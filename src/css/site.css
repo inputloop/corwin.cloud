@@ -1,0 +1,211 @@
+/* SPDX-FileCopyrightText: 2026 INPUTLOOP
+   SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+
+   corwin.cloud. One stylesheet, no web fonts, no framework. Colours are egad's tokens (Modus
+   Operandi for light, Vivendi for dark); corners are square, as buffers have corners.
+   Order: tokens, base, top bar, the topology stage, tabs and panels, diagrams, directory and
+   packages, mode-line and minibuffer, then small screens, motion, forced colours, print. */
+
+:root {
+  --canvas: #ffffff; --canvas-dim: #f2f2f2; --canvas-line: #dae5ec; --canvas-active: #c4c4c4;
+  --canvas-inactive: #e0e0e0; --text: #000000; --text-dim: #595959; --text-alt: #193668;
+  --link: #0031a9; --todo: #a60000; --done: #006800; --tag: #005e8b; --warn: #6f5500;
+  --border: #9f9f9f; --control: #595959; --focus: #0031a9;
+  --sans: system-ui, "Noto Sans", "DejaVu Sans", sans-serif;
+  --mono: ui-monospace, "Fira Code", "DejaVu Sans Mono", monospace;
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s6: 24px; --s8: 32px;
+  --gutter: 16px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #000000; --canvas-dim: #1e1e1e; --canvas-line: #2f3849; --canvas-active: #535353;
+    --canvas-inactive: #303030; --text: #ffffff; --text-dim: #a8a8a8; --text-alt: #c6daff;
+    --link: #2fafff; --todo: #ff5f59; --done: #44bc44; --tag: #00d3d0; --warn: #d0bc00;
+    --border: #646464; --control: #989898; --focus: #2fafff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas: #000000; --canvas-dim: #1e1e1e; --canvas-line: #2f3849; --canvas-active: #535353;
+  --canvas-inactive: #303030; --text: #ffffff; --text-dim: #a8a8a8; --text-alt: #c6daff;
+  --link: #2fafff; --todo: #ff5f59; --done: #44bc44; --tag: #00d3d0; --warn: #d0bc00;
+  --border: #646464; --control: #989898; --focus: #2fafff; color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--canvas); color: var(--text); -webkit-text-size-adjust: 100%; }
+body { margin: 0; font: 16px/26px var(--sans); background: var(--canvas); color: var(--text); overflow-wrap: break-word; }
+a { color: var(--link); text-underline-offset: 0.15em; }
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex]:focus-visible, summary:focus-visible {
+  outline: 3px solid var(--focus); outline-offset: 2px; }
+h1, h2, h3, h4 { line-height: 1.25; margin: var(--s6) 0 var(--s2); }
+h1 { font-size: 34px; } h2 { font-size: 28px; } h3 { font-size: 20px; } h4 { font-size: 17px; margin-top: 0; }
+p { margin: 0 0 var(--s3); }
+ul, ol { padding-left: 1.3em; margin: 0 0 var(--s3); }
+.wrap { max-width: 76rem; margin: 0 auto; padding: 0 var(--gutter) var(--s8); }
+.lede { max-width: 70ch; }
+.hint { color: var(--text-dim); font-size: 14px; line-height: 22px; max-width: 70ch; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.skip { position: absolute; left: var(--s2); top: -4rem; background: var(--canvas); color: var(--link); padding: var(--s2) var(--s3); z-index: 50; border: 2px solid var(--focus); }
+.skip:focus { top: var(--s2); }
+.js-only-flex, .js-only-inline { display: none; }
+.js .js-only-flex { display: flex; }
+.js .js-only-inline { display: inline; }
+
+/* ---- the top bar ---------------------------------------------------------------------------- */
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s6); padding: var(--s2) var(--gutter); background: var(--canvas-dim); border-bottom: 1px solid var(--border); }
+.brand { font: 700 16px/26px var(--mono); color: var(--text); text-decoration: none; }
+.top ul { list-style: none; display: flex; flex-wrap: wrap; gap: var(--s1) var(--s4); margin: 0; padding: 0; }
+.top nav a { display: inline-block; padding: var(--s1) 0; min-height: 24px; }
+.top nav a[aria-current="page"] { color: var(--text); font-weight: 700; text-decoration: none; border-bottom: 3px solid var(--link); }
+
+/* ---- the topology stage: the front door ------------------------------------------------------ */
+.stage { padding: 0; background: var(--canvas); }
+.topology { display: block; width: 100%; height: min(78vh, 52rem); min-height: 28rem; border: 0; border-bottom: 1px solid var(--border); background: var(--canvas); }
+.stage-note { margin: 0; padding: var(--s2) var(--gutter); font-size: 14px; line-height: 22px; color: var(--text-dim); background: var(--canvas-dim); }
+.stage.placeholder { max-width: 70ch; margin: 0 auto; padding: var(--s6) var(--gutter); }
+
+/* ---- tabs and panels ------------------------------------------------------------------------- */
+.tabs { max-width: 76rem; margin: 0 auto; padding: var(--s4) var(--gutter) var(--s8); }
+.tabs-h { margin-top: var(--s4); }
+.tablist { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 2px solid var(--border); margin-top: var(--s3); }
+.tablist [role="tab"] {
+  font: 14px/22px var(--mono); padding: var(--s2) var(--s3); min-height: 40px; display: inline-flex; align-items: center;
+  color: var(--text); text-decoration: none; background: var(--canvas-inactive);
+  border: 1px solid var(--border); border-bottom: 0; margin: 0 -1px -2px 0; }
+.tablist [role="tab"]:hover { background: var(--canvas-line); }
+.tablist [role="tab"][aria-selected="true"] { background: var(--canvas); font-weight: 700; border-bottom: 2px solid var(--canvas); border-top: 3px solid var(--link); }
+.js .panel[hidden] { display: none; }
+.panel { padding: var(--s4) 0; scroll-margin-top: var(--s4); }
+html:not(.js) .panel { border-top: 1px solid var(--border); margin-top: var(--s4); }
+.panel-head h2 { margin-top: 0; }
+.tagline { font-size: 18px; color: var(--text-alt); margin-bottom: var(--s2); }
+.badges { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.badge { font: 12px/18px var(--mono); padding: 0 var(--s2); border: 1px solid var(--control); color: var(--text); }
+.st-today { border-color: var(--done); color: var(--done); }
+.st-built { border-color: var(--tag); color: var(--tag); }
+.st-designed { border-color: var(--warn); color: var(--warn); }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--s2); margin: var(--s4) 0; }
+.facts div { background: var(--canvas-dim); padding: var(--s3); }
+.facts dt { font: 700 12px/18px var(--mono); color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+.facts dd { margin: 0; font-size: 15px; line-height: 22px; }
+.cols { display: grid; grid-template-columns: 1fr minmax(0, 24rem); gap: var(--s8); align-items: start; }
+.links { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+.private { color: var(--text-dim); font-family: var(--mono); font-size: 14px; }
+.sub { margin-top: var(--s8); border-top: 1px solid var(--border); }
+.flows { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: var(--s6); }
+.points { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--s3); }
+.points div { background: var(--canvas-dim); padding: var(--s3); border-left: 3px solid var(--link); }
+.points dt { font-weight: 700; } .points dd { margin: 0; color: var(--text-dim); font-size: 15px; line-height: 22px; }
+.how { color: var(--text-dim); font-size: 14px; line-height: 22px; }
+figure { margin: 0 0 var(--s4); }
+figcaption p { margin: 0 0 var(--s2); color: var(--text-dim); font-size: 14px; }
+figcaption h3, figcaption h4 { margin: 0 0 var(--s1); }
+
+/* ---- diagrams -------------------------------------------------------------------------------- */
+.diagram { display: block; width: 100%; max-width: 24rem; height: auto; }
+.diagram.wide { max-width: 30rem; }
+.d-box { fill: var(--canvas-dim); stroke: var(--control); stroke-width: 1.5; }
+.d-gone { stroke-dasharray: 5 4; fill: none; }
+.d-good { stroke: var(--done); stroke-width: 2.5; }
+.d-warn { stroke: var(--warn); stroke-width: 2.5; }
+.d-head { fill: var(--text); font: 700 15px var(--sans); }
+.d-sub { fill: var(--text-dim); font: 13px var(--sans); }
+.d-num { fill: var(--link); font: 700 15px var(--mono); }
+.d-arrow { stroke: var(--control); stroke-width: 2; }
+.d-arrow-head { fill: var(--control); }
+
+/* ---- directory and packages ------------------------------------------------------------------ */
+.filter { border: 0; padding: 0; margin: var(--s4) 0; min-width: 0; }
+.filter legend { font: 700 12px/18px var(--mono); text-transform: uppercase; color: var(--text-dim); padding: 0; margin-bottom: var(--s2); }
+.f { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.filter label { display: inline-block; font: 14px/22px var(--mono); padding: var(--s1) var(--s3); min-height: 32px; margin: 0 var(--s1) var(--s2) 0; border: 1px solid var(--control); cursor: pointer; }
+.f:checked + label { background: var(--text); color: var(--canvas); }
+.f:focus-visible + label { outline: 3px solid var(--focus); outline-offset: 2px; }
+.grid { list-style: none; padding: 0; margin: var(--s4) 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); gap: var(--s4); clear: both; }
+.f ~ .grid { margin-top: var(--s2); }
+.card { height: 100%; background: var(--canvas-dim); border: 1px solid var(--border); border-top: 3px solid var(--link); padding: var(--s4); display: flex; flex-direction: column; }
+.card h3 { margin: 0 0 var(--s1); font: 700 18px/26px var(--mono); overflow-wrap: anywhere; }
+.kind { font: 12px/18px var(--mono); color: var(--text-dim); margin-bottom: var(--s2); }
+.credit { font-size: 14px; line-height: 22px; color: var(--text-dim); }
+.acts { margin-top: auto; padding-top: var(--s2); display: flex; flex-wrap: wrap; gap: var(--s2); }
+.act { font-size: 14px; line-height: 22px; padding: var(--s1) var(--s3); min-height: 32px; border: 1px solid var(--link); text-decoration: none; display: inline-flex; align-items: center; }
+.act.primary { background: var(--link); color: var(--canvas); }
+.act.off { border-color: var(--border); color: var(--text-dim); font-family: var(--mono); font-size: 12px; }
+.act:hover:not(.off) { background: var(--canvas-line); color: var(--text); }
+.act.primary:hover { background: var(--text); color: var(--canvas); }
+.meter { list-style: none; display: flex; gap: var(--s1); padding: 0; margin: 0 0 var(--s3); font: 12px/18px var(--mono); }
+.meter li { flex: 1; text-align: center; border: 1px solid var(--border); color: var(--text-dim); padding: 0 var(--s1); }
+.meter li.on { background: var(--text); color: var(--canvas); border-color: var(--text); }
+#f-app:checked ~ .grid > li:not([data-kind="app"]),
+#f-game:checked ~ .grid > li:not([data-kind="game"]),
+#f-learn:checked ~ .grid > li:not([data-kind="learn"]),
+#f-ai:checked ~ .grid > li:not([data-kind="ai"]),
+#f-security:checked ~ .grid > li:not([data-kind="security"]),
+#f-platform:checked ~ .grid > li:not([data-kind="platform"]),
+#f-site:checked ~ .grid > li:not([data-kind="site"]) { display: none; }
+table { border-collapse: collapse; width: 100%; max-width: 50rem; }
+th, td { text-align: left; border: 1px solid var(--border); padding: var(--s2) var(--s3); }
+
+/* ---- mode-line and minibuffer: an Emacs footer ------------------------------------------------ */
+/* The mode-line is sticky at the bottom of the window so it shows the whole way down. The
+   minibuffer follows it in the page, so it only appears at the end: the mode-line seems to grow
+   a second line. No script is needed for that. */
+.modeline { position: sticky; bottom: 0; z-index: 20; background: var(--canvas-active); color: var(--text); border-top: 1px solid var(--border); font: 12px/28px var(--mono); }
+.ml-link { display: flex; gap: 1.6ch; align-items: baseline; padding: 0 var(--gutter); color: inherit; text-decoration: none; white-space: nowrap; overflow: hidden; min-height: 28px; }
+.ml-link:hover { background: var(--canvas-line); }
+.ml-buf { font-weight: 700; color: var(--text-alt); }
+.ml-pos::after { content: "--"; }
+.js .ml-pos::after { content: none; }
+.ml-sec { overflow: hidden; text-overflow: ellipsis; }
+.ml-modes { margin-left: auto; }
+.minibuffer-wrap { background: var(--canvas-dim); font: 14px/22px var(--mono); padding: var(--s2) var(--gutter) var(--s6); }
+.minibuffer { align-items: baseline; gap: 1ch; }
+.mb-prompt { color: var(--link); font-weight: 700; white-space: nowrap; }
+.minibuffer input { flex: 1; min-width: 0; font: inherit; color: var(--text); background: transparent; border: 0; border-bottom: 1px dashed var(--control); padding: var(--s1) 0; caret-color: var(--link); }
+.minibuffer input:focus-visible { outline: none; border-bottom: 3px solid var(--focus); }
+.goto { list-style: none; margin: var(--s2) 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0 var(--s4); max-height: 40vh; overflow: auto; }
+.goto li { padding: 0; }
+.goto a { display: inline-block; padding: var(--s1) 0; }
+.goto li[hidden] { display: none; }
+.js .goto:not(.open) { display: none; }
+.echo { margin: var(--s1) 0 0; color: var(--text-dim); }
+.colophon { margin: var(--s3) 0 0; font-size: 12px; line-height: 18px; color: var(--text-dim); }
+.at-bottom .modeline { background: var(--canvas-line); }
+html.motion-on.at-bottom .minibuffer-wrap { animation: grow 0.35s ease-out; }
+@keyframes grow { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
+html.motion-on .panel:not([hidden]) { animation: arrive 0.18s ease-out; }
+@keyframes arrive { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+/* ---- small screens --------------------------------------------------------------------------- */
+@media (max-width: 52rem) {
+  .cols { grid-template-columns: 1fr; gap: var(--s4); }
+  h1 { font-size: 28px; } h2 { font-size: 24px; }
+}
+@media (max-width: 34rem) {
+  .ml-flags, .ml-modes { display: none; }
+  .topology { height: 70vh; min-height: 24rem; }
+  .tablist [role="tab"] { font-size: 13px; padding: var(--s2); }
+  th, td { padding: var(--s1) var(--s2); }
+  table { font-size: 14px; }
+}
+
+/* ---- still: reduced motion ---------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  html, html *, html *::before, html *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
+}
+
+/* ---- forced colours (Windows high contrast) ---------------------------------------------------- */
+@media (forced-colors: active) {
+  .tablist [role="tab"][aria-selected="true"] { outline: 2px solid Highlight; }
+  .f:checked + label { outline: 2px solid Highlight; }
+  .modeline { border-top: 2px solid CanvasText; }
+  .d-box, .d-arrow { stroke: CanvasText; }
+}
+
+/* ---- print ------------------------------------------------------------------------------------- */
+@media print {
+  .modeline, .minibuffer, .goto, .skip, .topology, .tablist { display: none !important; }
+  .panel[hidden] { display: block !important; }
+}
