@@ -27,5 +27,10 @@ are for its own host); set `TOPOLOGY_KEEP_CONTEXT=1` to keep it.
 Installed with `sh deploy/install.sh` after `TOPOLOGY_DIR=../topology python3 build.py`: port 80 only,
 through `deploy/corwin.cloud.interim.conf`, until DNS for corwin.cloud points at gw33. Checked on gw33
 with `curl -H 'Host: corwin.cloud' http://127.0.0.1/…`: the three pages and `/topology/` answer 200, an
-unknown path 404, and `/topology/` carries its own hash-listed script policy. Once DNS points here, get a
-certificate and swap in `nginx-corwin.cloud.conf` (the TLS block).
+unknown path 404, and `/topology/` carries its own hash-listed script policy.
+
+DNS pointed at gw33 the same day (porkbun: the parking ALIAS removed, apex and www A to 149.5.245.7; the
+record is c4 `d/dns/corwin.cloud/2026/11/01/162544.txt`). Then `sh deploy/install-tls.sh`: certbot (webroot,
+both names, renews on its own timer), the TLS block in place of the interim one, backed out if `nginx -t`
+fails. https://corwin.cloud and https://www.corwin.cloud answer 200; plain http answers 301 to https.
+Run as the gw33 account on gw33 (it has sudo); the vibrobeast account there has none.
