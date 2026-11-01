@@ -21,3 +21,11 @@ The site is plain files. Nothing runs on the server but nginx.
 Without a topology checkout the build still works: the home page says so in place of the app.
 The staged topology leaves out its `context/` folder (starting requests and transcript reviews, which
 are for its own host); set `TOPOLOGY_KEEP_CONTEXT=1` to keep it.
+
+## Live on gw33 (2026-11-01)
+
+Installed with `sh deploy/install.sh` after `TOPOLOGY_DIR=../topology python3 build.py`: port 80 only,
+through `deploy/corwin.cloud.interim.conf`, until DNS for corwin.cloud points at gw33. Checked on gw33
+with `curl -H 'Host: corwin.cloud' http://127.0.0.1/…`: the three pages and `/topology/` answer 200, an
+unknown path 404, and `/topology/` carries its own hash-listed script policy. Once DNS points here, get a
+certificate and swap in `nginx-corwin.cloud.conf` (the TLS block).
