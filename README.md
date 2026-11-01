@@ -55,7 +55,7 @@ Node 18 or later for the node checks.
 to `PUBLIC_URLS` and the test will accept it; a private repository gets a name and "not public yet",
 never an address. Counts carry the date they were counted.
 
-## Put it on gw26
+## Put it on gw33
 
 `deploy/DEPLOY.md`, with an nginx server block in `deploy/nginx-corwin.cloud.conf`. DNS is Corwin's
 to point.

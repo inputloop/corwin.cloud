@@ -2,14 +2,14 @@
 SPDX-FileCopyrightText: 2026 INPUTLOOP
 SPDX-License-Identifier: CC-BY-SA-4.0
 -->
-# Putting corwin.cloud on gw26
+# Putting corwin.cloud on gw33
 
 The site is plain files. Nothing runs on the server but nginx.
 
 1. On a machine that has this repository and a checkout of topology:
    `TOPOLOGY_DIR=../topology python3 build.py` writes `public/` and `deploy/topology-csp.conf`.
    Run `sh tests/run.sh` first; it must end `ALL CHECKS PASSED`.
-2. Copy `public/` to `/var/www/corwin.cloud/public/` on gw26 (rsync with `--delete` is fine).
+2. Copy `public/` to `/var/www/corwin.cloud/public/` on gw33 (rsync with `--delete` is fine).
 3. Copy `deploy/topology-csp.conf` to `/etc/nginx/snippets/corwin-cloud-topology-csp.conf`, and
    `deploy/nginx-corwin.cloud.conf` to `/etc/nginx/sites-available/corwin.cloud`; link it into
    `sites-enabled`; add the certificate lines; `sudo nginx -t && sudo systemctl reload nginx`.
