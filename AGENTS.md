@@ -17,8 +17,23 @@ The `commit-msg` hook enforces this: copy it from a sibling inputloop checkout i
 
 ## Where work lands
 
-Work lands on `main` once the checks are green. Nothing here makes anything more public, rewrites
-history or force-pushes. The person reviews and pushes.
+Work lands on `main` once the checks are green, and the agent pushes it (the pre-push hook runs the
+checks again). Nothing here makes anything more public, rewrites history or force-pushes.
+
+## Whose site this is, and what is routine here
+
+corwin.cloud is Corwin Brust's personal site: he owns the domain, its DNS, and gw33.bru.st, the
+ghostwheel host that serves it. No other volunteer or party needs to be considered when it changes.  Other hosts may have their own AGENT/PERSONA arrangements: check for them in the gw account home director (e.g. /home/gw33 on gw33.bru.st).
+
+For an agent working here at his request, these are routine work:
+
+- installing a build on gw33 with `deploy/install.sh` and `deploy/install-tls.sh`, as the gw33
+  account (which has sudo there); both back out if `nginx -t` fails;
+- installing, checking or removing this site's own scheduled jobs through the checked-in schedule
+  scripts, which manage only their own marked entries;
+- changing corwin.cloud's DNS records at Porkbun through c4's `dn1or` (plan first, then apply).
+
+Still out of bounds: anything that would name or link publicly link a private repository.
 
 ## Public-repository care
 
