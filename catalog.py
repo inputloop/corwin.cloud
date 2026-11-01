@@ -26,6 +26,12 @@ PUBLIC_URLS = [
     ORG + "/vibrobeast-skills",
     ORG + "/vibrobeast-skills/tree/HEAD/skills",
     ORG + "/corwin.cloud",
+    ORG + "/topology/tree/corwin",
+    ORG + "/about-corwin",
+    ORG + "/gitcha",
+    ORG + "/ta",
+    ORG + "/three-phase-transcription",
+    ORG + "/journal",
     "https://github.com/mplscorwin/card-games.el",
     "https://melpa.org/#/card-games",
     "https://github.com/snesrev/zelda3",
@@ -37,7 +43,7 @@ PUBLIC_URLS = [
     "mailto:" + MAIL,
 ]
 # Private repositories: named on the directory, never linked, never in a URL.
-PRIVATE_NAMES = ["topology", "obsmage", "obsmage-corwin", "about-corwin", "gitcha", "c4"]
+PRIVATE_NAMES = ["obsmage", "obsmage-corwin", "c4"]
 
 KINDS = [
     ("app", "Apps"),
@@ -54,7 +60,8 @@ KINDS = [
 #   tab: the id of its home tab on index.html (or None)   demo: a public demo address (or None)
 # ---------------------------------------------------------------------------------------------
 REPOS = [
-    dict(id="topology", name="topology", kind="app", public=False, tab="topology",
+    dict(id="topology", name="topology", kind="app", public=True, tab="topology",
+         url=ORG + "/topology/tree/corwin",
          one="Draws what you have, from the files that describe it. This is the home page.",
          credit="Corwin and Bryant; the drawing app, TopoForge, is Bryant's"),
     dict(id="obsmage", name="obsmage", kind="app", public=False, tab="obsmage",
@@ -92,9 +99,10 @@ REPOS = [
          url="https://github.com/mplscorwin/card-games.el", outside=True,
          one="About thirty card games for GNU Emacs. Corwin's own, outside the inputloop org.",
          credit="Corwin"),
-    dict(id="gitcha", name="gitcha", kind="platform", public=False, tab=None,
-         one="A self-hosted package registry with mandatory two-factor sign-in.",
-         credit="Bryant"),
+    dict(id="gitcha", name="gitcha", kind="platform", public=True, tab=None,
+         url=ORG + "/gitcha",
+         one="A free, self-hosted forge for people and their agents: packages, git, site hosting and CI, with two-factor sign-in on every account. Its README says which parts are tested only against stand-ins.",
+         credit="Bryant and Corwin"),
     dict(id="c4", name="c4", kind="platform", public=False, tab=None,
          one="The registry and signing layer the shop's other tools are filed under.",
          credit="Corwin"),
@@ -106,9 +114,20 @@ REPOS = [
          url=ORG + "/corwin.cloud",
          one="This site: the shell around topology, the tabs, the directory, the packages.",
          credit="Corwin and Bryant"),
-    dict(id="about-corwin", name="about-corwin", kind="site", public=False, tab=None,
+    dict(id="about-corwin", name="about-corwin", kind="site", public=True, tab=None,
+         url=ORG + "/about-corwin",
          one="The source of the personal page at aboutcorwin.com.",
          credit="Corwin"),
+    dict(id="ta", name="ta", kind="ai", public=True, tab=None, url=ORG + "/ta",
+         one="Technology Architecture: a portable operating-model kit, one file you hand an AI so it grounds itself in a host's own public identity and prefers that host's own canon.",
+         credit="Corwin, with help from Bryant Frankford and B.K. Graphics (bkgraphics.com)"),
+    dict(id="three-phase-transcription", name="three-phase-transcription", kind="ai", public=True, tab=None,
+         url=ORG + "/three-phase-transcription",
+         one="Recorded talk in three layers that each cite the one below: quotes by time, subjects drawn from the quotes, and a result in which every sentence can be followed back to the second it was said.",
+         credit="Corwin; where a persona wrote something it wrote for Corwin, who holds the rights"),
+    dict(id="journal", name="journal", kind="site", public=True, tab=None, url=ORG + "/journal",
+         one="The open shelf: dated, PGP-clearsigned accounts of the shop's work, beginning with two companion accounts of the 2026 GNU Savannah forensic review.",
+         credit="Corwin and Claude (Anthropic), as the repository's own attribution line gives it"),
 ]
 
 # ---------------------------------------------------------------------------------------------
@@ -131,12 +150,12 @@ APPS = [
               ("Cells", "one fact per cell, kept twice"), ("Four pillars", "place, part, path, person"),
               ("TopoForge", "the drawing you move")],
         how="Cells are written as two files, one filed by row and one by column, and a check reads both sides and reports any cell they disagree on. A rebuild makes a fresh graph beside the old one and swaps it in, so nothing a repository stopped saying survives.",
-        status="Built on a working branch; private for now. The browser app and the three packages exist. No tool that effects changes is shipped yet: with writing switched on, the server says so.",
+        status="Built on a working branch (corwin); the repository has been public since 2026-11-01. The browser app and the three packages exist. No tool that effects changes is shipped yet: with writing switched on, the server says so.",
         state="built",
         licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0.",
         credit="Corwin and Bryant. TopoForge, the drawing app, is Bryant Frankford's.",
         needs="A browser. A server is optional.",
-        links=[("This page: topology, in the main area above", "index.html#top")],
+        links=[("This page: topology, in the main area above", "index.html#top"), ("Repository, branch corwin", ORG + "/topology/tree/corwin")],
         demo=None,
     ),
     dict(
@@ -356,15 +375,15 @@ OBS_SCENES = dict(
 #   state: today (installable now) / built (built, not yet published for others) / designed
 # ---------------------------------------------------------------------------------------------
 PACKAGES = [
-    dict(name="topology", kind="Debian package", state="built", public=False,
+    dict(name="topology", kind="Debian package", state="built", public=True,
          what="The command and the graph API. Built from topology's RECIPE.org, which is itself shipped inside it.",
-         where="Private for now.", tab="topology"),
-    dict(name="topology-perl", kind="Debian package", state="built", public=False,
+         where="Built by the recipe in the public topology repository (branch corwin).", tab="topology", url=ORG + "/topology/tree/corwin"),
+    dict(name="topology-perl", kind="Debian package", state="built", public=True,
          what="Perl 5.44.0 built for topology, with 16 CPAN distributions chosen by maintainer.",
-         where="Private for now.", tab="topology"),
-    dict(name="topology-www", kind="Debian package", state="built", public=False,
+         where="Built by the recipe in the public topology repository (branch corwin).", tab="topology", url=ORG + "/topology/tree/corwin"),
+    dict(name="topology-www", kind="Debian package", state="built", public=True,
          what="The browser app and front door, as files. Install only this one to serve the app with nothing else.",
-         where="Private for now.", tab="topology"),
+         where="Built by the recipe in the public topology repository (branch corwin).", tab="topology", url=ORG + "/topology/tree/corwin"),
     dict(name="C4", kind="Debian package", state="built", public=False,
          what="The registry and signing layer, packaged with a signed release key.",
          where="Private for now.", tab=None),

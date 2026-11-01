@@ -6,7 +6,7 @@
     TOPOLOGY_DIR=../topology python3 build.py [--out DIR]
 
 Python 3.8+, standard library only. The words are in catalog.py; the page shapes, the stylesheet
-and the one script are in src/. topology is private: this repository never carries it. The build
+and the one script are in src/. topology (public since 2026-11-01) is not carried here: the build stages it. The build
 asks a local checkout of topology to stage its own www (sh bin/stage-www.sh DEST) into
 <out>/topology/ and, if there is no checkout, writes a clear placeholder and says so.
 """
@@ -247,7 +247,7 @@ def topology_area(have):
                 '</section>')
     return ('<section class="stage placeholder" id="top" aria-labelledby="stage-h"><h1 id="stage-h">topology</h1>'
             '<p class="lede">topology is drawn here when this site is built with a checkout of it. This build had none, so this is a placeholder.</p>'
-            '<p>topology is not public yet. See <a href="#tab-topology">its tab</a> for what it is.</p></section>')
+            '<p>topology is public (branch corwin) on the inputloop GitHub. See <a href="#tab-topology">its tab</a> for what it is.</p></section>')
 
 
 def page_index(have):

@@ -16,14 +16,14 @@ other host.
 
 ## topology is not in this repository
 
-topology is private and carries Bryant Frankford's TopoForge. This repository holds only the
+topology (branch `corwin`) has been public since 2026-11-01 and carries Bryant Frankford's TopoForge. This repository still holds only the
 shell: navigation, tabs, directory, packages, footer. At build time the build asks a local checkout
 of topology to stage its own `www` (`sh bin/stage-www.sh DEST`) into `public/topology/`. Without a
 checkout the home page says so in place of the app, and everything else still builds.
 
 The build leaves out the staged `context/` folder (working notes for topology's own host) and
-replaces topology's private repository address in its recipe with "(private repository, not
-public yet)". `TOPOLOGY_KEEP_CONTEXT=1` keeps the folder.
+replaces the address of any repository still private (`PRIVATE_NAMES` in `catalog.py`) with "(private
+repository, not public yet)"; topology's own address is public now and stays. `TOPOLOGY_KEEP_CONTEXT=1` keeps the folder.
 
 ## Build
 

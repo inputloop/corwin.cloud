@@ -24,7 +24,7 @@ history or force-pushes. The person reviews and pushes.
 
 - Link only public repositories (`PUBLIC_URLS` in `catalog.py`). A private project is named with
   "not public yet" and never given an address.
-- topology is private and contains Bryant Frankford's TopoForge: never copy its `www/` or any of its
+- topology (branch `corwin`) is public since 2026-11-01 and contains Bryant Frankford's TopoForge: still never copy its `www/` or any of its
   sources here. The build stages it from a local checkout into `public/`, which is not committed.
 - No secrets, no machine paths, no device ids (the obsmage tab's diagram uses invented names), no
   hostnames beyond the public ghostwheel names.

@@ -50,7 +50,7 @@ prove_red() {
       printf 'STAYED GREEN  %s\n' "$name"; bad=1
     else printf 'went red      %s\n' "$name"; fi
   }
-  plant "a private repository linked"       catalog.py   's#ORG + "/vibrobeast-skills",$#ORG + "/gitcha",#'
+  plant "a private repository linked"       catalog.py   's#ORG + "/vibrobeast-skills",$#ORG + "/obsmage",#'
   plant "an inline script"                  build.py     's#<script src="js/site.js" defer></script>#<script>1</script>#'
   plant "an inline style attribute"         build.py     's#<a class="skip"#<a style="x" class="skip"#'
   plant "a script from another host"        build.py     's#<script src="js/site.js" defer></script>#<script src="https://cdn.example.com/a.js"></script>#'
@@ -60,7 +60,7 @@ prove_red() {
   plant "a script missing from jslicense"   build.py     's#^JS_FILES = .*#JS_FILES = ()#'
   plant "a machine path in the words"       catalog.py   's#Works for its makers#Works at /ho'me'/x for its makers#'
   plant "a broken internal link"            build.py     's#"packages.html")\]#"package.html")]#'
-  plant "a private name with a link"        catalog.py   's#credit="Corwin and Bryant; the drawing app#credit="see github.com/inputloop/topology; the drawing app#'
+  plant "a private name with a link"        catalog.py   's#credit="Corwin and Bryant; the drawing app#credit="see github.com/inputloop/obsmage; the drawing app#'
   plant "End key missing from the tabs"     src/js/site.js "s#ev.key === 'End'#ev.key === 'Ennd'#"
   plant "the script phones home"            src/js/site.js 's#^  var doc = document, html = doc.documentElement;#  var doc = document, html = doc.documentElement; fetch("/x");#'
   plant "the policy allows inline script"   deploy/nginx-corwin.cloud.conf "s#script-src 'self'; style-src 'self'; img-src 'self' data:; font-src#script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self' data:; font-src#"
