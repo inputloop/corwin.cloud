@@ -42,13 +42,34 @@ checkouts (`quantum3d5`, `hello-taxgnomes`, `egad`, `gitcha`); a demo with no ch
 staged copy changes in two ways only: each inline script moves into a file beside its page, and the
 page links `jslicense.html`. The policy for `/demo/*/app/` is written to `generated/demo-csp.conf`.
 
+## The next pass (2026-11-01)
+
+- **Every directory project has a `TOPOLOGY.md`** in topology's `examples/inputloop/` now, so no
+  page in the drawing is made from the catalog alone (a check fails if one is).
+- **Processes as data** (`processes.py`): lanes, and elements that say what they are (event, task,
+  gateway, data, and for BPMN+ an act). The shape comes from the notation, read from topology's own
+  `NOTATIONS` table at build time. Each process is a page in the drawing (BPMN) and a file in each
+  notation (BPMN, BPMN+, flowchart), offered under the drawing on the home page.
+- **NextTime's demo runs here** on pinned copies of Vue 3.5.44, Vue Router 4.6.4 and MapLibre 4.7.1
+  (`vendor.py`): the npm registry's tarballs, checked by sha256 and sha512 at every build, kept in
+  `VENDOR_CACHE` (default `~/.cache/corwin.cloud/npm`, fetched once), never in this repository.
+  The staged copy's addresses on other hosts are replaced by the local copies (`rewrite` in
+  `catalog.DEMOS`); staging is refused if one is left. Vue compiles that demo's templates in the
+  page, so its folder alone gets `'unsafe-eval'` (written beside it in `generated/demo-csp.conf`).
+- **about-corwin's Customize palette and Emacs CI strip are shared, not copied** (`share.py`): the
+  build stages them from a checkout (`ABOUT_DIR`, default `../about-corwin`), unchanged.
+- **Status lines from the channel feed** (`src/js/badges.js`): a card whose project has a channel
+  reads `/dist/<channel>/channel.json` from this site (c4's `d/channels/SPEC.md`, line form) and
+  says its last revision and stamp in words; with no feed the line stays hidden. The site policy's
+  `connect-src` is `'self'` for this.
+
 `docs/AMBITIONS.md` is our reading of what this site is for; `docs/UI-AUDIT-2026-11-01.md` lists
 what differs from TopoForge as Bryant made it, and why each difference stays or went.
 
 ## Build
 
 ```sh
-TOPOLOGY_DIR=../topology INPUTLOOP_DIR=../inputloop python3 build.py   # writes public/, deploy/topology-csp.conf, generated/demo-csp.conf
+TOPOLOGY_DIR=../topology INPUTLOOP_DIR=../inputloop ABOUT_DIR=../about-corwin python3 build.py   # writes public/, deploy/topology-csp.conf, generated/demo-csp.conf
 python3 -m http.server -d public 8000            # then open http://127.0.0.1:8000/
 ```
 

@@ -28,6 +28,7 @@ import shutil
 import sys
 
 import catalog as C
+import processes as PR
 
 DOC_NAME = "inputloop: the shop, drawn"
 LAYERS = [("words", "Words: titles and notes"), ("abstract", "Abstract: people and ideas"),
@@ -357,6 +358,58 @@ def gitcha_pages(idir):
     return raw, pages
 
 
+def process_page(proc, notation, table, src, key):
+    """One process, in one notation: lanes stacked as TopoForge zones, elements placed by column.
+    Every element carries its role and the shape each notation gives it, so the notation is data."""
+    nt = table[notation]
+    pg = Page(proc["name"] if notation == "bpmn" else "%s (%s)" % (proc["name"], nt["name"]), key)
+    others = " · ".join(table[n]["name"] for n in PR.CHOICES if n != notation)
+    pg.node("title", "text", 0, -170, 1400, 130,
+            "%s\nRead as %s: %s. The same process as a file in %s: on corwin.cloud's home page, under the drawing.\n%s\nMade by: %s."
+            % (proc["title"], nt["name"], nt["about"], others, proc["source"], proc["credit"]), "words")
+    CW, LH, LX = 230, 260, 210
+    cols = max(e["col"] for e in proc["elements"]) + 1
+    lshape, lword = PR.lane_shape(notation, table)
+    lane_ids, lane_y, y = {}, {}, 0
+    for lid, lname in proc["lanes"]:
+        h = LH if any(e.get("row") and e["lane"] == lid for e in proc["elements"]) else LH - 110
+        lane_y[lid] = y
+        ld = {"element": "lane", "read as": lword, "notation": nt["name"], "notations from": src}
+        for n in PR.CHOICES:
+            ld["as " + table[n]["name"]] = PR.lane_shape(n, table)[0]
+        lane_ids[lid] = pg.node("lane-" + lid, lshape, 0, y, LX + cols * CW, h, lname, "flow", data=ld)
+        y += h + 20
+    ids = {}
+    for el in proc["elements"]:
+        shape, word = PR.shape_for(el, notation, table)
+        w, h = {"diamond": (170, 120), "user": (90, 90), "ellipse": (160, 80)}.get(shape, (170, 90))
+        x = LX + el["col"] * CW + (CW - 20 - w) // 2
+        y = lane_y[el["lane"]] + (40 if not el.get("row") else 150)
+        data = {"element": el["role"] + (" (end)" if el.get("end") else ""), "act": el.get("act", ""), "read as": word,
+                "notation": nt["name"], "notations from": src}
+        for n in PR.CHOICES:
+            data["as " + table[n]["name"]] = PR.shape_for(el, n, table)[0]
+        ids[el["id"]] = pg.node(el["id"], shape, x, y, w, h, el["text"], "flow", parent=lane_ids[el["lane"]], data=data)
+    for a, b, label in proc["flows"]:
+        pg.link(ids[a], ids[b], label, layer="flow")
+    return pg
+
+
+def process_pages(tdir, dest):
+    """Write every process in every notation offered; return the BPMN pages for the default set."""
+    table, src = PR.read_notations(tdir)
+    out = []
+    for proc in PR.PROCESSES:
+        for n in PR.CHOICES:
+            key = "process-%s-%s" % (proc["id"], n)
+            pg = process_page(proc, n, table, src, "process-" + proc["id"])
+            with open(os.path.join(dest, key + ".json"), "w", encoding="utf-8") as f:
+                json.dump(dict(doc([pg]), name="%s (%s)" % (proc["name"], table[n]["name"])), f, indent=1)
+            if n == "bpmn":
+                out.append((proc, pg))
+    return out, src
+
+
 def doc(pages):
     return {"format": "topoforge", "version": 1, "name": DOC_NAME, "settings": SETTINGS,
             "pages": [p if isinstance(p, dict) else p.json() for p in pages], "cur": 0}
@@ -383,6 +436,13 @@ def make(out, tdir, idir):
             for extra in obsmage_pages():
                 index["pages"].append({"name": extra.name, "project": "obsmage"})
                 pages.append(extra)
+    procs, src = process_pages(tdir, dest)
+    index["processes"] = {}
+    index["notations_from"] = src
+    for proc, pg in procs:
+        index["processes"][proc["id"]] = {"page": len(pages), "name": pg.name, "files": {n: "drawings/process-%s-%s.json" % (proc["id"], n) for n in PR.CHOICES}}
+        index["pages"].append({"name": pg.name, "process": proc["id"]})
+        pages.append(pg)
     raw, gp = gitcha_pages(idir)
     if gp:
         index["gitcha_bryant"] = {"page": len(pages), "file": "drawings/how-gitcha-works.json", "sha256": GITCHA_SHA256,

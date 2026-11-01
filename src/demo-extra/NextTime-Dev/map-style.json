@@ -1,0 +1,8 @@
+{
+ "version": 8,
+ "name": "corwin.cloud: no base map (its tiles would come from another server)",
+ "sources": {},
+ "layers": [
+  {"id": "background", "type": "background", "paint": {"background-color": "#dde6ee"}}
+ ]
+}

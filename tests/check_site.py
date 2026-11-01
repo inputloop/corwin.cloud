@@ -113,6 +113,8 @@ class SiteChecks(unittest.TestCase):
         for rel in PAGES:
             for tag, attr, v in refs(parse(rel)):
                 if re.match(r"^(https?:|mailto:)", v):
+                    if any(re.match(pat, v) for pat in getattr(catalog, "PUBLIC_URL_PATTERNS", [])):
+                        continue
                     self.assertIn(v, allowed, "%s links %s, which is not on the public allow-list" % (rel, v))
         # and no private repository's address appears anywhere in the output, topology's files included
         for dp, _, fs in os.walk(OUT):
@@ -135,7 +137,8 @@ class SiteChecks(unittest.TestCase):
     def test_every_tab_is_reachable_from_a_directory_card(self):
         # the cards only: the footer's list of everywhere also links every tab
         d = read("directory.html")
-        d = d[d.index('<ul class="grid">'):d.index('</fieldset>')]
+        start = d.index('<ul class="grid">')
+        d = d[start:d.index('</fieldset>', start)]
         for app in catalog.APPS:
             self.assertIn('href="index.html#tab-%s"' % app["id"], d, "no directory card reaches tab %s" % app["id"])
 
@@ -222,6 +225,8 @@ class SiteChecks(unittest.TestCase):
 
     def test_no_forbidden_strings_anywhere_in_output(self):
         for dp, _, fs in os.walk(OUT):
+            if "/app/vendor/" in dp.replace(os.sep, "/") + "/":
+                continue   # pinned libraries, byte for byte the npm tarball's (test_nexttime_runs_here_on_pinned_libraries)
             for f in fs:
                 try:
                     with open(os.path.join(dp, f), encoding="utf-8") as fh:
@@ -300,7 +305,99 @@ class DemoChecks(unittest.TestCase):
         for dp, ds, fs in os.walk(ROOT):
             ds[:] = [d for d in ds if d not in (".git", "public", "node_modules", "__pycache__", "generated")]
             for f in fs:
-                self.assertNotIn(f, ("quantum3d5.js", "p5.min.js", "hello-taxgnomes.html", "egad-tokens.json", "how-gitcha-works.json"), os.path.join(dp, f))
+                self.assertNotIn(f, ("quantum3d5.js", "p5.min.js", "hello-taxgnomes.html", "egad-tokens.json", "how-gitcha-works.json",
+                                     "customize.js", "vue.global.prod.js", "maplibre-gl-csp.js"), os.path.join(dp, f))
+
+
+TOPO = os.environ.get("TOPOLOGY_DIR", os.path.join(ROOT, "..", "topology"))
+ILOOP = os.environ.get("INPUTLOOP_DIR", os.path.join(ROOT, "..", "inputloop"))
+ABOUT = os.environ.get("ABOUT_DIR", os.path.join(ROOT, "..", "about-corwin"))
+
+
+class NextPassChecks(unittest.TestCase):
+    """The 2026-11-01 next pass: TOPOLOGY.md for every project, processes as data, NextTime's demo on
+    pinned libraries, about-corwin's palette and CI strip shared by staging, channel badges."""
+
+    def index(self):
+        import json
+        with open(os.path.join(OUT, "drawings", "index.json"), encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_every_directory_project_is_drawn_from_its_own_topology_md(self):
+        if not os.path.isdir(os.path.join(TOPO, "examples", "inputloop")):
+            self.skipTest("no topology checkout")
+        ix = self.index()
+        bare = sorted(k for k, v in ix["projects"].items() if v["from"] == "catalog.py")
+        self.assertEqual(bare, [], "drawn from the catalog alone, with no TOPOLOGY.md: %s" % bare)
+
+    def test_each_process_is_a_page_and_a_file_in_every_notation(self):
+        import processes
+        ix = self.index()
+        for proc in processes.PROCESSES:
+            v = ix["processes"].get(proc["id"])
+            self.assertIsNotNone(v, proc["id"] + " is not in the default set")
+            self.assertEqual(ix["pages"][v["page"]]["name"], proc["name"])
+            for n in processes.CHOICES:
+                self.assertTrue(os.path.isfile(os.path.join(OUT, v["files"][n])), "%s has no %s file" % (proc["id"], n))
+                self.assertIn('href="%s"' % v["files"][n], read("index.html"), "the home page does not offer %s in %s" % (proc["id"], n))
+            self.assertIn('href="index.html?drawing=process-%s#top"' % proc["id"], read("index.html"))
+
+    def test_nexttime_runs_here_on_pinned_libraries(self):
+        if not os.path.isdir(os.path.join(ILOOP, "NextTime-Dev")):
+            self.skipTest("no NextTime-Dev checkout")
+        import vendor
+        app = os.path.join(OUT, "demo", "NextTime-Dev", "app")
+        self.assertTrue(os.path.isfile(os.path.join(app, "index.html")), "NextTime's demo was not staged: %s" % read("demo/NextTime-Dev/index.html")[-600:])
+        page = open(os.path.join(app, "index.html"), encoding="utf-8").read()
+        self.assertNotRegex(page, r"unpkg\.com|demotiles\.maplibre\.org")
+        self.assertNotRegex(page, r"<(script|link)[^>]+(src|href)=\"?https?://")
+        for js in [f for f in os.listdir(app) if f.endswith(".js")]:
+            self.assertNotIn("demotiles.maplibre.org", open(os.path.join(app, js), encoding="utf-8").read(), js)
+        import io, tarfile
+        table, demo = read("jslicense.html"), read("demo/NextTime-Dev/index.html")
+        for name in catalog_demo("NextTime-Dev")["vendor"]:
+            p = vendor.by_name(name)
+            raw = vendor.fetch(p, offline=True)        # checked against the pin again, here
+            with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tf:
+                for pub, inner in p["files"].items():
+                    with open(os.path.join(app, vendor.folder(p), pub), "rb") as f:
+                        self.assertEqual(f.read(), tf.extractfile(inner).read(), "%s/%s is not the pinned tarball's file" % (name, pub))
+            for mini, full in p["min"].items():
+                row = re.search(r'<tr><td><a href="demo/NextTime-Dev/app/%s/%s">.*?</tr>' % (re.escape(vendor.folder(p)), re.escape(mini)), table)
+                self.assertIsNotNone(row, "%s's %s has no row in jslicense.html" % (name, mini))
+                self.assertIn('href="demo/NextTime-Dev/app/%s/%s"' % (vendor.folder(p), full), row.group(0), "%s's %s: its row does not link the unminified source" % (name, mini))
+            self.assertIn(p["sha256"], demo, name + ": the demo page does not show the sha256")
+            self.assertIn(p["spdx"], demo, name + ": the demo page does not show the licence")
+        # NextTime is definitelynotaspren's work, credited by her GitHub handle, everywhere it is credited
+        self.assertRegex(demo, r"<dt>Made by</dt><dd>definitelynotaspren&#x27;s work\.</dd>")
+        self.assertRegex(read("directory.html"), r'<h3 id="c-NextTime-Dev">NextTime-Dev</h3>.*?<p class="credit">Made by: definitelynotaspren</p>')
+        self.assertRegex(read("index.html"), r"<dt>Made by</dt><dd>definitelynotaspren&#x27;s work\.")
+
+    def test_the_palette_and_ci_strip_are_staged_from_about_corwin_unchanged(self):
+        if not os.path.isfile(os.path.join(ABOUT, "src", "js", "customize.js")):
+            self.skipTest("no about-corwin checkout")
+        with open(os.path.join(ABOUT, "src", "js", "customize.js"), "rb") as a, open(os.path.join(OUT, "js", "customize.js"), "rb") as b:
+            self.assertEqual(a.read(), b.read(), "js/customize.js is not about-corwin's, byte for byte")
+        src = open(os.path.join(ABOUT, "src", "index.html"), encoding="utf-8").read()
+        block = re.search(r'\n(<div class="custom" id="custom">\n.*?\n</div>)\n', src, re.S).group(1)
+        for rel in PAGES:
+            self.assertIn(block, read(rel), rel + " lacks about-corwin's Customize block")
+            self.assertIn("css/shared.css", read(rel), rel)
+        css = read("css/shared.css")
+        for title in ("reading settings (Customize)", "Customize: the floating control"):
+            self.assertIn(title, css)
+        self.assertIn('id="ci-h"', read("index.html"), "the home page has no CI strip")
+        self.assertIn('href="js/customize.js"', read("jslicense.html"))
+
+    def test_a_project_with_a_channel_gets_a_hidden_status_line(self):
+        d = read("directory.html")
+        for r in catalog.REPOS:
+            if r.get("channel"):
+                self.assertIn('data-channel="%s" hidden' % r["channel"], d, r["id"])
+
+
+def catalog_demo(did):
+    return next(d for d in catalog.DEMOS if d["id"] == did)
 
 
 def html_escape(t):

@@ -24,15 +24,18 @@ import sys
 import catalog as C
 import demos as D
 import drawings as G
+import vendor as V
+import share as SH
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("site.js", "stage.js")
+JS_FILES = ("site.js", "stage.js", "badges.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
 
 e = html.escape
+SHARED = {"staged": False, "markup": "", "ci": ""}   # set by main() from share.stage(): about-corwin's palette and CI strip
 
 
 def a(href, text, cls=""):
@@ -118,10 +121,24 @@ Built by build.py from catalog.py and src/. Edit those, not this file.
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
 <script src="js/site.js" defer></script>
-%s</head>
+<script src="js/badges.js" defer></script>
+%s%s</head>
 <body data-page="%s">
 <a class="skip" href="#main">Skip to the content</a>
-""" % (e(title), e(desc), extra, here)
+%s""" % (e(title), e(desc), shared_head(), extra, here, (SHARED["markup"] + "\n") if SHARED["staged"] else "")
+
+
+def shared_head():
+    if not SHARED["staged"]:
+        return ""
+    return '<link rel="stylesheet" href="css/shared.css">\n<script src="js/customize.js" defer></script>\n'
+
+
+def ci_strip():
+    """about-corwin's CI strip, as its own build renders it, when the checkout was there."""
+    if not (SHARED["staged"] and SHARED["ci"]):
+        return ""
+    return '<div class="side shared-ci">%s</div>' % SHARED["ci"]
 
 
 def nav(here):
@@ -255,6 +272,8 @@ def topology_area(have, index):
     pages = {pid: index["pages"][v["page"]]["name"] for pid, v in index["projects"].items()}
     if index.get("gitcha_bryant"):
         pages["gitcha-bryant"] = index["pages"][index["gitcha_bryant"]["page"]]["name"]
+    for pid, v in index.get("processes", {}).items():
+        pages["process-" + pid] = v["name"]
     first = "topology/topoforge/index.html?load=/" + index["file"]
     return ('<section class="stage" id="top" aria-labelledby="stage-h">'
             '<h1 id="stage-h" class="stage-h">The shop, drawn <span class="muted">one page per project: the tabs along the bottom of the drawing</span></h1>'
@@ -266,15 +285,32 @@ def topology_area(have, index):
             '<a href="topology/topoforge/index.html">Full size</a> · <a href="%s" download>the drawings as a file</a> · <a href="topology/">topology\'s own front door</a>. '
             '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button> '
             '<span id="stage-msg" role="status"></span></p>'
+            + processes_note(index) +
             '</section>') % (e(first, quote=True), e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True),
                              e(index["file"], quote=True), e(index["file"], quote=True))
+
+
+def processes_note(index):
+    """The processes, each a page in the drawing (BPMN) and a file in each notation offered: the
+    person picks the notation; the drawing's data says how each element reads in every one."""
+    procs = index.get("processes") or {}
+    if not procs:
+        return ""
+    names = {"bpmn": "BPMN", "bpmnplus": "BPMN+", "flowchart": "flowchart"}
+    items = []
+    for pid, v in procs.items():
+        files = " · ".join(a(f, names.get(n, n), "") .replace("<a ", '<a download ', 1) for n, f in v["files"].items())
+        items.append('<li>%s: %s; as a file to open in your own TopoForge (File, Open): %s</li>'
+                     % (e(v["name"].replace("Process: ", "")), a("index.html?drawing=process-%s#top" % pid, "its page in the drawing (BPMN)"), files))
+    return ('<div class="processes"><p class="stage-note">Processes, drawn as data: each step says what it is (event, task, gateway, data) '
+            'and the notation decides the shape. Pick the notation you read:</p><ul class="stage-note">%s</ul></div>' % "".join(items))
 
 
 def page_index(have, index):
     return (head("corwin.cloud: the shop, drawn",
                  "TopoForge, opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
                  '<script src="js/stage.js" defer></script>\n')
-            + nav("home") + '<main id="main">\n' + topology_area(have, index) + render_tabs() + "</main>\n" + foot("corwin.cloud"))
+            + nav("home") + '<main id="main">\n' + topology_area(have, index) + ('<div class="wrap shared-wrap">%s</div>' % ci_strip() if ci_strip() else "") + render_tabs() + "</main>\n" + foot("corwin.cloud"))
 
 
 def demo_of(repo_id):
@@ -293,11 +329,15 @@ def card(r):
     dm = demo_of(r["id"])
     if dm:
         t.append(a("demo/%s/" % dm["id"], "Demo" if dm["runs"] != "elsewhere" else "How to run it", "act"))
+    ch = ""
+    if r.get("channel"):
+        ch = ('<p class="channel" data-channel="%s" hidden>Release channel %s: <span class="ch-words"></span></p>'
+              % (e(r["channel"], quote=True), e(r["channel"])))
     return ('<li data-kind="%s"><article class="card" aria-labelledby="c-%s"><h3 id="c-%s">%s</h3>'
-            '<p class="kind">%s · %s</p><p>%s</p><p class="credit">Made by: %s</p><p class="acts">%s</p></article></li>'
+            '<p class="kind">%s · %s</p><p>%s</p><p class="credit">Made by: %s</p>%s<p class="acts">%s</p></article></li>'
             % (r["kind"], re.sub(r"\W", "-", r["id"]), re.sub(r"\W", "-", r["id"]), e(r["name"]),
                dict(C.KINDS)[r["kind"]], "public" if r["public"] else "not public yet", e(r["one"]), e(r["credit"]),
-               "".join(t)))
+               ch, "".join(t)))
 
 
 def page_directory():
@@ -313,8 +353,9 @@ def page_directory():
 <fieldset class="filter"><legend>Show only</legend>%s
 <ul class="grid">%s</ul></fieldset>
 <p class="hint">Counted from this site's catalog, 2026-11-01.</p>
+%s
 </main>
-""" % (len(C.REPOS), pub, "".join(radios), "".join(card(r) for r in C.REPOS)) + foot("directory"))
+""" % (len(C.REPOS), pub, "".join(radios), "".join(card(r) for r in C.REPOS), ci_strip()) + foot("directory"))
 
 
 def package(p):
@@ -345,26 +386,36 @@ def page_404():
             '<div class="modeline"><span class="ml-link"><span class="ml-buf">corwin.cloud</span> <span>[No match]</span></span></div>\n</body>\n</html>\n')
 
 
+LIC_LINKS = {"GPL-3.0-or-later": ("GNU-GPL-3.0-or-later", "https://www.gnu.org/licenses/gpl-3.0.html"),
+             "AGPL-3.0-or-later": ("GNU-AGPL-3.0-or-later", "https://www.gnu.org/licenses/agpl-3.0.html"),
+             V.EXPAT[0]: V.EXPAT[:2], V.BSD3[0]: V.BSD3[:2]}
+SOURCE_LABELS = {C.P5_SOURCE: "p5.js 1.9.0"}
+
+
 def page_jslicense(staged):
     lab = '<a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU-GPL-3.0-or-later</a>'
     rows = []
-    for f in JS_FILES:
+    for f in JS_FILES + (("customize.js",) if SHARED["staged"] else ()):
         rows.append('<tr><td><a href="js/%s">%s</a></td><td>%s</td><td><a href="js/%s">%s</a></td></tr>' % (f, f, lab, f, f))
     for did, res in sorted(staged.items()):
         for path, lic, source in res.get("scripts", []):
             url = "demo/%s/app/%s" % (did, path)
-            if lic.startswith("GPL-3.0"):
-                lic_cell = lab
+            local = source and not re.match(r"^https?:", source)
+            src = ("demo/%s/app/%s" % (did, source)) if local else source
+            if lic in LIC_LINKS:
+                lic_cell = a(LIC_LINKS[lic][1], LIC_LINKS[lic][0])
             else:
-                lic_cell = e(lic) + (" (minified; its full source: %s)" % a(source, "p5.js 1.9.0") if source else "")
+                lic_cell = e(lic)
+            if source:
+                lic_cell += " (minified; its full source: %s)" % a(src, "the unminified file, served here" if local else SOURCE_LABELS.get(source, "upstream"))
             rows.append('<tr><td><a href="%s">%s</a></td><td>%s</td><td><a href="%s">%s</a></td></tr>'
-                        % (url, e(url), lic_cell, url if not source else source, "this file" if not source else "upstream source"))
+                        % (url, e(url), lic_cell, url if not source else src, "this file" if not source else ("unminified source" if local else "upstream source")))
     return (head("JavaScript licence information", "The licence of every script on this site, in the form GNU LibreJS reads.", "jslicense")
             + nav("") + """<main id="main" class="wrap">
 <h1>JavaScript licence information</h1>
-<p>Every script on corwin.cloud is free software and is served from this site. This table is in the form <a href="https://www.gnu.org/software/librejs/">GNU LibreJS</a> reads, and lists the demos' scripts too. This site's own scripts are not minified. One demo carries a library minified, as its repository ships it (p5.js, in Quantum 3D5, for speed); its row links the full source. The pages work with scripts off, except the drawing app and the demos, which are programs.</p>
+<p>Every script on corwin.cloud is free software and is served from this site. This table is in the form <a href="https://www.gnu.org/software/librejs/">GNU LibreJS</a> reads, and lists the demos' scripts too. This site's own scripts are not minified. Two demos carry libraries minified: Quantum 3D5 carries p5.js as its repository ships it (for speed), and NextTime's demo runs with pinned copies of Vue, Vue Router and MapLibre from the npm registry; each such row links the full source, which for the pinned libraries is served from this site too. The pages work with scripts off, except the drawing app and the demos, which are programs.</p>
 <table id="jslicense-labels1"><thead><tr><th scope="col">Script</th><th scope="col">Licence</th><th scope="col">Source</th></tr></thead><tbody>%s</tbody></table>
-<p>topology, staged under /topology/ from its own checkout, carries its own scripts and its own licence notices.</p>
+<p>topology, staged under /topology/ from its own checkout, carries its own scripts and its own licence notices. customize.js (the Customize control) is about-corwin's, staged from its checkout when this site was built, unchanged.</p>
 </main>
 """ % "".join(rows) + foot("jslicense"))
 
@@ -375,6 +426,22 @@ def rebase(text, root):
     """Make a page written for the site's top folder work from a sub-folder: prefix every relative
     href and src (not #, not /, not a scheme) with root."""
     return re.sub(r'(\b(?:href|src)=")(?![#/]|\./|[a-z]+:)', r"\1" + root, text)
+
+
+def vendor_table(d):
+    """The libraries a demo runs with, pinned: version, licence, where they come from, their sha256."""
+    rows = []
+    for name in d["vendor"]:
+        p = V.by_name(name)
+        lic = [f for f in p["files"] if f.startswith("LICENSE")][0]
+        files = " · ".join(a("./app/%s/%s" % (V.folder(p), f), e(f)) for f in p["files"] if f.endswith((".js", ".css")))
+        rows.append('<tr><th scope="row">%s %s</th><td>%s (%s)</td><td>%s</td><td>%s; <code>%s</code></td><td><code class="hash">%s</code></td><td>%s</td></tr>'
+                    % (e(p["name"]), e(p["version"]), a("./app/%s/%s" % (V.folder(p), lic), e(p["spdx"])), e(p["by"]), a(p["home"], "its source"),
+                      e(V.REGISTRY.replace("https://", "")), e(os.path.basename(V.tarball_url(p))), e(p["sha256"]), files))
+    return ('<div class="table-scroll"><table class="pairs vendor"><caption>The libraries this demo runs with, served from this site: each is the npm registry\'s tarball at the version named, '
+            'checked against the sha256 below when the site was built. Minified files sit beside their unminified twins.</caption>'
+            '<thead><tr><th scope="col">Library</th><th scope="col">Licence</th><th scope="col">Source</th><th scope="col">From</th>'
+            '<th scope="col">sha256 of the tarball</th><th scope="col">Files</th></tr></thead><tbody>%s</tbody></table></div>' % "".join(rows))
 
 
 def demo_page(d, res, idir):
@@ -391,6 +458,10 @@ def demo_page(d, res, idir):
         acts.append(a("index.html?drawing=%s#top" % target, label, "act primary"))
     if d.get("why"):
         body.append("<p><strong>Why it is not hosted here:</strong> %s</p>" % e(d["why"]))
+    if staged:
+        body.extend("<p>%s</p>" % e(n) for n in d.get("notes", []))
+    if d.get("vendor") and staged:
+        body.append(vendor_table(d))
     if d.get("derived") == "egad" and staged:
         extra = '<link rel="stylesheet" href="./app/egad-pairs.css">\n'
         floors = {"text": 7.0, "text-aa": 4.5, "ui": 3.0}
@@ -529,14 +600,28 @@ DEMO_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-
                "form-action 'none'; frame-ancestors 'self'")
 
 
-def write_demo_csp():
+def write_demo_csp(staged=None):
     """The policy for /demo/*/app/: scripts only from this site (the build moved every inline script
     into a file), styles inline allowed (the apps set style attributes from their scripts, as
-    topology's pages do). Written to generated/demo-csp.conf for whoever keeps deploy/ to include."""
+    topology's pages do). Written to generated/demo-csp.conf for whoever keeps deploy/ to include.
+    A demo whose catalog entry gives an eval_reason gets its own location, for its app folder alone,
+    whose script-src adds 'unsafe-eval' and nothing else; the reason is written beside it."""
     os.makedirs(os.path.join(ROOT, "generated"), exist_ok=True)
+    out = ["# generated by build.py: the policy for /demo/*/app/ (no inline script; every script is a file here)",
+           "add_header Content-Security-Policy \"%s\" always;" % DEMO_POLICY]
+    for d in C.DEMOS:
+        if d.get("eval_reason") and (staged or {}).get(d["id"], {}).get("staged"):
+            pol = DEMO_POLICY.replace("script-src 'self';", "script-src 'self' 'unsafe-eval';")
+            out += ["# %s: %s; 'unsafe-eval' for this folder only" % (d["id"], d["eval_reason"]),
+                    "location ^~ /demo/%s/app/ {" % d["id"],
+                    "    add_header Content-Security-Policy \"%s\" always;" % pol,
+                    "    add_header X-Content-Type-Options \"nosniff\" always;",
+                    "    add_header Referrer-Policy \"no-referrer\" always;",
+                    "    try_files $uri $uri/ =404;",
+                    "}"]
+            print("build: WARN demo %s gets 'unsafe-eval' in its own folder's policy: %s" % (d["id"], d["eval_reason"]), file=sys.stderr)
     with open(os.path.join(ROOT, "generated", "demo-csp.conf"), "w", encoding="utf-8") as f:
-        f.write("# generated by build.py: the policy for /demo/*/app/ (no inline script; every script is a file here)\n"
-                "add_header Content-Security-Policy \"%s\" always;\n" % DEMO_POLICY)
+        f.write("\n".join(out) + "\n")
 
 
 # ---- main ------------------------------------------------------------------------------------
@@ -554,6 +639,8 @@ def main():
     ap.add_argument("--topology", default=os.environ.get("TOPOLOGY_DIR", os.path.join(ROOT, "..", "topology")))
     ap.add_argument("--inputloop", default=os.environ.get("INPUTLOOP_DIR", os.path.join(ROOT, "..", "inputloop")),
                     help="a folder of checkouts of public inputloop repositories, for the demos and Bryant's drawing")
+    ap.add_argument("--about", default=os.environ.get("ABOUT_DIR", os.path.join(ROOT, "..", "about-corwin")),
+                    help="a checkout of about-corwin, for its Customize palette and CI strip")
     args = ap.parse_args()
     out = os.path.abspath(args.out)
     shutil.rmtree(out, ignore_errors=True)
@@ -563,6 +650,9 @@ def main():
     for f in ("favicon.svg", "robots.txt"):
         shutil.copy(os.path.join(SRC, f), os.path.join(out, f))
     have = stage_topology(out, args.topology)
+    SHARED.update(SH.stage(out, args.about))
+    if not SHARED["staged"]:
+        print("build: about-corwin's Customize palette and CI strip are left out: %s" % SHARED["why"], file=sys.stderr)
     index = G.make(out, args.topology, args.inputloop)
     staged = D.stage_all(out, args.inputloop)
     stage_shots(out, args.inputloop)
@@ -570,8 +660,8 @@ def main():
         if not res["staged"]:
             print("build: demo %s not staged: %s" % (did, res["why"]), file=sys.stderr)
         if any(src for _, _, src in res.get("scripts", [])):
-            print("build: WARN demo %s serves a minified script (its upstream source is linked in jslicense.html)" % did, file=sys.stderr)
-    write_demo_csp()
+            print("build: WARN demo %s serves a minified script (its full source is linked in jslicense.html)" % did, file=sys.stderr)
+    write_demo_csp(staged)
     write(out, "index.html", page_index(have, index))
     write(out, "demo/index.html", page_demos(staged))
     for d in C.DEMOS:
@@ -580,8 +670,8 @@ def main():
     write(out, "packages.html", page_packages())
     write(out, "jslicense.html", page_jslicense(staged))
     write(out, "404.html", page_404())
-    print("build: wrote %s (topology %s; %d drawing pages; demos staged: %s)" % (
-        out, "staged" if have else "PLACEHOLDER", len(index["pages"]), ", ".join(k for k, v in staged.items() if v["staged"]) or "none"))
+    print("build: wrote %s (topology %s; about-corwin's palette %s; %d drawing pages; demos staged: %s)" % (
+        out, "staged" if have else "PLACEHOLDER", "staged" if SHARED["staged"] else "left out", len(index["pages"]), ", ".join(k for k, v in staged.items() if v["staged"]) or "none"))
 
 
 if __name__ == "__main__":

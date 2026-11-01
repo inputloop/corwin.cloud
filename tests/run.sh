@@ -15,6 +15,8 @@ if [ -z "${TOPOLOGY_DIR:-}" ]; then TOPOLOGY_DIR=$(cd "$here/../topology" 2>/dev
 export TOPOLOGY_DIR
 if [ -z "${INPUTLOOP_DIR:-}" ]; then INPUTLOOP_DIR=$(cd "$here/../inputloop" 2>/dev/null && pwd || echo "$here/../inputloop"); fi
 export INPUTLOOP_DIR
+if [ -z "${ABOUT_DIR:-}" ]; then ABOUT_DIR=$(cd "$here/../about-corwin" 2>/dev/null && pwd || echo "$here/../about-corwin"); fi
+export ABOUT_DIR
 fail=0
 step() { printf '\n== %s\n' "$1"; }
 
@@ -85,6 +87,22 @@ prove_red() {
   plant "the home frames a host page"       build.py     's#first = "topology/topoforge/index.html?load=/" + index\["file"\]#first = "topology/app.html"#'
   plant "the demo policy allows inline js"  build.py     "s#DEMO_POLICY = (\"default-src 'self'; script-src 'self';#DEMO_POLICY = (\"default-src 'self'; script-src 'self' 'unsafe-inline';#"
   plant "a card without its drawing link"   build.py     '/t.append(a("index.html?drawing=%s#top" % r\["id"\], "Drawing", "act"))/d'
+  plant "a project drawn from the catalog alone" drawings.py  's#        for f in ("TOPOLOGY.md", ".topology.md"):#        for f in (".topology.md",):#'
+  plant "a notation baked into the shape"    drawings.py  's#        shape, word = PR.shape_for(el, notation, table)#        shape, word = "rounded", el["role"]#'
+  plant "a process with no BPMN page"        processes.py 's#^CHOICES = ("bpmn", "bpmnplus", "flowchart")#CHOICES = ("bpmnplus", "flowchart")#'
+  plant "a process not offered on the home"  build.py     's#        items.append(.<li>%s: %s; as a file#        0 and items.append("<li>%s: %s; as a file#'
+  plant "a pinned tarball's sha256 altered"  vendor.py    's#sha256="33cd651dcae080f76c110bdb035faf9e0bab35f44cd4bd9cf8cf40ae7ed97256"#sha256="43cd651dcae080f76c110bdb035faf9e0bab35f44cd4bd9cf8cf40ae7ed97256"#'
+  plant "a library left on another host"     catalog.py   '/vue@3\/dist\/vue.global.prod.js"><\/script>., ./d'
+  plant "a minified library without source"  demos.py     's#p\["licence"\]\[0\], "%s/%s" % (V.folder(p), full)))#p["licence"][0], None))#'
+  plant "eval allowed for every demo"        build.py     "s#DEMO_POLICY = (\"default-src 'self'; script-src 'self';#DEMO_POLICY = (\"default-src 'self'; script-src 'self' 'unsafe-eval';#"
+  plant "NextTime credited by another name"  catalog.py   "s#credit=\"definitelynotaspren's work.\", licence=#credit=\"Someone's work.\", licence=#"
+  plant "the palette copied, not as staged"  share.py     's#        f.write(js)#        f.write(js + "// changed\\n")#'
+  plant "the palette missing from the pages" build.py     's#(SHARED\["markup"\] + "\\n") if SHARED\["staged"\] else ""#""#'
+  plant "the CI strip left off the home"     build.py     's#topology_area(have, index) + (.<div class="wrap shared-wrap">%s</div>. % ci_strip() if ci_strip() else "")#topology_area(have, index)#'
+  plant "badges read another layout"         src/js/badges.js 's#^  var LINE = /^ {2}"#  var LINE = /^ *"#'
+  plant "badges ask another host"            src/js/badges.js "s#new URL('/dist/' + name#new URL('https://feeds.example/dist/' + name#"
+  plant "the site policy reads other hosts"  deploy/nginx-corwin.cloud.conf "s#font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src#font-src 'self'; connect-src *; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src#"
+  plant "a channel with no status line"      build.py     's#    if r.get("channel"):#    if False:#'
   if [ $bad = 0 ]; then echo "PROVE-RED OK"; return 0; fi
   echo "PROVE-RED FAILED"; return 1
 }

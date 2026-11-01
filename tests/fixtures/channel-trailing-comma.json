@@ -1,0 +1,11 @@
+{
+  "format": "channel/1",
+  "channel": "about-corwin",
+  "revision": "40ffbb38e32a8289aa817446ab8a62334acdde91",
+  "stamp": "20261101-181357",
+  "artifact": "https://corwin.cloud/dist/about-corwin/about-corwin-20261101-181357-40ffbb38e32a.tar.gz",
+  "sha256": "674e83422ef2ab1ddcd5d5750acd82d5b684b70a068e33d0633e8669c6d007e2",
+  "key": "about-corwin:40ffbb38e32a:6bace5a9:5d39ff7d",
+  "size": "68432",
+  "inputs": "git:40ffbb38e32a ci:6bace5a9 blog:5d39ff7d",
+}

@@ -5,7 +5,7 @@
 // What the Python checks cannot see: the script handles every fragment the pages link to, and the
 // keyboard pattern of the tabs is in the script; the deploy policy stays strict.
 import { readFileSync, existsSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -147,11 +147,81 @@ test('stage.js reads one key, TopoForge\'s own, writes nothing and asks the netw
   assert.ok(!/\bsrc\s*=\s*[^;]*\?load=/.test(s.replace(/getAttribute\('data-first'\)/g, '')), 'stage.js builds its own ?load= address');
 });
 
-test('the demo policy runs no inline script and names no other host', () => {
+test('the demo policy runs no inline script and names no other host; eval only in a folder that says why', () => {
   const f = join(root, 'generated', 'demo-csp.conf');
   if (!existsSync(f)) return;
-  const p = /Content-Security-Policy "([^"]+)"/.exec(readFileSync(f, 'utf8'))[1];
-  const script = /script-src ([^;]*)/.exec(p)[1];
-  assert.equal(script.trim(), "'self'");
-  assert.ok(!/https?:/.test(p));
+  const conf = readFileSync(f, 'utf8');
+  const p = /^add_header Content-Security-Policy "([^"]+)"/m.exec(conf)[1];
+  assert.equal(/script-src ([^;]*)/.exec(p)[1].trim(), "'self'");
+  const lines = conf.split('\n').filter((l) => !l.startsWith('#')).join('\n');
+  const outside = lines.replace(/location [^{]*\{[^}]*\}/g, '');
+  assert.ok(!outside.includes('unsafe-eval'), 'unsafe-eval outside a demo folder of its own');
+  for (const m of conf.matchAll(/# ([\w.-]+): ([^\n]+)\nlocation \^~ (\S+) \{([^}]*)\}/g)) {
+    assert.equal(m[3], `/demo/${m[1]}/app/`, 'a policy of its own for a folder that is not one demo\'s app');
+    assert.equal(/script-src ([^;]*)/.exec(m[4])[1].trim(), "'self' 'unsafe-eval'", m[1]);
+    assert.ok(m[2].length > 20, m[1] + ': no reason written beside it');
+  }
+  assert.equal((lines.match(/unsafe-eval/g) || []).length, (conf.match(/^location /gm) || []).length, 'unsafe-eval with no reason and folder of its own');
+  assert.ok(!/https?:/.test(conf) && !conf.includes('unsafe-inline\' ;') && !/script-src[^;]*unsafe-inline/.test(conf));
+});
+
+// ---- release channels: badges.js reads the feed of c4's d/channels/SPEC.md -------------------------
+import { createRequire } from 'node:module';
+const req = createRequire(import.meta.url);
+const fx = (n) => readFileSync(join(root, 'tests', 'fixtures', n), 'utf8');
+const badgesSrc = rd('js/badges.js');
+
+test('badges.js reads a feed in the line form and says it in words; anything else is nothing', () => {
+  const B = req(resolve(out, 'js', 'badges.js'));
+  const good = B.readFeed(fx('channel-good.json'), 'about-corwin');
+  assert.ok(good, 'the good feed was refused');
+  assert.equal(B.describe(good), 'Last revision 40ffbb38e32a, made 1 November 2026 at 18:13 UTC.');
+  for (const bad of ['channel-one-line.json', 'channel-four-spaces.json', 'channel-other-channel.json', 'channel-bad-stamp.json', 'channel-no-format.json', 'channel-trailing-comma.json']) {
+    assert.equal(B.readFeed(fx(bad), 'about-corwin'), null, bad + ' was read as a feed');
+  }
+});
+
+test('badges.js asks only this site, only for /dist/<channel>/channel.json, and stores nothing', () => {
+  assert.ok(!/https?:/.test(badgesSrc.split('\n').slice(1).join('\n')), 'badges.js names an address on another host');
+  assert.match(badgesSrc, /new URL\('\/dist\/' \+ name \+ '\/channel\.json', root\.location\.href\)/);
+  assert.match(badgesSrc, /url\.origin !== root\.location\.origin/);
+  assert.equal((badgesSrc.match(/fetch\(/g) || []).length, 1);
+  for (const bad of ['localStorage', 'sessionStorage', 'XMLHttpRequest', 'WebSocket', 'sendBeacon', 'document.cookie', 'eval(', 'innerHTML']) assert.ok(!badgesSrc.includes(bad), 'badges.js uses ' + bad);
+});
+
+test('the site policy lets a page read this site only: connect-src is self', () => {
+  const conf = readFileSync(join(root, 'deploy', 'nginx-corwin.cloud.conf'), 'utf8');
+  const site = /Content-Security-Policy "(default-src 'self'; script-src 'self'; style-src 'self';[^"]+)"/.exec(conf)[1];
+  assert.equal(/connect-src ([^;]*)/.exec(site)[1].trim(), "'self'");
+});
+
+// ---- processes: the notation is data, decided by topology's own table ----------------------------
+test('every process element is drawn with the shape its notation gives its role, as topology-core.js says', async () => {
+  const core = join(topo, 'www', 'js', 'topology-core.js');
+  if (!existsSync(core) || !hasDrawings) return;
+  const { NOTATIONS } = await import(core);
+  const ix = JSON.parse(rd('drawings/index.json'));
+  assert.ok(Object.keys(ix.processes || {}).length >= 1, 'no process in the default set');
+  let n = 0;
+  for (const [pid, v] of Object.entries(ix.processes)) {
+    for (const [key, file] of Object.entries(v.files)) {
+      const nt = NOTATIONS[key]; assert.ok(nt, key);
+      const page = JSON.parse(rd(file)).pages[0];
+      for (const node of page.nodes) {
+        const d = node.data || {};
+        if (!d.element) continue;
+        const role = d.element.replace(' (end)', '');
+        let want;
+        if (role === 'lane') want = nt.elements.lane || 'zone';
+        else if (key === 'bpmnplus' && d.act && nt.elements[d.act]) want = nt.elements[d.act];
+        else if (key === 'flowchart') want = nt.elements[{ event: d.element.endsWith('(end)') ? 'end' : 'start', task: 'step', gateway: 'decision', data: 'io' }[role]] || 'rounded';
+        else want = nt.elements[role] || 'rounded';
+        assert.equal(node.type, want, `${pid} as ${key}: ${node.id} (${d.element}${d.act ? ', ' + d.act : ''}) drawn as ${node.type}`);
+        for (const k of ['bpmn', 'bpmnplus', 'flowchart']) assert.ok(d['as ' + NOTATIONS[k].name], `${node.id} does not say how ${NOTATIONS[k].name} reads it`);
+        n++;
+      }
+    }
+    assert.equal(set.pages[v.page].name, v.name, pid + ': not in the default set where the index says');
+  }
+  assert.ok(n >= 30, 'process elements checked: ' + n);
 });

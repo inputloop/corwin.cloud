@@ -229,3 +229,30 @@ button.linkish { font: inherit; color: var(--link); background: none; border: 0;
 .swatch { display: inline-block; padding: var(--s1) var(--s2); font: 700 15px/22px var(--mono); border: 1px solid var(--border); }
 @media (max-width: 40rem) { .pairs td:nth-child(3), .pairs th:nth-child(3) { display: none; } }
 #jslicense-labels1 { width: 100%; table-layout: fixed; } #jslicense-labels1 td, #jslicense-labels1 th { overflow-wrap: anywhere; vertical-align: top; }
+
+/* ---- shared from about-corwin: the Customize palette and the CI strip -------------------------
+   css/shared.css is staged at build time from about-corwin's own stylesheet (share.py). It speaks
+   about-corwin's token names; here they are given this site's colours, inside those two pieces
+   only. The reading settings it sets on <html> scale this site's reading text (main), not the bars,
+   the buttons or the drawing; "hc" is egad's Vivendi pair, as on aboutcorwin.com. */
+.custom, .shared-ci { --surface: var(--canvas-dim); --ink: var(--text); --muted: var(--text-dim); --rule: var(--border);
+  --ml-active: var(--canvas-active); --shadow: none; }
+main.wrap, main .panel, main .shared-wrap { font-size: calc(1rem * var(--read-scale, 1)); line-height: var(--read-lh, 1.625); }
+main .lede, main .hint { max-width: var(--measure, 70ch); }
+.shared-wrap { padding-bottom: 0; }
+.shared-ci { max-width: 34rem; }
+:root[data-theme="hc"] {
+  --canvas: #000000; --canvas-dim: #1e1e1e; --canvas-line: #535353; --canvas-active: #535353;
+  --canvas-inactive: #303030; --text: #ffffff; --text-dim: #d0d0d0; --text-alt: #c6daff;
+  --link: #79a8ff; --todo: #ff5f59; --done: #44bc44; --tag: #00d3d0; --warn: #d0bc00;
+  --border: #9f9f9f; --control: #d0d0d0; --focus: #ffd400; color-scheme: dark;
+}
+:root[data-theme="hc"] a { text-decoration-thickness: 2px; }
+
+/* ---- release channels: a status line, filled by js/badges.js from the channel feed ----------- */
+.channel { font-size: 14px; line-height: 22px; color: var(--text-dim); border-left: 3px solid var(--done); padding-left: var(--s2); }
+.channel[hidden] { display: none; }
+.processes ul { margin-top: 0; }
+table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: break-all; }
+.table-scroll { overflow-x: auto; max-width: 100%; }
+.vendor td:nth-child(3), .vendor th:nth-child(3) { display: table-cell; }

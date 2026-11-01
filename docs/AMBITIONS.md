@@ -30,10 +30,11 @@ workflows and scenes, and Bryant's five pages of how Gitcha works. The pages are
 tabs. This site is public, so its floor is "never": a private part of a `TOPOLOGY.md` is never drawn,
 and the page says one was kept back.
 
-**Open.** Nine projects have no `TOPOLOGY.md` yet (card-games.el, .github, ta,
-three-phase-transcription, journal, pubs, the PHP backport, egad and hello-taxgnomes, counted
-2026-11-01); their pages come from the catalog alone and say so. Writing those files in topology's
-`examples/inputloop/` fills their pages in on the next build.
+**Done (next pass, 2026-11-01).** The nine projects that had no `TOPOLOGY.md` (card-games.el, .github,
+ta, three-phase-transcription, journal, pubs, the PHP backport, egad and hello-taxgnomes) have one in
+topology's `examples/inputloop/`, written from each project's own README, with four path files
+(pubs-refresh, transcript-sync, egad-emit, profile-build). A check fails if a page is drawn from the
+catalog alone.
 
 ## 3. Choices belong to the person: late, reversible, visible
 
@@ -56,9 +57,13 @@ works). TopoForge's own Layers panel switches views. Every project with a "how i
 flowchart drawn with TopoForge's own flowchart shapes. The look and notation menus that changed only
 the page around TopoForge are tucked away (see the UI audit).
 
-**Open.** BPMN and BPMN+ drawings as data (lanes as zones, gateways as diamonds) for a project whose
-work has a process worth drawing; asking Bryant whether TopoForge could relabel its palette per
-notation.
+**Today (next pass).** Two processes are drawn as data: aboutcorwin.com's assembly line (mint on gw33,
+the feed, the pull on the web host) and a GNU release uploaded as a triplet. Each element says what
+it is; topology's own notation table decides the shape. Each is a page in the drawing (BPMN) and a
+file in BPMN, BPMN+ and flowchart, offered under the drawing.
+
+**Open.** Asking Bryant whether TopoForge could relabel its palette per notation; Corwin's own BPMN+
+may hold more than the act axis.
 
 ## 5. A showcase that hosts every demo it can
 
@@ -71,8 +76,12 @@ colours run here, staged at build time from their public repositories. Gitcha an
 drawings. NextTime, fourSwordsFromThePast, vibrobeast, vibrobeast-skills, card-games.el and the PHP
 backport say what they need and how to run them.
 
-**Open.** NextTime's demo loads Vue and MapLibre from another host; serving our own pinned copies
-would let it run here. A "ring" page naming the other members, once there are any.
+**Today (next pass).** NextTime's demo runs here on pinned copies of Vue, Vue Router and MapLibre,
+checked by sha256 at build time; its map has no base map (the tiles would come from another server).
+Its folder alone allows the browser's eval, because Vue compiles the demo's templates in the page.
+
+**Open.** A "ring" page naming the other members, once there are any. Precompiling NextTime's
+templates would drop the eval exception; that is a change to the demo, so it is the demo's author's.
 
 ## 6. One house design, shared, not forked
 
@@ -83,16 +92,18 @@ share them, do not fork them.
 **Today.** The colours and the mode-line are shared already. egad has a demo page that measures its
 own promises.
 
-**Open.** The Customize palette and the CI gadget live in about-corwin; the way to share them is the
-way topology is shared: stage them at build time from a checkout, not copy them.
+**Today (next pass).** The Customize palette (kept per browser) and the Emacs CI strip are staged at
+build time from an about-corwin checkout, unchanged, and a check proves it byte for byte.
 
 ## 7. Live data in one shape
 
 **Read.** The channel feed (the last revision per channel), specified in c4's `d/channels/SPEC.md`;
 per-app status badges can read it later.
 
-**Open.** Not built here yet. When the feed is public, a badge on each demo and directory card can
-read it from this site's own address.
+**Today (next pass).** The about-corwin directory card reads its channel feed from this site and says
+its last revision and when it was made, in words. A missing feed leaves the line hidden.
+
+**Open.** Badges on demo pages, once a demo app has a channel of its own.
 
 ## 8. From the physical to the graphical
 

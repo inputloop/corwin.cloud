@@ -9,7 +9,9 @@ repository never carries them. Two changes are made to the staged copy, and only
   - every inline <script> is moved, unchanged, into its own file beside the page (inline-N.js) and
     loaded from there, in the same place, so the site's policy (script-src 'self') can run it with
     no hash and no 'unsafe-inline' for scripts;
-  - a <link rel="jslicense"> to this site's licence table is added to the head, for GNU LibreJS.
+  - a <link rel="jslicense"> to this site's licence table is added to the head, for GNU LibreJS;
+  - for a demo with `vendor` pins (vendor.py), each address on another host that its `rewrite` list
+    names is replaced by this site's pinned copy, and the staging is refused if one is left over.
 
 egad's demo is derived: a page of its colour pairs, measured, built from its tokens file.
 Returns {id: {"staged": bool, "scripts": [(path, licence, source)], "commit": str or None, "why": str}}.
@@ -22,6 +24,11 @@ import shutil
 import subprocess
 
 import catalog as C
+import vendor as V
+
+GPL_MAGNET = "magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&dn=gpl-3.0.txt"
+MAGNETS = {"GPL-3.0-or-later": GPL_MAGNET, "AGPL-3.0-or-later": "magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt"}
+EXTRA = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src", "demo-extra")
 
 SCRIPT = re.compile(r"<script(?![^>]*\bsrc=)([^>]*)>(.*?)</script>", re.S | re.I)
 
@@ -46,7 +53,7 @@ def externalize(html_path, licence):
         body = m.group(2)
         with open(os.path.join(here, name), "w", encoding="utf-8") as g:
             if "@license" not in body:
-                g.write("// @license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&dn=gpl-3.0.txt %s\n" % licence)
+                g.write("// @license %s %s\n" % (MAGNETS.get(licence, GPL_MAGNET), licence))
                 g.write("// Moved here from an inline script in %s by corwin.cloud's build; the code is unchanged.\n" % os.path.basename(html_path))
                 g.write(body.strip("\n") + "\n// @license-end\n")
             else:
@@ -88,9 +95,14 @@ def stage_one(d, out, idir):
             res["why"] = "%s has no %s" % (d["repo"], rel)
             shutil.rmtree(app, ignore_errors=True)
             return res
-    lic = d["licence"].split(";")[0].split(".")[0].replace("Code ", "").strip()
-    lic = "GPL-3.0-or-later" if "GPL-3.0-or-later" in lic else lic
+    lic = d.get("librejs") or "GPL-3.0-or-later"
     scripts = list(d.get("scripts", []))
+    if d.get("vendor") or d.get("rewrite"):
+        why = localize(d, app, scripts)
+        if why:
+            res["why"] = why
+            shutil.rmtree(app, ignore_errors=True)
+            return res
     for dp, _, fs in os.walk(app):
         for f in fs:
             if f.endswith((".html", ".htm")):
@@ -98,6 +110,44 @@ def stage_one(d, out, idir):
                     scripts.append((os.path.relpath(os.path.join(dp, n), app), lic, None))
     res.update(staged=True, scripts=scripts)
     return res
+
+
+def localize(d, app, scripts):
+    """Put the demo's pinned libraries and this site's extra files beside it, and point its pages at
+    them. Returns None, or the reason the demo cannot be staged."""
+    try:
+        for name in d.get("vendor", []):
+            p = V.by_name(name)
+            V.stage(p, app)
+            for mini, full in p["min"].items():
+                scripts.append(("%s/%s" % (V.folder(p), mini), p["licence"][0], "%s/%s" % (V.folder(p), full)))
+            for f in p["files"]:
+                if f.endswith(".js") and f not in p["min"]:
+                    scripts.append(("%s/%s" % (V.folder(p), f), p["licence"][0], None))
+    except (ValueError, OSError, KeyError) as ex:
+        return "a pinned library could not be staged: %s" % ex
+    extra = os.path.join(EXTRA, d["id"])
+    if os.path.isdir(extra):
+        for f in sorted(os.listdir(extra)):
+            shutil.copyfile(os.path.join(extra, f), os.path.join(app, f))
+            if f.endswith(".js"):
+                scripts.append((f, "GPL-3.0-or-later", None))
+    for dp, _, fs in os.walk(app):
+        for f in fs:
+            if not f.endswith((".html", ".htm")):
+                continue
+            path = os.path.join(dp, f)
+            with open(path, encoding="utf-8") as fh:
+                t = fh.read()
+            for old, new in d.get("rewrite", []):
+                t = t.replace(old, new)
+            left = [old for old, _ in d.get("rewrite", []) if old in t]
+            left += re.findall(r"<(?:script|link)[^>]+(?:src|href)=[\"']?(https?://[^\"' >]+)", t)
+            if left:
+                return "%s still names another host after the rewrite: %s" % (f, ", ".join(sorted(set(left))))
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(t)
+    return None
 
 
 # ---- egad: the colour pairs, measured ------------------------------------------------------------
