@@ -95,6 +95,13 @@ class SiteChecks(unittest.TestCase):
                 if frag and target.endswith(".html"):
                     self.assertIn(frag, parse(target).ids, "%s: %s has no #%s" % (rel, v, frag))
 
+    def test_pubs_is_in_the_directory_and_on_the_allow_list(self):
+        self.assertIn("https://github.com/inputloop/pubs", catalog.PUBLIC_URLS)
+        with open(os.path.join(OUT, "directory.html"), encoding="utf-8") as f:
+            page = f.read()
+        self.assertIn('href="https://github.com/inputloop/pubs"', page)
+        self.assertIn("The reading room", page)
+
     def test_external_links_are_only_public_ones(self):
         allowed = set(catalog.PUBLIC_URLS)
         for rel in PAGES:

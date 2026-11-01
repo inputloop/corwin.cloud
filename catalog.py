@@ -32,6 +32,7 @@ PUBLIC_URLS = [
     ORG + "/ta",
     ORG + "/three-phase-transcription",
     ORG + "/journal",
+    ORG + "/pubs",
     "https://github.com/mplscorwin/card-games.el",
     "https://melpa.org/#/card-games",
     "https://github.com/snesrev/zelda3",
@@ -128,6 +129,9 @@ REPOS = [
     dict(id="journal", name="journal", kind="site", public=True, tab=None, url=ORG + "/journal",
          one="The open shelf: dated, PGP-clearsigned accounts of the shop's work, beginning with two companion accounts of the 2026 GNU Savannah forensic review.",
          credit="Corwin and Claude (Anthropic), as the repository's own attribution line gives it"),
+    dict(id="pubs", name="pubs", kind="site", public=True, tab=None, url=ORG + "/pubs",
+         one="The reading room: a copy of the shop's publication shelf, with papers, posts, persona sheets, the canon and four game books, refreshed from the working folder.",
+         credit="Corwin"),
 ]
 
 # ---------------------------------------------------------------------------------------------

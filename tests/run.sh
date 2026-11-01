@@ -54,6 +54,8 @@ prove_red() {
   plant "an inline script"                  build.py     's#<script src="js/site.js" defer></script>#<script>1</script>#'
   plant "an inline style attribute"         build.py     's#<a class="skip"#<a style="x" class="skip"#'
   plant "a script from another host"        build.py     's#<script src="js/site.js" defer></script>#<script src="https://cdn.example.com/a.js"></script>#'
+  plant "pubs not on the public allow-list"  catalog.py   '/^    ORG + "\/pubs",$/d'
+  plant "pubs missing from the directory"   catalog.py   's#^    dict(id="pubs", name="pubs", kind="site", public=True, tab=None, url=ORG + "/pubs",#    dict(id="pubs", name="pubs", kind="site", public=True, tab=None, url=ORG + "/pubz",#'
   plant "a tab no directory card reaches"   catalog.py   's#tab="quantum3d5",#tab=None,#'
   plant "the tablist role missing"          build.py     's# role="tablist"##'
   plant "a script loses its LibreJS label"  src/js/site.js '1s#^.*$#// no label#'
