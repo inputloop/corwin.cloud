@@ -11,6 +11,7 @@ asks a local checkout of topology to stage its own www (sh bin/stage-www.sh DEST
 <out>/topology/ and, if there is no checkout, writes a clear placeholder and says so.
 """
 import argparse
+import json
 import base64
 import hashlib
 import html
@@ -21,10 +22,12 @@ import subprocess
 import sys
 
 import catalog as C
+import demos as D
+import drawings as G
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("site.js",)
+JS_FILES = ("site.js", "stage.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
@@ -98,7 +101,7 @@ def scenes_svg():
 
 # ---- shared furniture ------------------------------------------------------------------------
 
-def head(title, desc, here):
+def head(title, desc, here, extra=""):
     return """<!doctype html>
 <!--
 SPDX-FileCopyrightText: 2026 INPUTLOOP
@@ -115,15 +118,15 @@ Built by build.py from catalog.py and src/. Edit those, not this file.
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
 <script src="js/site.js" defer></script>
-</head>
+%s</head>
 <body data-page="%s">
 <a class="skip" href="#main">Skip to the content</a>
-""" % (e(title), e(desc), here)
+""" % (e(title), e(desc), extra, here)
 
 
 def nav(here):
     items = [("home", "Home", "index.html"), ("directory", "Directory", "directory.html"),
-             ("packages", "Packages", "packages.html")]
+             ("demos", "Demos", "demo/index.html"), ("packages", "Packages", "packages.html")]
     lis = []
     for key, label, href in items:
         cur = ' aria-current="page"' if key == here else ""
@@ -134,10 +137,11 @@ def nav(here):
 
 
 def everywhere():
-    pages = [("Home", "index.html"), ("Directory", "directory.html"), ("Packages", "packages.html"),
-             ("JavaScript licences", "jslicense.html")]
+    pages = [("Home", "index.html"), ("Directory", "directory.html"), ("Demos", "demo/index.html"),
+             ("Packages", "packages.html"), ("JavaScript licences", "jslicense.html")]
     li = ['<li><a href="%s">%s</a></li>' % (h, l) for l, h in pages]
     li += ['<li><a href="index.html#tab-%s">Tab: %s</a></li>' % (x["id"], e(x["name"])) for x in C.APPS]
+    li += ['<li><a href="demo/%s/">Demo: %s</a></li>' % (d["id"], e(d["name"])) for d in C.DEMOS]
     li.append('<li><a href="%s">About (aboutcorwin.com)</a></li>' % C.ABOUT_URL)
     return "".join(li)
 
@@ -192,8 +196,10 @@ def render_panel(app):
     links = []
     for label, url in app["links"]:
         links.append("<li>%s</li>" % a(url, e(label)))
-    if app.get("demo"):
-        links.append("<li>%s</li>" % a(app["demo"], "Demo", "demo"))
+    dm = demo_of(app["repo"])
+    if dm:
+        links.append("<li>%s</li>" % a("demo/%s/" % dm["id"], "Demo page" if dm["runs"] != "elsewhere" else "How to run it", "demo"))
+    links.append("<li>%s</li>" % a("index.html?drawing=%s#top" % app["repo"], "Its page in the drawing"))
     private = ""
     if not r["public"]:
         private = '<p class="private">Repository: <strong>not public yet</strong>.</p>'
@@ -232,28 +238,47 @@ def render_tabs():
     panels = "\n".join(render_panel(x) for x in C.APPS)
     return ('<section class="tabs" id="projects" aria-labelledby="projects-h">'
             '<h2 id="projects-h" class="tabs-h">The projects</h2>'
-            '<p class="hint">One tab each, with the design in full. <span class="js-only-inline">Arrow keys move between tabs; Home and End jump to the first and last.</span></p>'
+            '<p class="hint">The projects in words: one tab each, with the design in full. Every project in the directory also has a page in the drawing above. <span class="js-only-inline">Arrow keys move between tabs; Home and End jump to the first and last.</span></p>'
             '<div class="tablist" role="tablist" aria-label="Projects">%s</div>\n%s</section>' % ("".join(tabs), panels))
 
 
 # ---- pages -----------------------------------------------------------------------------------
 
-def topology_area(have):
-    if have:
-        return ('<section class="stage" id="top" aria-labelledby="stage-h"><h1 id="stage-h" class="visually-hidden">topology</h1>'
-                '<iframe id="topology" class="topology" src="topology/app.html" title="topology: draw what you have, from the files that describe it"></iframe>'
-                '<p class="stage-note"><a href="topology/app.html">Open topology full size</a> · <a href="topology/index.html">its own front door</a>. '
-                'Everything you draw stays in your browser. TopoForge, the drawing app inside, is Bryant Frankford\'s.</p>'
-                '</section>')
-    return ('<section class="stage placeholder" id="top" aria-labelledby="stage-h"><h1 id="stage-h">topology</h1>'
-            '<p class="lede">topology is drawn here when this site is built with a checkout of it. This build had none, so this is a placeholder.</p>'
-            '<p>topology is public (branch corwin) on the inputloop GitHub. See <a href="#tab-topology">its tab</a> for what it is.</p></section>')
+def topology_area(have, index):
+    """The front door is TopoForge itself, full width, opened on the shop's drawings: one page per
+    project, the tabs along its bottom edge. js/stage.js picks the address: the shop's drawings on a
+    first visit (TopoForge's own ?load=), the person's working copy when TopoForge has kept one."""
+    if not have:
+        return ('<section class="stage placeholder" id="top" aria-labelledby="stage-h"><h1 id="stage-h">topology</h1>'
+                '<p class="lede">topology is drawn here when this site is built with a checkout of it. This build had none, so this is a placeholder.</p>'
+                '<p>topology is public (branch corwin) on the inputloop GitHub. See <a href="#tab-topology">its tab</a> for what it is.</p></section>')
+    pages = {pid: index["pages"][v["page"]]["name"] for pid, v in index["projects"].items()}
+    if index.get("gitcha_bryant"):
+        pages["gitcha-bryant"] = index["pages"][index["gitcha_bryant"]["page"]]["name"]
+    first = "topology/topoforge/index.html?load=/" + index["file"]
+    return ('<section class="stage" id="top" aria-labelledby="stage-h">'
+            '<h1 id="stage-h" class="stage-h">The shop, drawn <span class="muted">one page per project: the tabs along the bottom of the drawing</span></h1>'
+            '<iframe id="topology" class="topology" title="TopoForge, opened on the shop\'s drawings" data-first="%s" '
+            'data-resume="topology/topoforge/index.html" data-doc="%s" data-pages="%s"></iframe>'
+            '<noscript><p class="stage-off">TopoForge needs JavaScript. Without it: <a href="directory.html">the directory</a>, '
+            '<a href="#projects">the projects in words</a> below, and <a href="%s" download>the drawings as a file</a> to open in your own copy.</p></noscript>'
+            '<p class="stage-note">TopoForge, the drawing app, is Bryant Frankford\'s. What you draw stays in this browser until you save it yourself (File). '
+            '<a href="topology/topoforge/index.html">Full size</a> · <a href="%s" download>the drawings as a file</a> · <a href="topology/">topology\'s own front door</a>. '
+            '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button> '
+            '<span id="stage-msg" role="status"></span></p>'
+            '</section>') % (e(first, quote=True), e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True),
+                             e(index["file"], quote=True), e(index["file"], quote=True))
 
 
-def page_index(have):
-    return (head("corwin.cloud: topology, and the projects around it",
-                 "topology, the drawing app, with a tab of full design detail for each of inputloop's public apps and obsmage.", "home")
-            + nav("home") + '<main id="main">\n' + topology_area(have) + render_tabs() + "</main>\n" + foot("corwin.cloud"))
+def page_index(have, index):
+    return (head("corwin.cloud: the shop, drawn",
+                 "TopoForge, opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
+                 '<script src="js/stage.js" defer></script>\n')
+            + nav("home") + '<main id="main">\n' + topology_area(have, index) + render_tabs() + "</main>\n" + foot("corwin.cloud"))
+
+
+def demo_of(repo_id):
+    return next((d for d in C.DEMOS if d["repo"] == repo_id), None)
 
 
 def card(r):
@@ -264,8 +289,10 @@ def card(r):
         t.append(a(r["url"], "Repository", "act"))
     else:
         t.append('<span class="act off">Repository: not public yet</span>')
-    if r.get("demo"):
-        t.append(a(r["demo"], "Demo", "act"))
+    t.append(a("index.html?drawing=%s#top" % r["id"], "Drawing", "act"))
+    dm = demo_of(r["id"])
+    if dm:
+        t.append(a("demo/%s/" % dm["id"], "Demo" if dm["runs"] != "elsewhere" else "How to run it", "act"))
     return ('<li data-kind="%s"><article class="card" aria-labelledby="c-%s"><h3 id="c-%s">%s</h3>'
             '<p class="kind">%s · %s</p><p>%s</p><p class="credit">Made by: %s</p><p class="acts">%s</p></article></li>'
             % (r["kind"], re.sub(r"\W", "-", r["id"]), re.sub(r"\W", "-", r["id"]), e(r["name"]),
@@ -282,7 +309,7 @@ def page_directory():
     return (head("Directory: everything inputloop makes", "Every repository we can name, what it does, and where to find its design, its code and its demo.", "directory")
             + nav("directory") + """<main id="main" class="wrap">
 <h1>Directory</h1>
-<p class="lede">Every repository we can name: %d of them, %d public. Each card goes to its design tab, its code if the code is public, and its demo if there is one. Private repositories are named so you can see what exists; they have no link.</p>
+<p class="lede">Every repository we can name: %d of them, %d public. Each card opens its page in the drawing on the home page, its code if the code is public, its demo or how to run it, and its design tab where it has one. Private repositories are named so you can see what exists; they have no link.</p>
 <fieldset class="filter"><legend>Show only</legend>%s
 <ul class="grid">%s</ul></fieldset>
 <p class="hint">Counted from this site's catalog, 2026-11-01.</p>
@@ -318,18 +345,121 @@ def page_404():
             '<div class="modeline"><span class="ml-link"><span class="ml-buf">corwin.cloud</span> <span>[No match]</span></span></div>\n</body>\n</html>\n')
 
 
-def page_jslicense():
+def page_jslicense(staged):
+    lab = '<a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU-GPL-3.0-or-later</a>'
     rows = []
     for f in JS_FILES:
-        rows.append('<tr><td><a href="js/%s">%s</a></td><td><a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU-GPL-3.0-or-later</a></td><td><a href="js/%s">%s</a></td></tr>' % (f, f, f, f))
+        rows.append('<tr><td><a href="js/%s">%s</a></td><td>%s</td><td><a href="js/%s">%s</a></td></tr>' % (f, f, lab, f, f))
+    for did, res in sorted(staged.items()):
+        for path, lic, source in res.get("scripts", []):
+            url = "demo/%s/app/%s" % (did, path)
+            if lic.startswith("GPL-3.0"):
+                lic_cell = lab
+            else:
+                lic_cell = e(lic) + (" (minified; its full source: %s)" % a(source, "p5.js 1.9.0") if source else "")
+            rows.append('<tr><td><a href="%s">%s</a></td><td>%s</td><td><a href="%s">%s</a></td></tr>'
+                        % (url, e(url), lic_cell, url if not source else source, "this file" if not source else "upstream source"))
     return (head("JavaScript licence information", "The licence of every script on this site, in the form GNU LibreJS reads.", "jslicense")
             + nav("") + """<main id="main" class="wrap">
 <h1>JavaScript licence information</h1>
-<p>Every script on corwin.cloud is free software and is served from this site; nothing is minified. This table is in the form <a href="https://www.gnu.org/software/librejs/">GNU LibreJS</a> reads. The page works with scripts off.</p>
+<p>Every script on corwin.cloud is free software and is served from this site. This table is in the form <a href="https://www.gnu.org/software/librejs/">GNU LibreJS</a> reads, and lists the demos' scripts too. This site's own scripts are not minified. One demo carries a library minified, as its repository ships it (p5.js, in Quantum 3D5, for speed); its row links the full source. The pages work with scripts off, except the drawing app and the demos, which are programs.</p>
 <table id="jslicense-labels1"><thead><tr><th scope="col">Script</th><th scope="col">Licence</th><th scope="col">Source</th></tr></thead><tbody>%s</tbody></table>
 <p>topology, staged under /topology/ from its own checkout, carries its own scripts and its own licence notices.</p>
 </main>
 """ % "".join(rows) + foot("jslicense"))
+
+
+# ---- demos -----------------------------------------------------------------------------------
+
+def rebase(text, root):
+    """Make a page written for the site's top folder work from a sub-folder: prefix every relative
+    href and src (not #, not /, not a scheme) with root."""
+    return re.sub(r'(\b(?:href|src)=")(?![#/]|\./|[a-z]+:)', r"\1" + root, text)
+
+
+def demo_page(d, res, idir):
+    staged = bool(res and res.get("staged"))
+    acts, extra, body = [], "", []
+    if d["runs"] == "here" and staged and not d.get("derived"):
+        acts.append(a("./app/index.html", "Start the demo", "act primary"))
+        body.append("<p>It opens as a page of its own, from this site, in your browser. This site loads nothing from other hosts, so neither does the demo.</p>")
+    elif d["runs"] == "here" and not staged:
+        body.append('<p class="private">This build had no checkout of its repository, so the demo is not here today: %s.</p>' % e(res["why"] if res else "not staged"))
+    elif d["runs"] == "drawing":
+        target = "gitcha-bryant" if d["id"] == "gitcha" else d["repo"]
+        label = "Open Bryant's drawing of how it works" if d["id"] == "gitcha" else "Open it: the home page"
+        acts.append(a("index.html?drawing=%s#top" % target, label, "act primary"))
+    if d.get("why"):
+        body.append("<p><strong>Why it is not hosted here:</strong> %s</p>" % e(d["why"]))
+    if d.get("derived") == "egad" and staged:
+        extra = '<link rel="stylesheet" href="./app/egad-pairs.css">\n'
+        floors = {"text": 7.0, "text-aa": 4.5, "ui": 3.0}
+        rows = []
+        for theme, fgn, bgn, fg, bg, ratio, floor, why in res["pairs"]:
+            ok = ratio >= floors.get(floor, 0)
+            rows.append('<tr><td>%s</td><td><span class="swatch bg-%s fg-%s">Aa %s on %s</span></td><td>%s</td><td>%.2f:1</td><td>%s (%g:1): %s</td></tr>'
+                        % (e(theme), bg[1:], fg[1:], e(fgn), e(bgn), e(why), ratio, e(floor), floors.get(floor, 0), "met" if ok else "<strong>not met</strong>"))
+        body.append('<table class="pairs"><caption>Every pair egad promises, measured by this site\'s build (WCAG 2.1 contrast; floors: text 7:1, text-aa 4.5:1, ui 3:1)</caption>'
+                    '<thead><tr><th scope="col">Theme</th><th scope="col">Sample</th><th scope="col">Used for</th><th scope="col">Contrast</th><th scope="col">Floor</th></tr></thead><tbody>%s</tbody></table>' % "".join(rows))
+    shots = []
+    for rel, cap in d.get("shots", []):
+        src = os.path.join(idir or "", d["repo"], rel)
+        if os.path.isfile(src):
+            shots.append((os.path.basename(rel), cap))
+    if shots:
+        body.append('<div class="shots">%s</div>' % "".join(
+            '<figure><a href="./shots/%s"><img src="./shots/%s" alt="%s" loading="lazy" width="1200" height="760"></a><figcaption>%s</figcaption></figure>'
+            % (n, n, e(c), e(c)) for n, c in shots))
+    src_line = ""
+    if res and res.get("commit"):
+        src_line = '<div><dt>Staged from</dt><dd>%s at commit %s, when this site was built.</dd></div>' % (e(d["repo"]), e(res["commit"]))
+    links = "".join("<li>%s</li>" % a(u, e(l)) for l, u in d.get("links", []))
+    html_ = (head("%s: demo" % d["name"], d["what"], "demos", extra) + nav("demos") + """<main id="main" class="wrap">
+<p class="crumbs"><a href="demo/index.html">Demos</a></p>
+<h1>%s</h1>
+<p class="lede">%s</p>
+<p class="acts">%s</p>
+%s
+<dl class="facts">
+  <div><dt>Made by</dt><dd>%s</dd></div>
+  <div><dt>Licence</dt><dd>%s</dd></div>
+  <div><dt>Run it yourself</dt><dd>%s</dd></div>
+  %s
+</dl>
+<ul class="links" aria-label="Links">%s<li><a href="index.html?drawing=%s#top">Its page in the drawing</a></li></ul>
+</main>
+""" % (e(d["name"]), e(d["what"]), "".join(acts), "\n".join(body), e(d["credit"]), e(d["licence"]), e(d["run"]),
+       src_line, links, e(d["repo"])) + foot("demo/" + d["id"]))
+    return rebase(html_, "../../")
+
+
+def page_demos(staged):
+    items = []
+    words = {"here": "runs here", "drawing": "a drawing you can open", "elsewhere": "runs elsewhere: what it needs"}
+    for d in C.DEMOS:
+        res = staged.get(d["id"])
+        state = words[d["runs"]] if d["runs"] != "here" or (res and res.get("staged")) else "not in this build"
+        items.append('<li><article class="card" aria-labelledby="d-%s"><h2 id="d-%s"><a href="demo/%s/">%s</a></h2>'
+                     '<p class="kind">%s</p><p>%s</p><p class="credit">Made by: %s</p></article></li>'
+                     % (G.slug(d["id"]), G.slug(d["id"]), d["id"], e(d["name"]), e(state), e(d["what"]), e(d["credit"])))
+    html_ = (head("Demos: try what inputloop makes", "Every inputloop app that runs in a browser, running here; for the rest, what it needs and how to run it.", "demos")
+             + nav("demos") + """<main id="main" class="wrap">
+<h1>Demos</h1>
+<p class="lede">What runs in a browser runs here, from this site, staged from its public repository when the site was built. For the rest, a page says what it needs and how to run it yourself. Nothing here asks you for an account or sends anything anywhere.</p>
+<ul class="grid">%s</ul>
+</main>
+""" % "".join(items) + foot("demos"))
+    return rebase(html_, "../")
+
+
+def stage_shots(out, idir):
+    for d in C.DEMOS:
+        for rel, _ in d.get("shots", []):
+            src = os.path.join(idir or "", d["repo"], rel)
+            if os.path.isfile(src):
+                dst = os.path.join(out, "demo", d["id"], "shots", os.path.basename(rel))
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copyfile(src, dst)
 
 
 # ---- topology staging ------------------------------------------------------------------------
@@ -394,6 +524,21 @@ def write_topology_csp(dest):
                 "add_header Content-Security-Policy \"%s\" always;\n" % policy)
 
 
+DEMO_POLICY = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; "
+               "font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'none'; "
+               "form-action 'none'; frame-ancestors 'self'")
+
+
+def write_demo_csp():
+    """The policy for /demo/*/app/: scripts only from this site (the build moved every inline script
+    into a file), styles inline allowed (the apps set style attributes from their scripts, as
+    topology's pages do). Written to generated/demo-csp.conf for whoever keeps deploy/ to include."""
+    os.makedirs(os.path.join(ROOT, "generated"), exist_ok=True)
+    with open(os.path.join(ROOT, "generated", "demo-csp.conf"), "w", encoding="utf-8") as f:
+        f.write("# generated by build.py: the policy for /demo/*/app/ (no inline script; every script is a file here)\n"
+                "add_header Content-Security-Policy \"%s\" always;\n" % DEMO_POLICY)
+
+
 # ---- main ------------------------------------------------------------------------------------
 
 def write(out, name, text):
@@ -407,6 +552,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "public"))
     ap.add_argument("--topology", default=os.environ.get("TOPOLOGY_DIR", os.path.join(ROOT, "..", "topology")))
+    ap.add_argument("--inputloop", default=os.environ.get("INPUTLOOP_DIR", os.path.join(ROOT, "..", "inputloop")),
+                    help="a folder of checkouts of public inputloop repositories, for the demos and Bryant's drawing")
     args = ap.parse_args()
     out = os.path.abspath(args.out)
     shutil.rmtree(out, ignore_errors=True)
@@ -416,12 +563,25 @@ def main():
     for f in ("favicon.svg", "robots.txt"):
         shutil.copy(os.path.join(SRC, f), os.path.join(out, f))
     have = stage_topology(out, args.topology)
-    write(out, "index.html", page_index(have))
+    index = G.make(out, args.topology, args.inputloop)
+    staged = D.stage_all(out, args.inputloop)
+    stage_shots(out, args.inputloop)
+    for did, res in staged.items():
+        if not res["staged"]:
+            print("build: demo %s not staged: %s" % (did, res["why"]), file=sys.stderr)
+        if any(src for _, _, src in res.get("scripts", [])):
+            print("build: WARN demo %s serves a minified script (its upstream source is linked in jslicense.html)" % did, file=sys.stderr)
+    write_demo_csp()
+    write(out, "index.html", page_index(have, index))
+    write(out, "demo/index.html", page_demos(staged))
+    for d in C.DEMOS:
+        write(out, "demo/%s/index.html" % d["id"], demo_page(d, staged.get(d["id"]), args.inputloop))
     write(out, "directory.html", page_directory())
     write(out, "packages.html", page_packages())
-    write(out, "jslicense.html", page_jslicense())
+    write(out, "jslicense.html", page_jslicense(staged))
     write(out, "404.html", page_404())
-    print("build: wrote %s (topology %s)" % (out, "staged" if have else "PLACEHOLDER"))
+    print("build: wrote %s (topology %s; %d drawing pages; demos staged: %s)" % (
+        out, "staged" if have else "PLACEHOLDER", len(index["pages"]), ", ".join(k for k, v in staged.items() if v["staged"]) or "none"))
 
 
 if __name__ == "__main__":

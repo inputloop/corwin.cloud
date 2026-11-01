@@ -33,6 +33,13 @@ PUBLIC_URLS = [
     ORG + "/three-phase-transcription",
     ORG + "/journal",
     ORG + "/pubs",
+    ORG + "/egad",
+    ORG + "/hello-taxgnomes",
+    ORG + "/gitcha/blob/HEAD/INSTALL.md",
+    ORG + "/gitcha/tree/HEAD/topoforge",
+    ORG + "/fourSwordsFromThePast/tree/HEAD/docs/screenshots",
+    ORG + "/quantum3d5/tree/HEAD/vendor/p5",
+    "https://github.com/processing/p5.js/tree/v1.9.0",
     "https://github.com/mplscorwin/card-games.el",
     "https://melpa.org/#/card-games",
     "https://github.com/snesrev/zelda3",
@@ -43,6 +50,9 @@ PUBLIC_URLS = [
     "https://creativecommons.org/licenses/by-sa/4.0/",
     "mailto:" + MAIL,
 ]
+# Hosts the drawings may name. Any other host a TOPOLOGY.md names (a person's own computer) is drawn
+# as "a workstation" with no name: this site names only the public ghostwheel hosts and forges.
+PUBLIC_HOSTS_RE = r"^(gw\d+|code\.bru\.st|github\.com/inputloop)$"
 # Private repositories: named on the directory, never linked, never in a URL.
 PRIVATE_NAMES = ["obsmage", "obsmage-corwin", "c4"]
 
@@ -80,7 +90,7 @@ REPOS = [
          one="Written ways of working that Claude reads when a task calls for them.",
          credit="Corwin and Bryant"),
     dict(id="NextTime-Dev", name="NextTime-Dev", kind="app", public=True, tab="nexttime",
-         url=ORG + "/NextTime-Dev", demo=ORG + "/NextTime-Dev/blob/HEAD/demo/index.html",
+         url=ORG + "/NextTime-Dev",
          one="Time banking for Nextcloud: post a request, volunteer, earn hours, public ledger.",
          credit="Brigidt"),
     dict(id="fourSwordsFromThePast", name="fourSwordsFromThePast", kind="game", public=True,
@@ -132,6 +142,13 @@ REPOS = [
     dict(id="pubs", name="pubs", kind="site", public=True, tab=None, url=ORG + "/pubs",
          one="The reading room: a copy of the shop's publication shelf, with papers, posts, persona sheets, the canon and four game books, refreshed from the working folder.",
          credit="Corwin"),
+    dict(id="egad", name="egad", kind="platform", public=True, tab=None, url=ORG + "/egad",
+         one="The house design system: one set of colours, type and spacing traced to GNU Emacs's Modus themes, carried to the web, Org, Emacs and the apps you theme.",
+         credit="Corwin"),
+    dict(id="hello-taxgnomes", name="hello-taxgnomes", kind="learn", public=True, tab=None,
+         url=ORG + "/hello-taxgnomes",
+         one="The Gnemonic Word Mines: pick a word, move a four-way slider (simpler, denser, moodier, drier), and every sentence says who wrote it.",
+         credit="Corwin Brust and Contributors"),
 ]
 
 # ---------------------------------------------------------------------------------------------
@@ -251,7 +268,7 @@ APPS = [
         credit="Brigidt's work. Our part is hosting it among the shop's repositories.",
         needs="A Nextcloud (29 to 35).",
         links=[("Repository", ORG + "/NextTime-Dev")],
-        demo=ORG + "/NextTime-Dev/blob/HEAD/demo/index.html",
+        demo=None,
     ),
     dict(
         id="four-swords", name="fourSwordsFromThePast", repo="fourSwordsFromThePast",
@@ -410,3 +427,92 @@ STATE_WORDS = {
     "built": "Built: packages exist; not published for others yet.",
     "designed": "Designed: written down, not yet built as a package.",
 }
+
+# ---------------------------------------------------------------------------------------------
+# Demos: one page each under /demo/<id>/. `runs`: here (staged at build time from a checkout of the
+# public repository, never committed here), drawing (a TopoForge drawing on the home page), or
+# elsewhere (the page says what it needs and how to run it). `stage` maps a published path under
+# /demo/<id>/app/ to a path in the repository checkout. `scripts` are the app's script files, for
+# jslicense.html: (path under app/, licence, source address or None for "this file is the source").
+# ---------------------------------------------------------------------------------------------
+P5_SOURCE = "https://github.com/processing/p5.js/tree/v1.9.0"
+DEMOS = [
+    dict(id="topology", repo="topology", name="topology", runs="drawing",
+         what="The drawing app this site opens with: TopoForge, with the shop drawn as one page per project.",
+         run="It is the home page. To keep your own copy, install the topology-www package, or open TopoForge's index.html from its repository in any browser.",
+         credit="Corwin and Bryant. TopoForge, the drawing app, is Bryant Frankford's.",
+         licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."),
+    dict(id="quantum3d5", repo="quantum3d5", name="Quantum 3D5", runs="here",
+         what="Build atoms and molecules from protons, neutrons and electrons and watch them bond, react and decay in 3D, with lessons, a glossary and a page that says which physics is real, simplified or faked.",
+         run="Open index.html from the repository in a current browser. No account, no server, no network.",
+         credit="The simulator: Bryant Frankford. The project, its documentation, tests and accessibility work: Bryant Frankford, Corwin Brust and Mentat (for Corwin), as its AUTHORS file gives it.",
+         licence="GPL-3.0-or-later. It carries p5.js 1.9.0 (LGPL-2.1), minified on purpose, as its repository explains.",
+         stage={"index.html": "index.html", "css": "css", "js": "js", "vendor": "vendor",
+                "COPYING": "COPYING", "AUTHORS": "AUTHORS", "README.md": "README.md"},
+         scripts=[("js/quantum3d5.js", "GPL-3.0-or-later", None), ("js/accessibility.js", "GPL-3.0-or-later", None),
+                  ("vendor/p5/p5.min.js", "LGPL-2.1", P5_SOURCE)],
+         links=[("Repository", ORG + "/quantum3d5"), ("Where p5.js comes from", ORG + "/quantum3d5/tree/HEAD/vendor/p5")]),
+    dict(id="hello-taxgnomes", repo="hello-taxgnomes", name="hello-taxgnomes", runs="here",
+         what="The Gnemonic Word Mines: pick a word from the word game's four tables and move a four-way slider (north simpler, south denser, east moodier, west drier). Every sentence says who wrote it: a dictionary, the game's sentences, a template or a local model.",
+         run="The repository's make builds build/hello-taxgnomes.html, one page that works alone in any browser.",
+         credit="Corwin Brust and Contributors. The readings quote WordNet 3.1, GCIDE 0.53 and SCOWL.",
+         licence="Code GPL-3.0-or-later; prose CC BY-SA 4.0. WordNet 3.1 quotations under the WordNet licence (WORDNET-LICENSE, beside the page); GCIDE GPL-3.0-or-later; SCOWL permissive.",
+         stage={"index.html": "build/hello-taxgnomes.html", "COPYING": "COPYING", "WORDNET-LICENSE": "WORDNET-LICENSE"},
+         scripts=[],
+         links=[("Repository", ORG + "/hello-taxgnomes")]),
+    dict(id="egad", repo="egad", name="egad", runs="here", derived="egad",
+         what="The house colours, measured: every colour pair egad promises, in its light (Operandi) and dark (Vivendi) themes, with the contrast ratio worked out when this site was built.",
+         run="The repository's make check measures the same pairs; make writes the CSS, the Org theme and the Emacs themes into dist/.",
+         credit="Corwin. The colour values come from GNU Emacs's Modus themes (Protesilaos Stavrou).",
+         licence="Code GPL-3.0-or-later; prose CC BY-SA 4.0. Modus is GPL-3.0-or-later.",
+         links=[("Repository", ORG + "/egad")]),
+    dict(id="gitcha", repo="gitcha", name="Gitcha", runs="drawing",
+         what="A free, self-hosted forge for people and their agents: packages, git, site hosting and CI, with two-factor sign-in on every account. It is a server, so it does not run in a page; Bryant's drawing of how it works does, in TopoForge.",
+         run="Its INSTALL.md takes you from nothing to a running Gitcha on your own computer in about ten minutes, or on an Ubuntu server.",
+         credit="Bryant Frankford and Corwin Brust, co-creators. The drawing and the screenshots are Bryant Frankford's.",
+         licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; the drawing GPL-3.0-or-later OR LGPL-3.0-or-later; the screenshots CC-BY-SA-4.0.",
+         shots=[("docs/screenshots/01-landing.png", "The front page"),
+                ("docs/screenshots/18-crawl.png", "The crawl: what people and agents posted"),
+                ("docs/screenshots/21-second-reader.png", "A Second Reader review"),
+                ("docs/screenshots/26-ring.png", "The ring")],
+         links=[("Install it", ORG + "/gitcha/blob/HEAD/INSTALL.md"), ("The drawing in its repository", ORG + "/gitcha/tree/HEAD/topoforge"),
+                ("Repository", ORG + "/gitcha")]),
+    dict(id="NextTime-Dev", repo="NextTime-Dev", name="NextTime", runs="elsewhere",
+         what="Time banking for Nextcloud: post a request, volunteer, earn hours, public ledger. Its repository has a one-page demo of the whole workflow with made-up data held in memory.",
+         why="That demo loads Vue, Vue Router and MapLibre from unpkg.com, and map tiles from another server. This site loads nothing from other hosts, so it is not hosted here yet. Open it from the repository instead.",
+         run="Download demo/index.html from the repository and open it in a browser (it needs a network connection for those libraries). The app itself installs into a Nextcloud, 29 to 35.",
+         credit="Brigidt's work.", licence="GNU AGPL-3.0, as its LICENSE file gives it.",
+         links=[("The demo, in the repository", ORG + "/NextTime-Dev/blob/HEAD/demo/index.html"), ("Repository", ORG + "/NextTime-Dev")]),
+    dict(id="fourSwordsFromThePast", repo="fourSwordsFromThePast", name="fourSwordsFromThePast", runs="elsewhere",
+         what="A Link to the Past as a native PC game with four-player drop-in co-op.",
+         why="It is a native program and needs your own copy of the original game, so it cannot run in a page. Its pictures show the original game's art, which belongs to its owners, so they are linked, not copied here.",
+         run="Build it as its BUILDING.md says, then give it your own US copy of the game.",
+         credit="A Bryant repository; credit is not yet written in its README, so none is claimed here beyond that.",
+         licence="MIT (snesrev/zelda3, the base it is built on), as its LICENSE.txt gives it.",
+         links=[("Screenshots, in the repository", ORG + "/fourSwordsFromThePast/tree/HEAD/docs/screenshots"),
+                ("Repository", ORG + "/fourSwordsFromThePast")]),
+    dict(id="vibrobeast", repo="vibrobeast", name="vibrobeast", runs="elsewhere",
+         what="A memory Claude keeps on your own computer, in plain files.",
+         why="It is an extension for Claude Desktop or Claude Code and works on your computer, not in a web page.",
+         run="Install it into Claude Desktop or Claude Code from the public repository, as its README says.",
+         credit="Made together by Corwin and Bryant.", licence="Writing CC-BY-SA-4.0; scripts GPL-3.0-or-later.",
+         links=[("Repository", ORG + "/vibrobeast")]),
+    dict(id="vibrobeast-skills", repo="vibrobeast-skills", name="vibrobeast-skills", runs="elsewhere",
+         what="Written ways of working that Claude reads when a task needs them.",
+         why="Skills are read by Claude, not run in a page. Each one is a short file you can read in the repository.",
+         run="Install it as a plugin in Claude Desktop or Claude Code, through the public repository.",
+         credit="Corwin and Bryant.", licence="See the repository.",
+         links=[("The skills, to read", ORG + "/vibrobeast-skills/tree/HEAD/skills"), ("Repository", ORG + "/vibrobeast-skills")]),
+    dict(id="card-games.el", repo="card-games.el", name="card-games.el", runs="elsewhere",
+         what="About thirty card games for GNU Emacs.",
+         why="It runs inside GNU Emacs.",
+         run="In Emacs: M-x package-install RET card-games RET (from MELPA).",
+         credit="Corwin's own, outside the inputloop org.", licence="Code GPL-3.0-or-later; manual CC-BY-4.0.",
+         links=[("On MELPA", "https://melpa.org/#/card-games"), ("Repository", "https://github.com/mplscorwin/card-games.el")]),
+    dict(id="suit-crm-6-5-php-sec-backport", repo="suit-crm-6-5-php-sec-backport", name="Patched PHP for SuiteCRM", runs="elsewhere",
+         what="Builds patched end-of-life PHP for SuiteCRM and proves SuiteCRM installs on it.",
+         why="It builds software on a host; there is nothing to show in a page.",
+         run="Follow its RUNBOOK.md on a host to build on.",
+         credit="Corwin's.", licence="See the repository.",
+         links=[("Runbook", ORG + "/suit-crm-6-5-php-sec-backport/blob/HEAD/RUNBOOK.md"), ("Repository", ORG + "/suit-crm-6-5-php-sec-backport")]),
+]

@@ -17,7 +17,8 @@ sys.path.insert(0, ROOT)
 import catalog  # noqa: E402
 
 OUT = os.environ.get("SITE_OUT", os.path.join(ROOT, "public"))
-PAGES = ["index.html", "directory.html", "packages.html", "jslicense.html", "404.html"]
+PAGES = ["index.html", "directory.html", "packages.html", "jslicense.html", "404.html", "demo/index.html"] + \
+    ["demo/%s/index.html" % d["id"] for d in catalog.DEMOS]
 # Written in pieces so that this file does not itself contain what it forbids.
 FORBIDDEN = re.compile(r"F" r":\\|/ho" r"me/|clau" r"de\.ai|anthro" r"pic\.com|Co-Auth" r"ored")
 PRIVATE_URL = re.compile(r"github\.com/[\w.-]+/(%s)\b" % "|".join(re.escape(n) for n in catalog.PRIVATE_NAMES))
@@ -81,15 +82,20 @@ class SiteChecks(unittest.TestCase):
 
     def test_every_internal_link_resolves(self):
         for rel in PAGES:
+            here = os.path.dirname(rel)
             for tag, attr, v in refs(parse(rel)):
                 if re.match(r"^(https?:|mailto:|data:)", v):
                     continue
-                base = "/" if rel == "404.html" else ""
                 path, _, frag = v.partition("#")
-                target = path or rel
-                if rel == "404.html" and path.startswith("/"):
-                    target = path.lstrip("/") or "index.html"
-                target = target.rstrip("/") or "index.html"
+                path = path.partition("?")[0]
+                if not path:
+                    target = rel
+                elif path.startswith("/"):
+                    target = path.lstrip("/")
+                else:
+                    target = os.path.normpath(os.path.join(here, path))
+                if target.endswith("/") or os.path.isdir(os.path.join(OUT, target)) or target in ("", "."):
+                    target = os.path.join(target, "index.html")
                 full = os.path.join(OUT, target)
                 self.assertTrue(os.path.isfile(full), "%s: %s -> %s does not exist" % (rel, v, target))
                 if frag and target.endswith(".html"):
@@ -127,7 +133,9 @@ class SiteChecks(unittest.TestCase):
         self.assertGreaterEqual(d.count("not public yet"), len([r for r in catalog.REPOS if not r["public"]]))
 
     def test_every_tab_is_reachable_from_a_directory_card(self):
+        # the cards only: the footer's list of everywhere also links every tab
         d = read("directory.html")
+        d = d[d.index('<ul class="grid">'):d.index('</fieldset>')]
         for app in catalog.APPS:
             self.assertIn('href="index.html#tab-%s"' % app["id"], d, "no directory card reaches tab %s" % app["id"])
 
@@ -199,6 +207,18 @@ class SiteChecks(unittest.TestCase):
             self.assertIn("js/" + f, table, f + " is not in jslicense.html")
         for rel in ["index.html", "directory.html", "packages.html"]:
             self.assertIn('rel="jslicense"', read(rel))
+        # the demos: every script file in a staged app has a row, and every staged page points at the table
+        for d in catalog.DEMOS:
+            app = os.path.join(OUT, "demo", d["id"], "app")
+            for dp, _, fs in os.walk(app):
+                for f in fs:
+                    p = os.path.relpath(os.path.join(dp, f), OUT).replace(os.sep, "/")
+                    if f.endswith(".js"):
+                        self.assertIn('href="%s"' % p, table, p + " is not in jslicense.html")
+                    if f.endswith(".html"):
+                        t = read(p)
+                        self.assertIn('rel="jslicense"', t, p)
+                        self.assertNotRegex(t, r"<script(?![^>]*\bsrc=)", p + " has an inline script")
 
     def test_no_forbidden_strings_anywhere_in_output(self):
         for dp, _, fs in os.walk(OUT):
@@ -234,8 +254,11 @@ class SiteChecks(unittest.TestCase):
     def test_home_has_topology_or_says_it_does_not(self):
         h = read("index.html")
         if os.path.isdir(os.path.join(OUT, "topology")):
-            self.assertIn('src="topology/app.html"', h)
-            self.assertTrue(os.path.isfile(os.path.join(OUT, "topology", "app.html")))
+            self.assertIn('data-first="topology/topoforge/index.html?load=/drawings/inputloop.json"', h)
+            self.assertIn('data-resume="topology/topoforge/index.html"', h)
+            self.assertNotIn("topology/app.html", h, "the home page frames TopoForge itself, not a host page around it")
+            self.assertTrue(os.path.isfile(os.path.join(OUT, "topology", "topoforge", "index.html")))
+            self.assertIn("Bryant Frankford", h)
         else:
             self.assertIn("placeholder", h)
 
@@ -246,6 +269,43 @@ class SiteChecks(unittest.TestCase):
             for f in fs:
                 self.assertNotIn(f, ("topoforge.html", "topology-core.js", "app.html", "RECIPE.org"), os.path.join(dp, f))
         self.assertFalse(os.path.exists(os.path.join(ROOT, "www")))
+
+
+class DemoChecks(unittest.TestCase):
+    def test_every_demo_page_says_who_made_it_its_licence_and_how_to_run_it(self):
+        for d in catalog.DEMOS:
+            h = read("demo/%s/index.html" % d["id"])
+            for word in ("Made by", "Licence", "Run it yourself"):
+                self.assertIn("<dt>%s</dt>" % word, h, d["id"])
+            self.assertIn(html_escape(d["credit"]), h, d["id"] + ": credit not as the catalog gives it")
+            self.assertIn(html_escape(d["licence"]), h, d["id"])
+
+    def test_each_app_that_runs_here_is_staged_or_says_why_not(self):
+        for d in catalog.DEMOS:
+            if d["runs"] != "here":
+                continue
+            h = read("demo/%s/index.html" % d["id"])
+            staged = os.path.isdir(os.path.join(OUT, "demo", d["id"], "app"))
+            self.assertTrue(staged or "not here today" in h, d["id"])
+            if staged and not d.get("derived"):
+                self.assertTrue(os.path.isfile(os.path.join(OUT, "demo", d["id"], "app", "index.html")), d["id"])
+                self.assertIn('href="./app/index.html"', h, d["id"])
+
+    def test_every_directory_card_opens_its_drawing(self):
+        dr = read("directory.html")
+        for r in catalog.REPOS:
+            self.assertIn('href="index.html?drawing=%s#top"' % html_escape(r["id"]), dr, r["id"])
+
+    def test_demo_sources_are_not_in_the_repository(self):
+        for dp, ds, fs in os.walk(ROOT):
+            ds[:] = [d for d in ds if d not in (".git", "public", "node_modules", "__pycache__", "generated")]
+            for f in fs:
+                self.assertNotIn(f, ("quantum3d5.js", "p5.min.js", "hello-taxgnomes.html", "egad-tokens.json", "how-gitcha-works.json"), os.path.join(dp, f))
+
+
+def html_escape(t):
+    import html
+    return html.escape(t)
 
 
 class PlaceholderBuild(unittest.TestCase):

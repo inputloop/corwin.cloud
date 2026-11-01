@@ -25,10 +25,30 @@ The build leaves out the staged `context/` folder (working notes for topology's 
 replaces the address of any repository still private (`PRIVATE_NAMES` in `catalog.py`) with "(private
 repository, not public yet)"; topology's own address is public now and stays. `TOPOLOGY_KEEP_CONTEXT=1` keeps the folder.
 
+## The drawings and the demos (2026-11-01)
+
+The home page is TopoForge itself, full width, opened on **the shop, drawn**: one TopoForge page per
+project the directory lists (the tabs along the bottom of the drawing), obsmage's workflows and
+scenes, and Bryant Frankford's five-page drawing of how Gitcha works. `drawings.py` makes them at
+build time from `catalog.py` and the `TOPOLOGY.md` files in topology's `examples/inputloop/`; they are
+TopoForge's own JSON, opened with its own `?load=`, so they can be saved, changed and opened in any
+copy of TopoForge. A person's own working copy is never replaced: `src/js/stage.js` opens the shop's
+drawings only when TopoForge has kept nothing in this browser, and a button starts again on request.
+
+`/demo/<id>/` has a page for every inputloop app: the ones that run in a browser run there, staged
+at build time by `demos.py` from a checkout of the public repository (never committed here); the
+rest say what they need and how to run them. `INPUTLOOP_DIR` (default `../inputloop`) is a folder of
+checkouts (`quantum3d5`, `hello-taxgnomes`, `egad`, `gitcha`); a demo with no checkout says so. The
+staged copy changes in two ways only: each inline script moves into a file beside its page, and the
+page links `jslicense.html`. The policy for `/demo/*/app/` is written to `generated/demo-csp.conf`.
+
+`docs/AMBITIONS.md` is our reading of what this site is for; `docs/UI-AUDIT-2026-11-01.md` lists
+what differs from TopoForge as Bryant made it, and why each difference stays or went.
+
 ## Build
 
 ```sh
-TOPOLOGY_DIR=../topology python3 build.py       # writes public/ and deploy/topology-csp.conf
+TOPOLOGY_DIR=../topology INPUTLOOP_DIR=../inputloop python3 build.py   # writes public/, deploy/topology-csp.conf, generated/demo-csp.conf
 python3 -m http.server -d public 8000            # then open http://127.0.0.1:8000/
 ```
 
@@ -43,7 +63,10 @@ sh tests/run.sh --prove-red     # plant one fault per promise in a copy; each mu
 
 The checks: every internal link resolves; every external link is on the allow-list of public
 addresses in `catalog.py` (a private repository's address anywhere in the output fails); every tab
-is reachable from a directory card; the ARIA tab pattern; no inline script or style; LibreJS
+is reachable from a directory card; every directory project has its own page in the default
+drawings, saying who made it as the directory does; nothing under a `## Private` heading and no
+private host name is drawn; Bryant's drawing is his, byte for byte; every demo page names who made
+it, its licence and how to run it; no staged demo page keeps an inline script; the ARIA tab pattern; no inline script or style; LibreJS
 labels and the `jslicense.html` row; no machine paths or vendor strings; the deploy policy stays
 strict. `tests/browser.cjs` drives the built site in Chromium at 1280 and 390 pixels, under the
 deploy policies, with scripts on and off; it runs when the `playwright` package is installed.

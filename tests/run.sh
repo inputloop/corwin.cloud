@@ -13,6 +13,8 @@ py=${PYTHON:-python3}
 node=${NODE:-node}
 if [ -z "${TOPOLOGY_DIR:-}" ]; then TOPOLOGY_DIR=$(cd "$here/../topology" 2>/dev/null && pwd || echo "$here/../topology"); fi
 export TOPOLOGY_DIR
+if [ -z "${INPUTLOOP_DIR:-}" ]; then INPUTLOOP_DIR=$(cd "$here/../inputloop" 2>/dev/null && pwd || echo "$here/../inputloop"); fi
+export INPUTLOOP_DIR
 fail=0
 step() { printf '\n== %s\n' "$1"; }
 
@@ -46,7 +48,10 @@ prove_red() {
     (cd "$here" && tar cf - --exclude=./public --exclude=./node_modules --exclude=./.git --exclude=__pycache__ .) | (cd "$tmp/w" && tar xf -)
     sed "$expr" "$tmp/w/$file" > "$tmp/x" && cp "$tmp/x" "$tmp/w/$file"
     if cmp -s "$here/$file" "$tmp/w/$file"; then printf 'PLANT FAILED  %s (no change to %s)\n' "$name" "$file"; bad=1; return; fi
-    if (cd "$tmp/w" && "$py" build.py --out pub >/dev/null 2>&1 && SITE_OUT=pub "$py" tests/check_site.py && SITE_OUT=pub "$node" --test tests/check.mjs) >"$tmp/log" 2>&1; then
+    # build outside the copy: a build inside it would trip the "no sources in the repository" checks
+    # and turn every plant red for the wrong reason
+    rm -rf "$tmp/pub"
+    if (cd "$tmp/w" && "$py" build.py --out "$tmp/pub" >/dev/null 2>&1 && SITE_OUT="$tmp/pub" "$py" tests/check_site.py && SITE_OUT="$tmp/pub" "$node" --test tests/check.mjs) >"$tmp/log" 2>&1; then
       printf 'STAYED GREEN  %s\n' "$name"; bad=1
     else printf 'went red      %s\n' "$name"; fi
   }
@@ -68,6 +73,18 @@ prove_red() {
   plant "the policy allows inline script"   deploy/nginx-corwin.cloud.conf "s#script-src 'self'; style-src 'self'; img-src 'self' data:; font-src#script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self' data:; font-src#"
   plant "the licence line altered"          build.py     's#prose CC-BY-SA-4.0\.#prose CC-BY-4.0.#'
   plant "a version number invented"         catalog.py   's#what="The command and the graph API\.#what="The command and the graph API, 1.2.3.#'
+  plant "a directory project with no tab"   drawings.py  's#^    for repo in C.REPOS:$#    for repo in C.REPOS[:-1]:#'
+  plant "a private part drawn"              drawings.py  's#^        if private_level is None:$#        if private_level is not None:\n            out.insert(0, ln)\n        else:#'
+  plant "a workstation named"               drawings.py  's#return name if re.match(C.PUBLIC_HOSTS_RE, name) else "a workstation"#return name#'
+  plant "a drawing page without its credit" drawings.py  's#"Made by: %s." % repo\["credit"\].rstrip(".")#"Made by: someone."#'
+  plant "Bryant's drawing altered"          drawings.py  's#            f.write(raw)#            f.write(raw + b" ")#'
+  plant "an inline script left in a demo"   demos.py     's#    t = SCRIPT.sub(repl, t)#    t = t#'
+  plant "a demo script not in jslicense"    build.py     's#for path, lic, source in res.get("scripts", \[\]):#for path, lic, source in []:#'
+  plant "a demo page loses its credit"      build.py     's#e(d\["credit"\]), e(d\["licence"\]), e(d\["run"\])#"", e(d["licence"]), e(d["run"])#'
+  plant "stage.js writes to storage"        src/js/stage.js "s#^  var kept = false;#  var kept = false; localStorage.setItem('x', '1');#"
+  plant "the home frames a host page"       build.py     's#first = "topology/topoforge/index.html?load=/" + index\["file"\]#first = "topology/app.html"#'
+  plant "the demo policy allows inline js"  build.py     "s#DEMO_POLICY = (\"default-src 'self'; script-src 'self';#DEMO_POLICY = (\"default-src 'self'; script-src 'self' 'unsafe-inline';#"
+  plant "a card without its drawing link"   build.py     '/t.append(a("index.html?drawing=%s#top" % r\["id"\], "Drawing", "act"))/d'
   if [ $bad = 0 ]; then echo "PROVE-RED OK"; return 0; fi
   echo "PROVE-RED FAILED"; return 1
 }

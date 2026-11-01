@@ -209,3 +209,23 @@ html.motion-on .panel:not([hidden]) { animation: arrive 0.18s ease-out; }
   .modeline, .minibuffer, .goto, .skip, .topology, .tablist { display: none !important; }
   .panel[hidden] { display: block !important; }
 }
+
+/* ---- the stage, the drawing as the front door (2026-11-01) ------------------------------------ */
+.stage-h { margin: 0; padding: var(--s2) var(--gutter); font-size: 16px; line-height: 24px; background: var(--canvas-dim); border-bottom: 1px solid var(--border); }
+.stage-h .muted { font-weight: 400; color: var(--text-dim); }
+.stage .topology { height: calc(100vh - 12rem); min-height: 30rem; max-height: none; }
+.stage-off { padding: var(--s4) var(--gutter); }
+button.linkish { font: inherit; color: var(--link); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; min-height: 24px; }
+
+/* ---- demos ------------------------------------------------------------------------------------ */
+.crumbs { margin: var(--s4) 0 0; font-size: 14px; }
+.shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: var(--s4); margin: var(--s4) 0; }
+.shots figure { margin: 0; }
+.shots img { display: block; width: 100%; height: auto; border: 1px solid var(--border); }
+.shots figcaption { font-size: 14px; color: var(--text-dim); }
+.pairs { border-collapse: collapse; width: 100%; margin: var(--s4) 0; font-size: 14px; }
+.pairs caption { text-align: left; color: var(--text-dim); padding-bottom: var(--s2); }
+.pairs th, .pairs td { border: 1px solid var(--border); padding: var(--s1) var(--s2); text-align: left; vertical-align: top; }
+.swatch { display: inline-block; padding: var(--s1) var(--s2); font: 700 15px/22px var(--mono); border: 1px solid var(--border); }
+@media (max-width: 40rem) { .pairs td:nth-child(3), .pairs th:nth-child(3) { display: none; } }
+#jslicense-labels1 { width: 100%; table-layout: fixed; } #jslicense-labels1 td, #jslicense-labels1 th { overflow-wrap: anywhere; vertical-align: top; }
