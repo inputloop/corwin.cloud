@@ -90,7 +90,7 @@ prove_red() {
 }
 
 case "${1:-}" in
-  --prove-red) prove_red ;;
-  "") run_checks "${SITE_OUT:-$here/public}" && echo && echo "ALL CHECKS PASSED" ;;
+  --prove-red) prove_red && sh "$here/deploy/test-install.sh" --prove-red && sh "$here/deploy/test-install-dist.sh" --prove-red ;;
+  "") run_checks "${SITE_OUT:-$here/public}" && sh "$here/deploy/test-install.sh" && sh "$here/deploy/test-install-dist.sh" && echo && echo "ALL CHECKS PASSED" ;;
   *) echo "usage: sh tests/run.sh [--prove-red]" >&2; exit 2 ;;
 esac

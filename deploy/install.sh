@@ -1,14 +1,44 @@
 #!/bin/sh
-# install.sh -- put corwin.cloud on this host's nginx (interim, port 80). Backs out on any nginx -t failure.
+# install.sh -- put corwin.cloud on this host's nginx. Uses the TLS block when corwin.cloud's certificate
+# exists (the interim port-80 block only before it does), so a reinstall never takes https down. Backs out
+# on any nginx -t failure, putting the previous site file back.  Run as the gw33 account on gw33.
+#   sh deploy/install.sh        (from an unpacked build: public/, deploy/, generated/)
+# Paths can be overridden for tests: NGINX_DIR, LE_LIVE, WWW_ROOT.
+# Copyright 2026 INPUTLOOP; GPL-3.0-or-later OR LGPL-3.0-or-later.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
-sudo mkdir -p /var/www/corwin.cloud
-sudo rsync -a --delete "$here/../public/" /var/www/corwin.cloud/public/
-sudo install -m 644 "$here/topology-csp.conf" /etc/nginx/snippets/corwin-cloud-topology-csp.conf
-sudo install -m 644 "$here/corwin.cloud.interim.conf" /etc/nginx/sites-available/corwin.cloud
-sudo ln -sf /etc/nginx/sites-available/corwin.cloud /etc/nginx/sites-enabled/corwin.cloud
-if sudo nginx -t 2>&1; then sudo systemctl reload nginx; sleep 2; echo "installed; nginx reloaded"  # reload is asynchronous: checks before it lands read the old config
-else sudo rm -f /etc/nginx/sites-enabled/corwin.cloud; echo "nginx -t failed: backed out, nothing changed" >&2; exit 1; fi
-curl -s -o /dev/null -w 'corwin.cloud via Host header: %{http_code}\n' -H 'Host: corwin.cloud' http://127.0.0.1/
-curl -s -H 'Host: corwin.cloud' http://127.0.0.1/ | grep -c 'corwin.cloud' | sed 's/^/pages naming corwin.cloud: /'
-curl -s -o /dev/null -w 'topology via Host header: %{http_code}\n' -H 'Host: corwin.cloud' http://127.0.0.1/topology/
+NGINX_DIR=${NGINX_DIR:-/etc/nginx}
+LE_LIVE=${LE_LIVE:-/etc/letsencrypt/live/corwin.cloud}
+WWW_ROOT=${WWW_ROOT:-/var/www/corwin.cloud}
+SITE=$NGINX_DIR/sites-available/corwin.cloud
+
+if sudo test -s "$LE_LIVE/fullchain.pem"; then conf=nginx-corwin.cloud.conf; else conf=corwin.cloud.interim.conf; fi
+demo=""
+for d in "$here/../generated/demo-csp.conf" "$here/demo-csp.conf"; do [ -f "$d" ] && { demo=$d; break; }; done
+if grep -q corwin-cloud-demo-csp "$here/$conf" && [ -z "$demo" ]; then
+  echo "no generated/demo-csp.conf beside the build, and $conf needs it: nothing changed" >&2; exit 1
+fi
+
+sudo mkdir -p "$WWW_ROOT" "$NGINX_DIR/snippets" "$NGINX_DIR/sites-available" "$NGINX_DIR/sites-enabled"
+sudo rsync -a --delete "$here/../public/" "$WWW_ROOT/public/"
+sudo install -m 644 "$here/topology-csp.conf" "$NGINX_DIR/snippets/corwin-cloud-topology-csp.conf"
+if [ -n "$demo" ]; then sudo install -m 644 "$demo" "$NGINX_DIR/snippets/corwin-cloud-demo-csp.conf"; fi
+
+prev=$(mktemp); had=0
+if [ -f "$SITE" ]; then sudo cp "$SITE" "$prev"; had=1; fi
+sudo install -m 644 "$here/$conf" "$SITE"
+sudo ln -sf "$SITE" "$NGINX_DIR/sites-enabled/corwin.cloud"
+if sudo nginx -t 2>&1; then
+  sudo systemctl reload nginx; sleep "${RELOAD_WAIT:-2}"   # reload is asynchronous: checks before it lands read the old config
+  echo "installed with $conf; nginx reloaded"
+else
+  if [ $had = 1 ]; then sudo install -m 644 "$prev" "$SITE"; else sudo rm -f "$NGINX_DIR/sites-enabled/corwin.cloud"; fi
+  rm -f "$prev"
+  echo "nginx -t failed with $conf: the previous site file is back" >&2; exit 1
+fi
+rm -f "$prev"
+if [ "$conf" = nginx-corwin.cloud.conf ]; then
+  curl -s -o /dev/null -w 'https via SNI: %{http_code}\n' --resolve corwin.cloud:443:127.0.0.1 https://corwin.cloud/ || true
+else
+  curl -s -o /dev/null -w 'corwin.cloud via Host header: %{http_code}\n' -H 'Host: corwin.cloud' http://127.0.0.1/ || true
+fi
