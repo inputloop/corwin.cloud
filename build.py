@@ -306,8 +306,6 @@ TF_EMBED_FREE = "bare,select,ready"
 TF_EMBED_CLASSIC = "select,ready"
 TF_SRC_APP = C.ORG + "/topology/tree/corwin/www/topoforge"
 TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"
-TF_LICENCE = ("Code: GPL-3.0-or-later or LGPL-3.0-or-later, your choice. "
-              "Prose (its README, its other documents, the story it writes): CC-BY-SA-4.0.")
 
 
 def site_revision():
@@ -321,17 +319,30 @@ def site_revision():
 
 
 def legend(index, first):
-    """The legend under the drawing, drawn as an architect's title block: a grid of hairline cells.
-    TopoForge's maker gets the most room: who made it, its licence, its source. Without scripts it is a
-    block under the drawing; js/float.js floats it over the canvas and lets it move and hide."""
+    """The legend under the drawing (docs/NAV.md, revision 5): one line of hairline compartments, in the
+    manner of an architect's title block, with no sentences and no machine-formatted licence strings
+    (Corwin, 2026-11-02: "GPLv3+ would fit into a small hair-line separated compartment"). The whole
+    words follow it (credits): shown with scripts off; with scripts, the free frame's Help, Credits and
+    licence shows them, and classic unfolds them under the line."""
     rev, day = site_revision()
     gh = '<a href="%s">Bryant Frankford</a>' % BRYANT_URL
-    short = ('<p class="lg-short">' + TF_NAME + ' by %s · code GPL-3.0-or-later or LGPL-3.0-or-later · prose CC-BY-SA-4.0 · <a href="%s">source</a></p>' % (gh, TF_SRC_PROJECT))
+    lic_words = ("GNU General Public License, version 3 or any later version, or GNU Lesser General Public License, "
+                 "version 3 or any later version, as you choose")
+    comps = [
+        ("lg-c-app", 'topology forge · %s' % gh),
+        ("lg-c-lic", '<abbr title="%s">GPLv3+ or LGPLv3+</abbr>' % lic_words),
+        ("lg-c-prose", '<abbr title="prose: Creative Commons Attribution-ShareAlike 4.0 International">prose CC BY-SA 4.0</abbr>'),
+        ("lg-c-src", '<a href="%s">source</a>' % TF_SRC_PROJECT),
+        ("lg-c-rev", 'rev <code>%s</code> · %s' % (e(rev), day)),
+    ]
+    line = ('<p class="lg-line">%s<button type="button" class="lg-c lg-more js-only-inline" aria-expanded="false" aria-controls="lg-grid">credits</button></p>'
+            % "".join('<span class="lg-c %s">%s</span>' % c for c in comps))
     cells = [
         ("lg-app", "Drawing app", TF_NAME + ', made by %s for Corwin Brust, with Corwin and contributors. Bryant is listed first on it.' % gh),
-        ("lg-lic", "Its licence", 'Code: <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0-or-later</a> or '
-         '<a href="https://www.gnu.org/licenses/lgpl-3.0.html">LGPL-3.0-or-later</a>, your choice. '
-         'Prose: <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC-BY-SA-4.0</a>. As its README.org says.'),
+        ("lg-lic", "Its licence", 'Its code may be used under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License, version 3</a> '
+         'or any later version, or the <a href="https://www.gnu.org/licenses/lgpl-3.0.html">GNU Lesser General Public License, version 3</a> '
+         'or any later version, as you choose. Its prose is under <a href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons '
+         'Attribution-ShareAlike 4.0 International</a>. As its README.org says. There is no warranty, to the extent the law allows.'),
         ("lg-src", "Its source", 'topology, branch corwin: <a href="%s">www/topoforge/</a>, the app served here; '
          '<a href="%s">topoforge/</a>, its README, AUTHORS and licences.' % (TF_SRC_APP, TF_SRC_PROJECT)),
         ("lg-you", "Your drawing", '<span class="lg-keep">Stays in this browser until you save it (File, Export). </span>'
@@ -339,15 +350,14 @@ def legend(index, first):
          '<a href="topology/" id="stage-door">topology\'s own front door</a> · '
          '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button>'
          % (e(first, quote=True), e(index["file"], quote=True))),
-        ("lg-sheet", "Sheet", 'The shop, drawn: a page per project. corwin.cloud <code>%s</code>, %s.' % (e(rev), day)),
+        ("lg-sheet", "Sheet", 'The shop, drawn: a page per project. corwin.cloud revision <code>%s</code>, built %s.' % (e(rev), day)),
     ]
     grid = "".join('<div class="lg-cell %s"><dt>%s</dt><dd>%s</dd></div>' % (c, e(h), d) for c, h, d in cells)
-    # the notice says why the shop's drawings are not showing (js/stage.js fills it); it heads the
-    # legend, and stays when the legend is hidden to its one row
+    # the notice says why the shop's drawings are not showing (js/stage.js fills it); it heads the legend
     notice = ('<p class="stage-notice" id="stage-notice" hidden><span id="stage-notice-t"></span> '
               '<button type="button" class="linkish" id="stage-notice-b">Open the shop\'s drawings</button></p>')
     return ('<aside class="legend" id="legend" aria-labelledby="legend-h"><h2 id="legend-h" class="lg-h">Legend</h2>%s%s'
-            '<dl class="lg-grid">%s</dl><p class="lg-msg" id="stage-msg" role="status"></p></aside>' % (notice, short, grid))
+            '<dl class="lg-grid" id="lg-grid">%s</dl><p class="lg-msg" id="stage-msg" role="status"></p></aside>' % (notice, line, grid))
 
 
 def processes_note(index):

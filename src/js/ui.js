@@ -8,8 +8,8 @@
 // visit; otherwise this browser's choice (corwin.cloud.ui.v1, read and
 // written in try/catch); otherwise free. It adds one row to Customize ("Page layout") once the page is
 // there; choosing the other value keeps it and reloads, because the drawing app is asked for other
-// switches in each. window.CCUI.set(v) does the same for the free frame's Options menu. It asks the
-// network for nothing.
+// switches in each. window.CCUI.set(v) does the same for the free frame's Options menu. On the home page
+// it adds the layout switch (revision 5): a light switch that never moves. It asks the network for nothing.
 (function () {
   'use strict';
   var KEY = 'corwin.cloud.ui.v1', VALUES = ['free', 'classic'], html = document.documentElement;
@@ -60,6 +60,32 @@
     var act = panel.querySelector('.c-actions');
     panel.insertBefore(fs, act || null);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', row); else row();
+  // the layout switch (docs/NAV.md, revision 5): a light switch that never moves, for blink compare.
+  // Free (home page): always, just under where Customize sits in classic. Classic: only in a tab that got
+  // there by the switch (kept for the tab in sessionStorage), in the same box, drawn plain; a classic
+  // visit not reached by it shows only Customize, whose row above still switches back.
+  var BLINK = 'corwin.cloud.blink';
+  function blinking() { try { return window.sessionStorage.getItem(BLINK) === '1'; } catch (e) { return false; } }
+  function lightSwitch() {
+    if (!document.body || document.body.getAttribute('data-page') !== 'home' || document.getElementById('ui-switch')) return;
+    if (ui !== 'free' && !blinking()) return;
+    var other = ui === 'free' ? 'classic' : 'free';
+    var b = document.createElement('button'), t = document.createElement('span');
+    b.type = 'button'; b.id = 'ui-switch'; b.className = 'ui-switch';
+    b.setAttribute('role', 'switch');
+    b.setAttribute('aria-checked', String(ui === 'classic'));
+    b.setAttribute('aria-label', 'Classic layout');
+    b.title = ui === 'free' ? 'Classic layout: off. Press for classic; this switch stays here, so a second press comes back.' : 'Classic layout: on. Press for free; this switch stays here.';
+    t.className = 'ui-thumb'; t.setAttribute('aria-hidden', 'true');
+    b.appendChild(t);
+    b.addEventListener('click', function () {
+      try { window.sessionStorage.setItem(BLINK, '1'); } catch (e) { /* refused: the switch then shows in classic for this page only */ }
+      b.setAttribute('aria-checked', String(other === 'classic'));
+      set(other);
+    });
+    document.body.appendChild(b);
+  }
+  function ready() { row(); lightSwitch(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
 })();
 // @license-end

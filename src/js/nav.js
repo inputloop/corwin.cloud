@@ -3,7 +3,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // nav.js: the navigator beside the drawing, drawn as an Emacs frame (docs/NAV.md says what and why).
-// Classic only (revision 4): it starts hidden to its grip row; in free, js/free.js is the finder.
+// Classic: it starts hidden to its grip row. Free (revision 5, "yes, and"): it is the buffer *navigator*
+// that js/free.js shows in a window of an Emacs frame beside *finder*: no grip row, no dock, no edge
+// (the frame moves and widens), its menus offered to the frame's menu bar (window.CCNav), and C-x 2, 3,
+// 0, 1 and o left to the frame's windows.
 // Without this file the navigator is a plain list of links. With it:
 //   - a palette that floats over the drawing (js/float.js: drag its grip, arrow keys, or the Window
 //     menu; dock it left or right; hide it to a strip), with a menu bar that also carries the site's
@@ -22,8 +25,8 @@
   var doc = document, host = doc.getElementById('nav'), grid = doc.getElementById('stage-grid');
   var frame = doc.getElementById('topology');
   if (!host || !grid || !window.fetch || !window.JSON) return;
-  // free (docs/NAV.md, revision 4): the one Emacs frame (js/free.js) is the finder; this navigator is classic's
-  if (doc.documentElement.getAttribute('data-ui') !== 'classic') return;
+  // free (docs/NAV.md, revision 5): the navigator is a buffer js/free.js shows in an Emacs frame's window
+  var FREE = doc.documentElement.getAttribute('data-ui') !== 'classic';
   var KEY = 'corwin.cloud.nav.v1', MAXWIN = 4;
   var T = window.Taxonomy && window.Taxonomy.tokenize && window.Taxonomy.similarity ? window.Taxonomy : null;
   var FACET_NAMES = { show: 'Show', notation: 'Notation', pillar: 'Is a', says: 'Topic' };
@@ -244,7 +247,7 @@
   }
   var COMMANDS = {
     'closebuf': function () { closeTab(); }, 'nextbuf': nextTab, 'other': otherWin, 'pinbuf': function () { pinToBuffer(); },
-    'about': function () { say('The navigator lists what the drawing draws, by category. Press categories in the tool bar and type words after Narrow: both narrow at once. Pins stay put. It floats over the drawing and may cover part of it: drag its top row, dock it, or hide it. docs/NAV.md in the site\u2019s repository says how it decides.'); },
+    'about': function () { say('The navigator lists what the drawing draws, by category. Press categories in the tool bar and type words after Narrow: both narrow at once. Pins stay put. ' + (FREE ? 'It is a buffer of the Emacs frame: move or widen the frame, or show *finder* in its window (C-x b). ' : 'It floats over the drawing and may cover part of it: drag its top row, dock it, or hide it. ') + 'docs/NAV.md in the site\u2019s repository says how it decides.'); },
     'customize': function () { var b = doc.getElementById('custom-btn'); if (b) { b.click(); var r = doc.querySelector('#custom-panel input'); if (r) r.focus(); say('Customize: the reading text and colours of this site, kept in this browser.'); } },
     'dock-left': function () { fl.dock('left'); }, 'dock-right': function () { fl.dock('right'); }, 'float': function () { fl.dock('float'); },
     'hide': function () { fl.toggle(); }, 'reset': function () { fl.reset(); },
@@ -631,6 +634,7 @@
 
   function keys(ev) {
     var tgt = ev.target, inField = tgt.matches && tgt.matches('input, textarea, select');
+    if (FREE) return freeKeys(ev, tgt);
     if (ev.altKey && !ev.ctrlKey && !ev.metaKey && (ev.key === 'x' || ev.key === '≈' || ev.code === 'KeyX')) {
       ev.preventDefault(); ev.stopPropagation(); els.q.focus(); say('Narrow the navigator: type words. Ctrl+Enter pins the results to a new buffer.'); return;
     }
@@ -670,6 +674,26 @@
     all.forEach(function (x) { x.setAttribute('tabindex', '-1'); });
     all[j].setAttribute('tabindex', '0'); all[j].focus();
   }
+  // free: only the navigator's own rows and pins; C-x, C-c, Alt+x and Escape are the frame's (which
+  // forwards C-x t and C-c p, m, k here through CCNav.run)
+  function freeKeys(ev, tgt) {
+    if (openMenu && ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); menuShow(null); return; }
+    var a = tgt.closest && tgt.closest('a.it');
+    if (!a || ev.ctrlKey || (ev.altKey && ev.key !== 'ArrowUp' && ev.key !== 'ArrowDown')) return;
+    var box = a.closest('.win'), all = Array.prototype.slice.call(box.querySelectorAll('a.it')), i = all.indexOf(a);
+    if (ev.altKey) {
+      var li = a.closest('.pin-entry');
+      ev.preventDefault(); ev.stopPropagation();
+      if (!li) { say('Only a pinned item moves with Alt+Up and Alt+Down.'); return; }
+      var from = +li.getAttribute('data-pi'); movePin(from, from + (ev.key === 'ArrowUp' ? -1 : 1)); return;
+    }
+    var j = ev.key === 'ArrowDown' ? i + 1 : ev.key === 'ArrowUp' ? i - 1 : ev.key === 'Home' ? 0 : ev.key === 'End' ? all.length - 1 : null;
+    if (j === null) return;
+    ev.preventDefault(); ev.stopPropagation();
+    j = Math.max(0, Math.min(all.length - 1, j));
+    all.forEach(function (x) { x.setAttribute('tabindex', '-1'); });
+    all[j].setAttribute('tabindex', '0'); all[j].focus();
+  }
   function pinPoint() {
     var t = tab(), id = t.wins[t.sel].point;
     if (!id || !ITEMS[id]) { say('No item at point: move to one first.'); return; }
@@ -686,7 +710,8 @@
     (ix.stop || []).forEach(function (w) { STOP[w] = 1; });
     state = sane(load()) || { cur: 0, tabs: [newTab('*all*')] };
     build();
-    if (window.CCFloat && window.CCFloat.available) {
+    if (FREE) host.classList.add('nf-free');
+    if (!FREE && window.CCFloat && window.CCFloat.available) {
       fl = window.CCFloat.make({
         name: 'nav', label: 'The navigator', el: host, grip: els.grip, edge: els.handle, docks: true, width: 320, hiddenNarrow: true, hidden: true,
         say: say,
@@ -701,7 +726,28 @@
     }
     wire(); render();
     if (seenPage) watch(seenPage);   // the app may have spoken before the index arrived
-    say(T ? 'The navigator: press categories, or type words after Narrow (Alt+x). Help, Keys lists the rest.'
+    if (FREE) {
+      // what js/free.js asks of the buffer: where it lives, its menus for the frame's menu bar (Emacs: a
+      // major mode's menu joins the menu bar while its window is selected), its commands, its context
+      window.CCNav = {
+        host: host,
+        mount: function (el) { if (host.parentNode !== el) el.appendChild(host); host.hidden = false; },
+        menus: function () {
+          var out = [];
+          ['Buffers', 'Window', 'Filter'].forEach(function (m) { out.push({ header: m === 'Window' ? 'Its own windows (inside the navigator)' : m }); MENUS[m]().forEach(function (c) { out.push({ cmd: c[0], label: c[1], key: c[2] }); }); });
+          out.push({ header: '' }); out.push({ cmd: 'keys', label: 'Its keys', key: '' }); out.push({ cmd: 'about', label: 'About the navigator', key: '' });
+          return out;
+        },
+        run: function (c) { if (c === 'pin') { pinPoint(); return true; } if (COMMANDS[c]) { COMMANDS[c](); return true; } return false; },
+        context: function () { var t = tab(), list = ctxs(t).filter(function (c) { return !ctxEmpty(c); }); return list.length ? describe(list, true) : 'all'; },
+        shown: function () { return compute(tab()).shown; },
+        total: function () { return ix.items.length; },
+        item: function (id) { return ITEMS[id] || null; },
+        focus: function () { focusWin(tab().sel); }
+      };
+      try { doc.dispatchEvent(new CustomEvent('ccnav:ready')); } catch (e) { /* old browser */ }
+    }
+    say(FREE ? 'Press categories, or type words after Narrow. Its menu is Navigator.' : T ? 'The navigator: press categories, or type words after Narrow (Alt+x). Help, Keys lists the rest.'
           : 'The navigator: press categories or type words (words match whole, plural or by their start; about-corwin’s matching was not staged).');
     host.setAttribute('data-ready', 'yes');
   }

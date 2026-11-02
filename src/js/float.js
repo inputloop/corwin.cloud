@@ -119,27 +119,32 @@
     f.reset = function () { f.temp = false; f.set({ mode: 'float', x: null, y: null, h: null, hidden: false }); };
     f.retarget = function () { if (f.auto && !f.narrow()) { f.state.x = f.state.y = null; f.apply(); } };
 
-    // the grip: drag, or arrow keys
+    // the grip: drag, or arrow keys. o.drag lists more places that drag it with a pointer only (the
+    // free frame's menu bar, as a window manager's title bar: docs/NAV.md, revision 5); a press on a
+    // button there is the button's, not a drag
     var drag = null;
-    f.grip.addEventListener('pointerdown', function (ev) {
-      if (f.narrow() || ev.button > 0 || (ev.target.closest && ev.target.closest('button:not(.fl-grip)'))) return;
-      if (f.state.mode !== 'float') return;
-      f.clamp();
-      drag = { x: ev.clientX, y: ev.clientY, sx: f.state.x, sy: f.state.y, moved: false };
-      try { f.grip.setPointerCapture(ev.pointerId); } catch (e) { /* fine */ }
-    });
-    f.grip.addEventListener('pointermove', function (ev) {
-      if (!drag) return;
-      var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
-      if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
-      drag.moved = true; ev.preventDefault();
-      f.state.x = drag.sx + dx; f.state.y = drag.sy + dy; f.auto = false; f.apply();
-    });
-    f.grip.addEventListener('pointerup', function () {
-      if (!drag) return;
-      var moved = drag.moved; drag = null;
-      if (moved) { f.grabbed = true; saveAll(); if (o.say) o.say(f.describe()); }
-    });
+    function bindDrag(h) {
+      h.addEventListener('pointerdown', function (ev) {
+        if (f.narrow() || ev.button > 0 || (ev.target.closest && ev.target.closest('button:not(.fl-grip), a, input'))) return;
+        if (f.state.mode !== 'float') return;
+        f.clamp();
+        drag = { x: ev.clientX, y: ev.clientY, sx: f.state.x, sy: f.state.y, moved: false };
+        try { h.setPointerCapture(ev.pointerId); } catch (e) { /* fine */ }
+      });
+      h.addEventListener('pointermove', function (ev) {
+        if (!drag) return;
+        var dx = ev.clientX - drag.x, dy = ev.clientY - drag.y;
+        if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+        drag.moved = true; ev.preventDefault();
+        f.state.x = drag.sx + dx; f.state.y = drag.sy + dy; f.auto = false; f.apply();
+      });
+      h.addEventListener('pointerup', function () {
+        if (!drag) return;
+        var moved = drag.moved; drag = null;
+        if (moved) { f.grabbed = true; saveAll(); if (o.say) o.say(f.describe()); }
+      });
+    }
+    [f.grip].concat(o.drag || []).forEach(bindDrag);
     f.grip.addEventListener('click', function (ev) { if (f.grabbed) { f.grabbed = false; ev.preventDefault(); ev.stopPropagation(); } }, true);
     f.grip.addEventListener('keydown', function (ev) {
       var k = ev.key, n = ev.shiftKey ? BIG : STEP;
@@ -186,13 +191,24 @@
     });
   }
   function get(n) { return list.filter(function (f) { return f.name === n; })[0] || null; }
-  window.CCFloat = { make: make, relayout: relayout, available: !!area, get: get };
+  // free's own settings (the legend watermark off, the navigator's frame closed), one key, in try/catch
+  var FKEY = 'corwin.cloud.free.v1';
+  function freeState() { try { return JSON.parse(window.localStorage.getItem(FKEY) || '{}') || {}; } catch (e) { return {}; } }
+  function freeKeep(k, v) { var s = freeState(); s[k] = v; try { window.localStorage.setItem(FKEY, JSON.stringify(s)); } catch (e) { /* refused: for this visit */ } }
+  window.CCFloat = { make: make, relayout: relayout, available: !!area, get: get, freeState: freeState, freeKeep: freeKeep };
 
   // ---- the legend ----------------------------------------------------------------------------------
   var lg = doc.getElementById('legend');
   if (!lg || !area) return;
   // classic (docs/NAV.md, revision 4): the legend stays under the drawing as its one row; nothing floats
   var FREE = doc.documentElement.getAttribute('data-ui') !== 'classic';
+  var more = lg.querySelector('.lg-more');
+  if (more) more.addEventListener('click', function () {
+    if (FREE && window.CCFloat.credits) { window.CCFloat.credits(); return; }
+    var open = !lg.classList.contains('lg-open');
+    lg.classList.toggle('lg-open', open);
+    more.setAttribute('aria-expanded', String(open));
+  });
   if (!FREE) { lg.setAttribute('data-ready', 'yes'); return; }
   lg.classList.add('watermark');
   var grip = doc.createElement('div');
@@ -200,54 +216,36 @@
   var handle = doc.createElement('button');
   handle.type = 'button'; handle.className = 'fl-grip lg-grip';
   handle.setAttribute('aria-label', 'Move the legend: drag, or use the arrow keys');
-  handle.textContent = '⠿ Legend';
-  var hide = doc.createElement('button');
-  hide.type = 'button'; hide.className = 'fl-btn lg-hide'; hide.setAttribute('aria-expanded', 'true');
-  hide.setAttribute('aria-controls', 'legend');
+  handle.setAttribute('title', 'Move the legend');
+  handle.textContent = '\u283f';
   // free: the watermark can be turned off (Options, Legend watermark, in the frame's menus); the legal
   // notices stay on every mode-line (GPL) and in Help, Credits and licence. Kept in corwin.cloud.free.v1.
   var off = doc.createElement('button');
   off.type = 'button'; off.className = 'fl-btn lg-off'; off.textContent = 'off';
   off.setAttribute('aria-label', 'Turn the legend watermark off (Help, Credits and licence still shows it)');
-  grip.appendChild(handle); grip.appendChild(hide); grip.appendChild(off);
+  grip.appendChild(handle); grip.appendChild(off);
   lg.insertBefore(grip, lg.firstChild);
-  var FKEY = 'corwin.cloud.free.v1';
-  function freeState() { try { return JSON.parse(window.localStorage.getItem(FKEY) || '{}') || {}; } catch (e) { return {}; } }
   function setOff(v, quiet) {
-    var s = freeState(); s.legendOff = !!v;
-    try { window.localStorage.setItem(FKEY, JSON.stringify(s)); } catch (e) { /* refused: for this visit */ }
+    freeKeep('legendOff', !!v);
     lg.hidden = !!v;
     window.CCFloat.legendOff = !!v;
+    // shown again: placed again from its real width (it had none while off), so it never runs off the canvas
+    var L0 = get('legend');
+    if (!v && L0) { if (L0.auto) L0.retarget(); else L0.apply(); }
     if (!quiet && msg) msg.textContent = v ? 'The legend watermark is off. GPL on the mode-line, or Help, Credits and licence, shows it.' : 'The legend watermark is on.';
   }
   window.CCFloat.setLegendOff = setOff;
   off.addEventListener('click', function () { setOff(true); });
   setOff(!!freeState().legendOff, true);
   var msg = doc.getElementById('stage-msg');
-  var L = make({
-    name: 'legend', label: 'The legend', el: lg, grip: handle, docks: false, width: 520, hiddenNarrow: true, hidden: true,
+  make({
+    name: 'legend', label: 'The legend', el: lg, grip: handle, docks: false, width: 520, hiddenNarrow: false, hidden: false,
     say: function (t) { if (msg) msg.textContent = t; },
-    // a watermark along the bottom of the canvas: right of the Emacs frame (js/free.js; it starts at the
-    // left edge, 440 pixels wide) and left of the app's overview map
+    // one line along the bottom of the canvas, left of the app's overview map
     place: function (edges, W, H, el) {
-      var fr = get('frame1'), left = Math.max(edges.left, fr && fr.state.x !== null ? fr.state.x + fr.state.w + 12 : 460), w = Math.round(Math.max(MINW, Math.min(620, edges.right - left, W - 24)));
-      el.style.setProperty('--fw', w + 'px');
-      return { x: Math.max(12, Math.min(edges.right - w, W - w - 12)), y: Math.max(12, H - (el.offsetHeight || 40) - 16), w: w };
-    },
-    onApply: function (f) {
-      var h = f.isHidden();
-      hide.textContent = h ? 'show' : 'hide';
-      hide.setAttribute('aria-expanded', h ? 'false' : 'true');
-      hide.setAttribute('aria-label', h ? 'Show the whole legend' : 'Hide the legend to one line');
+      var w = el.offsetWidth || 520;
+      return { x: Math.max(12, Math.min(edges.right - w, W - w - 12)), y: Math.max(12, H - (el.offsetHeight || 22) - 12) };
     }
-  });
-  // shown again, an unmoved watermark is placed again from the bottom, so it does not run off the canvas
-  hide.addEventListener('click', function () { L.toggle(); if (L.auto) L.retarget(); });
-  // focus going into the drawing hides the legend to its one line (not kept: the next visit is as you left it)
-  window.addEventListener('blur', function () {
-    setTimeout(function () {
-      if (doc.activeElement === frame && !L.narrow() && !L.isHidden()) { L.temp = true; L.apply(); }
-    }, 0);
   });
   lg.setAttribute('data-ready', 'yes');
 })();

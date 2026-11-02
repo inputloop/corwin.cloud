@@ -2,14 +2,18 @@
 // SPDX-FileCopyrightText: 2026 INPUTLOOP
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// free.js: the free page layout (docs/NAV.md, revision 4). The drawing fills the window (the app is
+// free.js: the free page layout (docs/NAV.md, revisions 4 and 5). The drawing fills the window (the app is
 // asked for embed=bare, so its own bars and panels are hidden) and one Emacs frame floats near the left
 // edge, top to bottom: a menu bar (the site's pages, the app's commands() as its menus grouped them,
 // Options, Help: the only menus on the page), a tool-bar of shape categories (tiles that press and
 // unpress), the finder (shapes and what the drawing draws, in one to four windows, each with a
 // mode-line built from a template of elements), and the message area, which becomes a one-line M-x
 // input. C-x 5 2 makes another frame. Pages, Properties, Credits and the frame by the shape (*Here*,
-// C-c .) are small Emacs frames. It talks to the app only through its documented calls and messages
+// C-c .) are small Emacs frames. Revision 5 ("yes, and"): a window can show *navigator* (js/nav.js, the
+// navigator of revisions 1 to 3, whole) instead of *finder*; on a wide first visit frame 2 shows it beside
+// frame 1; the frame moves by its menu bar too and widens by its right edge; the menu bar, the mode-lines
+// and the message area grow by a line together; the tool-bar is icons in even groups with tooltips; a
+// preview box says what is pointed at (topology forge 1.9's preview() takes over when it is there). It talks to the app only through its documented calls and messages
 // (topology forge 1.8, spec/EMBED-v1.md), never reaching into its page; it reads one file from this
 // site (nav/index.json) and asks the network for nothing else; it keeps only places (js/float.js) and
 // the watermark's on or off (js/float.js) in this browser.
@@ -24,6 +28,10 @@
   var narrowQ = window.matchMedia ? window.matchMedia('(max-width: 47.5rem)') : { matches: false };
   var IX = null, CATS = [], SHAPE = {}, ICON = {}, CMDS = [], SEL = null, READY = null, PAGE = '';
   var frames = [], cur = null, small = {}, nextFrame = 1, MOTION = html.classList.contains('motion-on');
+  var NAVAT = null, MAXLINES = 4, LH = 24, CELL = 30;   // where *navigator* is shown; lines and tool cells, in pixels
+  // what free keeps (the navigator's frame closed or not) is kept by js/float.js, under corwin.cloud.free.v1
+  function fstate() { return window.CCFloat.freeState ? window.CCFloat.freeState() : {}; }
+  function fkeep(k, v) { if (window.CCFloat.freeKeep) window.CCFloat.freeKeep(k, v); }
 
   // ---- small helpers ------------------------------------------------------------------------------
   function mk(tag, attrs, kids) {
@@ -37,6 +45,14 @@
     return n;
   }
   function tf() { try { var w = app.contentWindow; return w && w.TopoForge && w.TopoForge.commands ? w.TopoForge : null; } catch (e) { return null; } }
+  // topology forge 1.9's calls turn on only when its version says so and the call is there
+  function vge(v, w) {
+    var a = String(v || '0').split('.').map(Number), b = String(w).split('.').map(Number);
+    for (var i = 0; i < Math.max(a.length, b.length); i++) { var x = a[i] || 0, y = b[i] || 0; if (x !== y) return x > y; }
+    return true;
+  }
+  function nine(call) { var t = tf(); return t && vge(t.version, '1.9') && (!call || typeof t[call] === 'function') ? t : null; }
+  function nav() { return window.CCNav || null; }
   function say(t) { if (cur) cur.say(t); }
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
   function each(list, fn) { Array.prototype.forEach.call(list, fn); }
@@ -95,13 +111,39 @@
   window.addEventListener('message', function (ev) {
     var m = ev.data;
     if (ev.origin !== window.location.origin || ev.source !== app.contentWindow || !m || !m.detail) return;
-    if (m.type === 'topoforge:ready') { READY = m.detail; PAGE = m.detail.page || ''; takeShapes(); refreshCmds(); }
-    else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; }
+    if (m.type === 'topoforge:ready') { READY = m.detail; PAGE = m.detail.page || ''; takeShapes(); refreshCmds(); hooks19(); }
+    else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; frames.forEach(function (f) { f.renderTools(); f.layoutTools(); }); }
+    else if (m.type === 'topoforge:context' && nine()) { SEL = m.detail && m.detail.count ? m.detail : SEL; here(); }
+    else if (m.type === 'topoforge:pages' && nine()) { if (small.pages && !small.pages.root.hidden) small.pages.fill(); }
+    else if (m.type === 'topoforge:key' && nine()) { keyFromApp(m.detail); return; }
     else return;
     frames.forEach(function (f) { f.modelines(); });
     if (small.pages && !small.pages.root.hidden) small.pages.fill();
     if (small.properties && !small.properties.root.hidden) small.properties.fill();
   });
+  // topology forge 1.9 (docs/NAV.md, revision 5, "1.9 hooks"): each turns on only when the version says
+  // 1.9 or later and the call is there; with 1.8 nothing here runs
+  function hooks19() {
+    var t = nine('embed');
+    if (t) { try { t.embed({ keys: true, context: true, pagelist: true }); } catch (e) { /* an older 1.9 without the words */ } }
+  }
+  // 1.9's keys switch: Alt+x, F10, C-x and C-c pressed in the drawing come here (topoforge:key, with Emacs's
+  // key names); a sequence stays open until this page ends it, so it ends every one it finishes or refuses
+  var KEYSEQ = { 'C-x 2': 'split-window-below', 'C-x 3': 'split-window-right', 'C-x 0': 'delete-window', 'C-x 1': 'delete-other-windows', 'C-x o': 'other-window',
+    'C-x b': 'switch-to-buffer', 'C-x {': 'shrink-frame', 'C-x }': 'enlarge-frame', 'C-x 5 2': 'make-frame', 'C-x 5 0': 'delete-frame', 'C-x 5 o': 'other-frame',
+    'C-x t 2': 'nav:newbuf', 'C-x t 0': 'nav:closebuf', 'C-x t o': 'nav:nextbuf', 'C-c .': 'here', 'C-c p': 'nav:pin', 'C-c m': 'nav:setmode', 'C-c k': 'nav:clearmode' };
+  function keyFromApp(d) {
+    var f = cur || frames[0], t = tf();
+    if (!f || !d) return;
+    var seq = d.seq && d.seq.length ? d.seq : [d.key], str = seq.join(' ');
+    function end() { if (t && typeof t.endKeys === 'function') t.endKeys(); }
+    if (seq[0] === 'M-x') { end(); core('execute-extended-command', f); return; }
+    if (seq[0] === '<f10>') { end(); f.menuOpen(0, true); return; }
+    if (seq[seq.length - 1] === 'C-g' || seq[seq.length - 1] === '<escape>') { end(); f.say('Quit'); return; }
+    if (KEYSEQ[str]) { end(); run(KEYSEQ[str], f); return; }
+    if (Object.keys(KEYSEQ).some(function (k) { return k.indexOf(str + ' ') === 0; })) { f.say(str + '-'); return; }
+    end(); f.say(str + ' is undefined');
+  }
   function placeShape(id, center) {
     var t = tf(), s = SHAPE[id];
     if (!t || !s) { say('The drawing app is not ready yet.'); return; }
@@ -125,17 +167,20 @@
   // ---- the mode-line: a template of elements (docs/NAV.md, "The mode-line: a template of elements") --
   var MODE_LINE = '%buffer  %page  %select  %zoom  %filter  %split  %lighters';
   var ELEMENTS = {
-    buffer: { scope: 'core', text: function () { return '*finder*'; }, act: 'switch-to-buffer',
-      help: function () { return 'Buffer *finder*: the shapes and what the drawing draws. Click: switch to another buffer.'; } },
+    buffer: { scope: 'core', text: function (c) { return c.buf === 'navigator' ? '*navigator*' : '*finder*'; }, act: 'switch-to-buffer',
+      help: function (c) { return c.buf === 'navigator' ? 'Buffer *navigator*: what the drawing draws, by category, with pins, buffers and splits of its own. Click: switch this window to another buffer (C-x b).' : 'Buffer *finder*: the shapes and what the drawing draws. Click: switch this window to another buffer (C-x b).'; } },
     page: { scope: 'context', text: function () { return PAGE ? 'p:' + PAGE : ''; }, act: 'pages',
       help: function () { return 'The page of the drawing in view: ' + PAGE + '. Click: the Pages box.'; } },
     select: { scope: 'context', long: 'here', act: 'here',
       text: function () { return SEL ? SEL.name + (SEL.count > 1 ? ' +' + (SEL.count - 1) : '') : ''; },
       help: function () { return SEL ? 'Selected in the drawing: ' + SEL.name + (SEL.tooltip ? ': ' + SEL.tooltip : '') + ' · ' + SEL.kind + ' · page ' + SEL.page + '. Click or long press: the frame by the shape (C-c .).' : ''; } },
     zoom: { scope: 'mode', parts: [['−', 'view::zoom-out', 'Zoom out (the mouse wheel here zooms too)'], ['zoom', 'view::fit-to-window', 'Fit the drawing to the window'], ['+', 'view::zoom-in', 'Zoom in']] },
-    filter: { scope: 'mode', act: 'filter-clear',
-      text: function (c) { return filterWords(c.frame); },
-      help: function (c) { return filterWords(c.frame) === 'all' ? 'The finder shows everything: press a tile or type words (M-x) to narrow it.' : 'The finder is narrowed to ' + filterWords(c.frame) + '. Click: show everything again.'; } },
+    filter: { scope: 'mode', act: function (c) { return c.buf === 'navigator' ? 'nav-narrow' : 'filter-clear'; },
+      text: function (c) { return c.buf === 'navigator' ? (nav() ? nav().shown() + '/' + nav().total() + ' ' + nav().context() : '') : filterWords(c.frame); },
+      help: function (c) {
+        if (c.buf === 'navigator') return nav() ? 'The navigator shows ' + nav().shown() + ' of ' + nav().total() + ' (' + nav().context() + '). Click: its Narrow line.' : '';
+        return filterWords(c.frame) === 'all' ? 'The finder shows everything: press a tile or type words (M-x) to narrow it.' : 'The finder is narrowed to ' + filterWords(c.frame) + '. Click: show everything again.';
+      } },
     split: { scope: 'core', act: 'other-window',
       text: function (c) { return c.total > 1 ? 'W' + c.n + '/' + c.total : ''; },
       help: function (c) { return 'Window ' + c.n + ' of ' + c.total + '. Click: the other window (C-x o).'; } },
@@ -175,7 +220,7 @@
         var txt = e.text(c);
         if (!txt) { pendingGap = ''; return; }
         var h = e.help(c);
-        node.appendChild(mk('button', { type: 'button', cls: 'ml-b', 'data-act': e.act, 'data-long': e.long || null, 'data-help': h, 'aria-label': h, text: txt }));
+        node.appendChild(mk('button', { type: 'button', cls: 'ml-b', 'data-act': typeof e.act === 'function' ? e.act(c) : e.act, 'data-long': e.long || null, 'data-help': h, 'aria-label': h, text: txt }));
       }
       if (pendingGap && el.childNodes.length) el.appendChild(doc.createTextNode(pendingGap));
       pendingGap = '';
@@ -186,7 +231,8 @@
   // ---- commands: the frame's own, by name (Emacs's), and the app's by its id ----------------------
   var KEYS = { 'split-window-below': 'C-x 2', 'split-window-right': 'C-x 3', 'delete-window': 'C-x 0', 'delete-other-windows': 'C-x 1',
     'other-window': 'C-x o', 'make-frame': 'C-x 5 2', 'delete-frame': 'C-x 5 0', 'other-frame': 'C-x 5 o', 'here': 'C-c .',
-    'execute-extended-command': 'Alt+x', 'menu-bar-open': 'F10', 'keyboard-quit': 'C-g' };
+    'execute-extended-command': 'Alt+x', 'menu-bar-open': 'F10', 'keyboard-quit': 'C-g', 'switch-to-buffer': 'C-x b',
+    'enlarge-frame': 'C-x }', 'shrink-frame': 'C-x {' };
   var NAMES = { 'split-window-below': 'Split window below', 'split-window-right': 'Split window right', 'delete-window': 'Delete window',
     'delete-other-windows': 'One window', 'other-window': 'Other window', 'make-frame': 'New frame', 'delete-frame': 'Delete frame',
     'other-frame': 'Other frame', 'here': 'The frame by the shape (*Here*)', 'pages': 'Pages', 'properties': 'Properties', 'credits': 'Credits and licence',
@@ -194,7 +240,8 @@
     'toggle-motion': 'Motion', 'filter-clear': 'Show everything in the finder', 'describe-mode': 'About this frame', 'keys': 'Keys',
     'fold': 'Show or hide the tool-bar and finder', 'move-left': 'Move left', 'move-right': 'Move right', 'move-up': 'Move up', 'move-down': 'Move down',
     'move-reset': 'Back to where it started', 'switch-to-buffer': 'Switch to buffer', 'execute-extended-command': 'M-x: run a command',
-    'menu-bar-open': 'Open the menu bar' };
+    'menu-bar-open': 'Open the menu bar', 'enlarge-frame': 'Wider', 'shrink-frame': 'Narrower', 'toolbar': 'Tool-bar in this frame',
+    'show-navigator': 'Show *navigator* in this window', 'show-finder': 'Show *finder* in this window', 'nav-narrow': 'The navigator’s Narrow line' };
   function core(name, f) {
     f = f || cur;
     var fn = {
@@ -210,6 +257,11 @@
       'fold': function () { f.fold(); },
       'move-left': function () { f.fl.move(-64, 0); }, 'move-right': function () { f.fl.move(64, 0); }, 'move-up': function () { f.fl.move(0, -64); }, 'move-down': function () { f.fl.move(0, 64); },
       'move-reset': function () { f.fl.reset(); },
+      'enlarge-frame': function () { f.fl.set({ w: f.fl.state.w + 16 }, true); f.say('The frame is ' + f.fl.state.w + ' pixels wide, kept in this browser (C-x }).'); },
+      'shrink-frame': function () { f.fl.set({ w: f.fl.state.w - 16 }, true); f.say('The frame is ' + f.fl.state.w + ' pixels wide, kept in this browser (C-x {).'); },
+      'toolbar': function () { f.st.toolbar = !f.st.toolbar; f.render(); f.say(f.st.toolbar ? 'The tool-bar is shown in this frame.' : 'The tool-bar is off in this frame (Options, Tool-bar in this frame brings it back).'); },
+      'show-navigator': function () { f.show('navigator'); }, 'show-finder': function () { f.show('finder'); },
+      'nav-narrow': function () { var q = doc.getElementById('nav-q'); if (q && NAVAT) { q.focus(); f.say('Narrow the navigator: type words; its pressed categories hold too. Ctrl+Enter pins the results as a buffer.'); } else f.say('The navigator is not shown: C-x b *navigator*.'); },
       'switch-to-buffer': function () { f.mx('Switch to buffer: ', bufferCands); },
       'execute-extended-command': function () { f.mx('M-x ', allCands); },
       'menu-bar-open': function () { f.menuOpen(0, true); },
@@ -220,6 +272,10 @@
   }
   function run(name, f) {
     if (/^[a-z]+:[a-z0-9-]*:/.test(name)) return runApp(name);
+    if (name.indexOf('nav:') === 0) {
+      if (!nav() || !NAVAT) { say('The navigator is not shown in any window: C-x b, then *navigator*.'); return false; }
+      var r = nav().run(name.slice(4)); if (NAVAT) NAVAT.f.modelines(); return r;
+    }
     return core(name, f);
   }
   function setUI(v) {
@@ -272,8 +328,8 @@
     window.location.href = l.href;
   }
   function bufferCands() {
-    return ['*finder*', '*Pages*', '*Properties*', '*Credits*', '*Here*'].map(function (b) {
-      return { label: b, run: function () { if (b === '*finder*') { cur.focusWin(); say('Buffer *finder*.'); } else core(b === '*Here*' ? 'here' : b.slice(1, -1).toLowerCase()); } };
+    return ['*finder*', '*navigator*', '*Pages*', '*Properties*', '*Credits*', '*Here*'].map(function (b) {
+      return { label: b, run: function () { if (b === '*finder*' || b === '*navigator*') cur.show(b.slice(1, -1)); else core(b === '*Here*' ? 'here' : b.slice(1, -1).toLowerCase()); } };
     });
   }
   function allCands() {
@@ -289,20 +345,17 @@
   }
 
   // ---- the frame -------------------------------------------------------------------------------------
-  function Frame(n) {
+  function Frame(n, opts) {
     var f = this;
+    opts = opts || {};
     f.n = n;
-    f.st = { q: '', tiles: [], tree: { w: 1 }, wins: { 1: { fold: [], point: null, scroll: 0 } }, sel: 1, next: 2, open: !narrowQ.matches };
+    f.st = { q: '', tiles: [], tree: { w: 1 }, wins: { 1: { fold: [], point: null, scroll: 0, buf: opts.buf || 'finder' } }, sel: 1, next: 2, open: !narrowQ.matches, toolbar: opts.toolbar !== false };
     f.root = mk('section', { cls: 'ef', id: 'ef-' + n, 'aria-label': 'Emacs frame ' + n + ': menus, tool-bar, finder, mode-line and message area', 'data-frame': n });
     f.grip = mk('button', { type: 'button', cls: 'fl-grip ef-grip', 'aria-label': 'Move this frame: drag, or use the arrow keys (Options, Move does it with one press)', title: 'Drag to move', text: '⠿' });
     f.menubar = mk('div', { cls: 'ef-menubar', role: 'menubar', 'aria-label': 'Menu bar (F10)' });
     f.menubar.appendChild(f.grip);
-    f.menus = ['Site', 'File', 'Edit', 'Arrange', 'Layout', 'View', 'Options', 'Help'];
-    f.menus.forEach(function (m, i) {
-      f.menubar.appendChild(mk('button', { type: 'button', cls: 'ef-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'data-menu': m, tabindex: i ? '-1' : '0', text: m }));
-    });
     f.foldB = mk('button', { type: 'button', cls: 'ef-fold', 'aria-controls': 'ef-body-' + n, 'data-act': 'fold' });
-    f.menubar.appendChild(f.foldB);
+    f.renderMenubar();
     f.pop = mk('div', { cls: 'ef-pop', role: 'menu', hidden: true });
     f.toolbar = mk('div', { cls: 'ef-toolbar', role: 'toolbar', 'aria-label': 'Tool bar: shape categories. Pressed tiles narrow the finder’s shapes.' });
     f.wins = mk('div', { cls: 'ef-wins' });
@@ -313,26 +366,74 @@
     f.comp = mk('ul', { cls: 'ef-comp', id: 'ef-comp-' + n, role: 'listbox', 'aria-label': 'Completions', hidden: true });
     f.form = mk('form', { cls: 'ef-mb-form', hidden: true, role: 'search' }, [f.prompt, f.input]);
     f.echo = mk('div', { cls: 'ef-echo' }, [f.comp, f.msg, f.form]);
-    [f.menubar, f.pop, f.body, f.echo].forEach(function (x) { f.root.appendChild(x); });
+    // the right edge: the frame's width (drag, or arrow keys; kept per browser by js/float.js)
+    f.edge = mk('div', { cls: 'ef-edge', role: 'separator', tabindex: '0', 'aria-orientation': 'vertical',
+      'aria-label': 'Width of this frame: drag, or Left and Right (16 pixels), Page Up and Page Down, Home and End; C-x { and C-x } too' });
+    [f.menubar, f.pop, f.body, f.echo, f.edge].forEach(function (x) { f.root.appendChild(x); });
     grid.appendChild(f.root);
     f.fl = window.CCFloat.make({
-      name: 'frame' + n, label: n === 1 ? 'The Emacs frame' : 'Emacs frame ' + n, el: f.root, grip: f.grip, docks: false, width: 440, hiddenNarrow: false,
+      name: 'frame' + n, label: n === 1 ? 'The Emacs frame' : 'Emacs frame ' + n, el: f.root, grip: f.grip, drag: [f.menubar], edge: f.edge,
+      docks: false, width: opts.width || 440, hiddenNarrow: false,
       say: function (t) { f.say(t); },
       place: function (edges, W, H) {
-        var k = n - 1;
-        return n === 1 ? { x: 8, y: 8, h: Math.max(320, Math.min(H - 24, 700)) } : { x: Math.min(W - 460, 460 + 24 * k), y: 24 + 24 * k, h: Math.max(300, Math.min(H - 80, 560)) };
+        var prev = frames[frames.length - 1], h = Math.max(320, Math.min(H - 24, 700));
+        if (n === 1) return { x: 8, y: 8, h: h };
+        // beside the frame before it when there is room (two views side by side), else stepped over it
+        var px = prev && prev !== f && prev.fl.state.x !== null ? prev.fl.state.x + prev.fl.state.w + 12 : 460;
+        var w = opts.width || 440;
+        return px + w <= W - 8 ? { x: px, y: 8, h: h } : { x: Math.min(W - w - 8, 460 + 24 * (n - 1)), y: 24 + 24 * (n - 1), h: Math.max(300, Math.min(H - 80, 560)) };
       }
     });
     f.wire();
     f.render();
+    if (window.ResizeObserver) { var lastW = 0; new window.ResizeObserver(function () { var w = f.root.offsetWidth; if (w !== lastW) { lastW = w; f.layoutTools(); f.linesSoon(); } }).observe(f.root); }
   }
-  Frame.prototype.say = function (t) { this.msg.textContent = t; };
+  Frame.prototype.say = function (t) { this.msg.textContent = t; this.linesSoon(); };
+  // the menu bar: the site, the app's menus, Navigator while a window showing *navigator* is selected
+  // (Emacs: a major mode's menu joins the menu bar), Options, Help
+  Frame.prototype.menuNames = function () {
+    var m = ['Site', 'File', 'Edit', 'Arrange', 'Layout', 'View'];
+    if (nav() && this.st.wins[this.st.sel] && this.st.wins[this.st.sel].buf === 'navigator') m.push('Navigator');
+    return m.concat(['Options', 'Help']);
+  };
+  Frame.prototype.renderMenubar = function () {
+    var f = this, names = f.menuNames();
+    if (f.menus && f.menus.join() === names.join()) return;
+    if (f.openMenu !== null && f.openMenu !== undefined) f.menuOpen(null);
+    var had = f.menubar.contains(doc.activeElement) ? doc.activeElement.getAttribute('data-menu') : null;
+    each(f.menubar.querySelectorAll('.ef-mb'), function (b) { b.parentNode.removeChild(b); });
+    f.menus = names;
+    names.forEach(function (m, i) {
+      f.menubar.insertBefore(mk('button', { type: 'button', cls: 'ef-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'data-menu': m, tabindex: i ? '-1' : '0', text: m }), f.foldB.parentNode === f.menubar ? f.foldB : null);
+    });
+    if (f.foldB.parentNode !== f.menubar) f.menubar.appendChild(f.foldB);
+    if (had) { var b = f.menubar.querySelector('[data-menu="' + had + '"]'); if (b) b.focus(); }
+    f.linesSoon();
+  };
+  // show a buffer in the selected window. One navigator lives in one window at a time: showing it here
+  // moves it from where it was, and that window shows *finder*
+  Frame.prototype.show = function (buf, w) {
+    var f = this, s = f.st;
+    w = w || s.sel;
+    if (buf === 'navigator' && !nav()) { f.say('The navigator is still loading (or its index did not load).'); return; }
+    if (buf === 'navigator' && NAVAT && !(NAVAT.f === f && NAVAT.w === w)) {
+      var o = NAVAT, ow = o.f.st.wins[o.w];
+      if (ow) ow.buf = 'finder';
+      NAVAT = null;
+      if (o.f !== f) o.f.render();
+      f.say('*navigator* moved here from ' + (o.f === f ? 'the other window' : 'frame ' + o.f.n) + ': it is shown in one window at a time.');
+    } else f.say(buf === 'navigator' ? 'Buffer *navigator*: press categories, type words after Narrow, pin, split. Its menu is Navigator.' : 'Buffer *finder*.');
+    s.wins[w].buf = buf;
+    if (buf === 'navigator') NAVAT = { f: f, w: w };
+    else if (NAVAT && NAVAT.f === f && NAVAT.w === w) NAVAT = null;
+    f.render(); checkNav();
+  };
   Frame.prototype.leaves = function (node) { var f = this; node = node || f.st.tree; return node.w ? [node.w] : node.kids.reduce(function (a, k) { return a.concat(f.leaves(k)); }, []); };
   Frame.prototype.split = function (dir) {
     var f = this, s = f.st, ls = f.leaves();
     if (ls.length >= MAXWIN) { f.say('At most ' + MAXWIN + ' windows in a frame here.'); return; }
     var id = s.next++, from = s.wins[s.sel];
-    s.wins[id] = { fold: from.fold.slice(), point: from.point, scroll: from.scroll };
+    s.wins[id] = { fold: from.fold.slice(), point: from.point, scroll: from.scroll, buf: from.buf === 'navigator' ? 'finder' : from.buf };
     (function walk(nd, parent, i) {
       if (nd.w === s.sel) {
         if (parent && parent.dir === dir) parent.kids.splice(i + 1, 0, { w: id });
@@ -356,12 +457,12 @@
     })(s.tree);
     if (s.tree.kids && s.tree.kids.length === 1) s.tree = s.tree.kids[0];
     delete s.wins[s.sel]; s.sel = f.leaves()[0];
-    f.render(); f.focusWin(); f.say('Window deleted (C-x 0).');
+    checkNav(); f.render(); f.focusWin(); f.say('Window deleted (C-x 0).');
   };
   Frame.prototype.oneWin = function () {
     var f = this, s = f.st, n = f.leaves().length;
     s.tree = { w: s.sel }; Object.keys(s.wins).forEach(function (k) { if (+k !== s.sel) delete s.wins[k]; });
-    f.render(); f.say(n > 1 ? 'One window: the others are closed (C-x 1).' : 'There is only one window.');
+    checkNav(); f.render(); f.say(n > 1 ? 'One window: the others are closed (C-x 1).' : 'There is only one window.');
   };
   Frame.prototype.otherWin = function () {
     var f = this, s = f.st, ls = f.leaves();
@@ -375,6 +476,7 @@
   };
   Frame.prototype.focusWin = function () {
     var w = this.wins.querySelector('.ef-win[data-win="' + this.st.sel + '"]');
+    if (w && this.st.wins[this.st.sel].buf === 'navigator' && nav()) { nav().focus(); return; }
     var n = w && (w.querySelector('.ef-it[tabindex="0"]') || w.querySelector('button'));
     if (n) n.focus();
   };
@@ -388,26 +490,97 @@
         .map(function (k) { return '[' + k + '="' + a.getAttribute(k) + '"]'; })[0] };
     }
     f.root.classList.toggle('ef-open', s.open);
+    f.root.classList.toggle('ef-notools', !s.toolbar);
+    f.renderMenubar();
     f.foldB.textContent = s.open ? '−' : '+';
     f.foldB.setAttribute('aria-expanded', String(s.open));
     f.foldB.setAttribute('aria-label', s.open ? 'Fold the tool-bar and finder' : 'Unfold the tool-bar and finder');
     f.renderTools(); f.renderWins();
+    f.layoutTools(); f.linesSoon();
     if (keep && keep.sel) {
       var scope = keep.win ? f.wins.querySelector('.ef-win[data-win="' + keep.win + '"]') : f.root;
       var nn = scope && scope.querySelector(keep.sel);
       if (nn) nn.focus({ preventScroll: true });
     }
   };
+  // the tool-bar (docs/NAV.md, revision 5): groups from what is there now, each an even grid, hairlines
+  // between groups, icons only (each tool's name and key in its tooltip and its accessible name)
+  Frame.prototype.toolGroups = function () {
+    var f = this, s = f.st, gs = [], w = s.wins[s.sel] || {};
+    function appT(id, ic) { var c = cmd(id); return c ? { act: id, label: c.label, key: c.shortcut, off: !c.enabled, icon: ic } : null; }
+    function coreT(name, ic, label) { return { act: name, label: label || NAMES[name], key: KEYS[name] || '', icon: ic }; }
+    if (CATS.length) gs.push({ id: 'shapes', label: 'Shape categories: pressed ones narrow the finder', tools: CATS.map(function (c) {
+      var on = s.tiles.indexOf(c.id) >= 0;
+      return { cat: c, label: c.label + ' shapes (' + c.shapes.length + ')', name: c.label + ' shapes (' + c.shapes.length + '): ' + (on ? 'pressed; press again to show every category' : 'press to show only these'), pressed: on };
+    }) });
+    if (refreshCmds().length) {
+      gs.push({ id: 'edit', label: 'Edit', tools: [appT('edit::undo', 'undo'), appT('edit::redo', 'redo')] });
+      if (SEL) gs.push({ id: 'sel', label: 'The selection', tools: [appT('edit::duplicate', 'dup'), appT('edit::delete', 'del'), appT('arrange::bring-to-front', 'front'),
+        appT('arrange::send-to-back', 'back'), appT('view::zoom-to-selection', 'zsel'), coreT('here', 'here')] });
+      gs.push({ id: 'view', label: 'View', tools: [appT('view::zoom-out', 'zout'), appT('view::fit-to-window', 'fit'), appT('view::zoom-in', 'zin')] });
+    }
+    var win = [coreT('split-window-right', 'split')];
+    if (!narrowQ.matches) win.push(coreT('make-frame', 'frame'));
+    if (nav()) win.push(w.buf === 'navigator' ? coreT('show-finder', 'finder') : coreT('show-navigator', 'nav'));
+    if (f.leaves().length > 1) win.push(coreT('delete-other-windows', 'one'));
+    gs.push({ id: 'win', label: 'Windows and frames', tools: win });
+    gs.forEach(function (g) { g.tools = g.tools.filter(Boolean); });
+    return gs.filter(function (g) { return g.tools.length; });
+  };
   Frame.prototype.renderTools = function () {
-    var f = this;
+    var f = this, first = true;
     f.toolbar.textContent = '';
+    if (!f.st.toolbar) return;
     if (!CATS.length) { f.toolbar.appendChild(mk('span', { cls: 'ef-wait', text: 'The shapes arrive when the drawing app is ready.' })); return; }
-    CATS.forEach(function (c, i) {
-      var on = f.st.tiles.indexOf(c.id) >= 0;
-      f.toolbar.appendChild(mk('button', { type: 'button', cls: 'ef-tile', 'data-cat': c.id, 'aria-pressed': String(on), tabindex: i ? '-1' : '0',
-        'aria-label': c.label + ' shapes (' + c.shapes.length + '): ' + (on ? 'pressed; press again to show every category' : 'press to show only these'), title: c.label },
-        [icon(c.shapes[0].id), mk('span', { cls: 'ef-tl', text: c.label.replace(' & ', ' ').split(' ')[0] })]));
+    f.toolbar.setAttribute('aria-label', 'Tool bar: shape categories, then the drawing’s and the frame’s commands. Arrow keys move along it.');
+    f.toolGroups().forEach(function (g) {
+      var box = mk('div', { cls: 'ef-tg', role: 'group', 'aria-label': g.label, 'data-group': g.id });
+      g.tools.forEach(function (t) {
+        var b;
+        if (t.cat) b = mk('button', { type: 'button', cls: 'ef-tool ef-tile', 'data-cat': t.cat.id, 'aria-pressed': String(t.pressed), 'aria-label': t.name, 'data-tip': t.label, tabindex: first ? '0' : '-1' }, [icon(t.cat.shapes[0].id)]);
+        else b = mk('button', { type: 'button', cls: 'ef-tool', 'data-act': t.act, 'aria-label': t.label + (t.key ? ' (' + t.key + ')' : ''), 'aria-disabled': t.off ? 'true' : null,
+          'data-tip': t.label + (t.key ? '   ' + t.key : '') + (t.off ? ' (cannot run now)' : ''), tabindex: first ? '0' : '-1' }, [glyph(t.icon)]);
+        first = false;
+        box.appendChild(b);
+      });
+      f.toolbar.appendChild(box);
     });
+  };
+  // even rows: a group that cannot fit on one row gets the column count that makes its rows as even as
+  // they can be (eight tools in room for six: two rows of four); a group that starts a row drops its hairline
+  Frame.prototype.layoutTools = function () {
+    var f = this, tb = f.toolbar, gs = tb.querySelectorAll('.ef-tg');
+    if (!gs.length || !tb.clientWidth) return;
+    var cs = getComputedStyle(tb), avail = tb.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 10;
+    var max = Math.max(1, Math.floor((avail + 2) / CELL));
+    each(gs, function (g) {
+      var n = g.children.length, cols = n <= max ? n : Math.ceil(n / Math.ceil(n / max));
+      g.style.setProperty('--cols', String(cols));
+    });
+    var top = null;
+    each(gs, function (g) { g.classList.toggle('ef-tg-row', g.offsetTop !== top); top = g.offsetTop; });
+  };
+  // the three lines (docs/NAV.md, revision 5): the menu bar, every mode-line and the message area take
+  // the same number of lines; when one needs to wrap, all grow by a line together
+  Frame.prototype.linesSoon = function () {
+    var f = this;
+    if (f.linesQ) return;
+    f.linesQ = true;
+    (window.requestAnimationFrame || setTimeout)(function () { f.linesQ = false; f.lines(); });
+  };
+  function linesOf(el) {
+    var cs = getComputedStyle(el), ch = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+    return Math.max(1, Math.round((el.getBoundingClientRect().height - ch) / LH));
+  }
+  Frame.prototype.lines = function () {
+    var f = this, r = f.root;
+    if (!r.isConnected || r.hidden || !r.offsetWidth) return;
+    r.classList.add('ef-measure');
+    var parts = [f.menubar, f.form.hidden ? f.msg : f.form].concat(Array.prototype.slice.call(f.wins.querySelectorAll('.ef-ml')));
+    var n = Math.min(MAXLINES, parts.reduce(function (m, el) { return Math.max(m, linesOf(el)); }, 1));
+    r.classList.remove('ef-measure');
+    r.style.setProperty('--ef-lines', String(n));
+    r.setAttribute('data-lines', String(n));
   };
   Frame.prototype.model = function () {
     var f = this, s = f.st, cats = CATS.filter(function (c) { return !s.tiles.length || s.tiles.indexOf(c.id) >= 0; });
@@ -432,7 +605,14 @@
     f.modelines();
   };
   Frame.prototype.win = function (w, ls, model) {
-    var f = this, s = f.st, ws = s.wins[w] || (s.wins[w] = { fold: [], point: null, scroll: 0 });
+    var f = this, s = f.st, ws = s.wins[w] || (s.wins[w] = { fold: [], point: null, scroll: 0, buf: 'finder' });
+    if (ws.buf === 'navigator') {
+      var nb = mk('div', { cls: 'ef-wb ef-navwb' });
+      if (nav() && NAVAT && NAVAT.f === f && NAVAT.w === w) nav().mount(nb);
+      else nb.appendChild(mk('p', { cls: 'ef-none', text: nav() ? 'The navigator is shown in another window.' : 'The navigator is loading…' }));
+      var nml = mk('div', { cls: 'ef-ml', 'data-ml': w, role: 'group', 'aria-label': 'Mode-line of window ' + (ls.indexOf(w) + 1) });
+      return mk('div', { cls: 'ef-win ef-win-nav' + (w === s.sel ? ' selected' : ''), 'data-win': w, 'data-buf': 'navigator', role: 'region', 'aria-label': 'Window ' + (ls.indexOf(w) + 1) + ' of ' + ls.length + ': *navigator*' }, [nb, nml]);
+    }
     var body = mk('div', { cls: 'ef-wb' });
     if (!model.length) body.appendChild(mk('p', { cls: 'ef-none', text: CATS.length || IX ? 'Nothing here says “' + s.q.trim() + '”. Click the filter on the mode-line to show everything.' : 'Loading…' }));
     model.forEach(function (sec) {
@@ -455,22 +635,20 @@
     var first = body.querySelector('.ef-it.is-point') || body.querySelector('.ef-it');
     if (first) first.setAttribute('tabindex', '0');
     var ml = mk('div', { cls: 'ef-ml', 'data-ml': w, role: 'group', 'aria-label': 'Mode-line of window ' + (ls.indexOf(w) + 1) });
-    var box = mk('div', { cls: 'ef-win' + (w === s.sel ? ' selected' : ''), 'data-win': w, role: 'region', 'aria-label': 'Window ' + (ls.indexOf(w) + 1) + ' of ' + ls.length + ': *finder*' }, [body, ml]);
+    var box = mk('div', { cls: 'ef-win' + (w === s.sel ? ' selected' : ''), 'data-win': w, 'data-buf': 'finder', role: 'region', 'aria-label': 'Window ' + (ls.indexOf(w) + 1) + ' of ' + ls.length + ': *finder*' }, [body, ml]);
     body.addEventListener('scroll', function () { ws.scroll = body.scrollTop; }, { passive: true });
     return box;
   };
   Frame.prototype.modelines = function () {
-    var f = this, ls = f.leaves();
-    if (f.n === 1) motionMade = false;
-    each(f.wins.querySelectorAll('.ef-ml'), function (el) {
-      var w = +el.getAttribute('data-ml');
-      renderModeline(el, { frame: f, win: w, n: ls.indexOf(w) + 1, total: ls.length });
-    });
-    if (f.n === 1) frames.slice(1).forEach(function (o) { o.modelinesOnly(); });
+    var f = this;
+    if (f.n === 1 || frames[0] === f) motionMade = false;
+    f.modelinesOnly();
+    if (frames[0] === f) frames.slice(1).forEach(function (o) { o.modelinesOnly(); });
   };
   Frame.prototype.modelinesOnly = function () {
     var f = this, ls = f.leaves();
-    each(f.wins.querySelectorAll('.ef-ml'), function (el) { var w = +el.getAttribute('data-ml'); renderModeline(el, { frame: f, win: w, n: ls.indexOf(w) + 1, total: ls.length }); });
+    each(f.wins.querySelectorAll('.ef-ml'), function (el) { var w = +el.getAttribute('data-ml'); renderModeline(el, { frame: f, win: w, n: ls.indexOf(w) + 1, total: ls.length, buf: (f.st.wins[w] || {}).buf }); });
+    f.linesSoon();
   };
 
   // menus
@@ -491,9 +669,15 @@
     else if (m === 'Options') {
       mine('customize'); head('Page layout');
       out.push({ label: 'Free', act: 'ui-free', radio: true, checked: true }); out.push({ label: 'Classic (menus at the top)', act: 'ui-classic', radio: true, checked: false });
-      head(''); mine('legend', !window.CCFloat.legendOff); mine('toggle-motion', MOTION); mine('fold', this.st.open);
+      head(''); mine('legend', !window.CCFloat.legendOff); mine('toggle-motion', MOTION); mine('fold', this.st.open); mine('toolbar', this.st.toolbar);
+      head('Buffers'); mine('show-finder'); mine('show-navigator');
       head('Palettes'); mine('properties'); mine('pages'); mine('here');
-      if (!this.fl.narrow()) { head('Move this frame'); ['move-left', 'move-right', 'move-up', 'move-down', 'move-reset'].forEach(function (n) { mine(n); }); }
+      if (!this.fl.narrow()) {
+        head('Move this frame'); ['move-left', 'move-right', 'move-up', 'move-down', 'move-reset'].forEach(function (n) { mine(n); });
+        head('Width of this frame'); mine('enlarge-frame'); mine('shrink-frame');
+      }
+    } else if (m === 'Navigator') {
+      (nav() ? nav().menus() : []).forEach(function (it) { if (it.header !== undefined) head(it.header); else out.push({ label: it.label, key: it.key, act: 'nav:' + it.cmd }); });
     } else if (m === 'Help') { mine('keys'); mine('credits'); mine('describe-mode'); head('The drawing app'); app_('Help'); }
     else app_(m);
     return out;
@@ -578,7 +762,9 @@
     root.addEventListener('pointerdown', function () { cur = f; frames.forEach(function (o) { o.root.classList.toggle('ef-selected', o === f); }); });
     root.addEventListener('click', function (ev) {
       var n = ev.target, c, w = n.closest && n.closest('.ef-win');
-      if (w && +w.getAttribute('data-win') !== f.st.sel) { f.st.sel = +w.getAttribute('data-win'); each(f.wins.querySelectorAll('.ef-win'), function (b) { b.classList.toggle('selected', b === w); }); f.modelines(); }
+      if (w && +w.getAttribute('data-win') !== f.st.sel) { f.st.sel = +w.getAttribute('data-win'); each(f.wins.querySelectorAll('.ef-win'), function (b) { b.classList.toggle('selected', b === w); }); f.renderMenubar(); f.renderTools(); f.layoutTools(); f.modelines(); }
+      // the navigator's own clicks are its own; its window's mode-line follows them
+      if (n.closest('.navframe')) { setTimeout(function () { f.modelinesOnly(); }, 0); return; }
       if (n.closest('.ef-msg')) { core('execute-extended-command', f); return; }
       if ((c = n.closest('.ef-mb'))) { var i = f.menus.indexOf(c.getAttribute('data-menu')); if (f.openMenu === i) f.menuClose(true); else f.menuOpen(i, ev.detail === 0); return; }
       if ((c = n.closest('.ef-mi'))) {
@@ -590,6 +776,7 @@
         return;
       }
       if ((c = n.closest('[data-long]')) && c._longDone) { c._longDone = false; return; }
+      if ((c = n.closest('.ef-tool[aria-disabled="true"]'))) { f.say((c.getAttribute('data-tip') || 'That').replace(/\s+\(cannot run now\)$/, '').replace(/\s{3}.*$/, '') + ' cannot run now.'); return; }
       if ((c = n.closest('[data-act]'))) { run(c.getAttribute('data-act'), f); return; }
       if ((c = n.closest('.ef-tile'))) {
         var id = c.getAttribute('data-cat'), tl = f.st.tiles, j = tl.indexOf(id);
@@ -613,6 +800,23 @@
     function help(ev) { var b = ev.target.closest && ev.target.closest('.ef-ml [data-help]'); if (b) f.say(b.getAttribute('data-help')); }
     root.addEventListener('mouseover', help);
     root.addEventListener('focusin', help);
+    root.addEventListener('input', function (ev) { if (ev.target.closest && ev.target.closest('.navframe')) f.modelinesOnly(); });
+    // tooltips and the preview: pointing at or focusing a tool, a shape or a navigator item
+    function point(ev) {
+      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-shape, a.ef-it, .navframe a.it');
+      if (!el) return;
+      if (el.classList.contains('ef-tool')) showTip(el, ev.type === 'focusin');
+      preview(el);
+    }
+    root.addEventListener('mouseover', point);
+    root.addEventListener('focusin', point);
+    root.addEventListener('mouseout', function (ev) {
+      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-shape, a.ef-it, .navframe a.it');
+      if (!el || (ev.relatedTarget && (el.contains(ev.relatedTarget) || tip.el.contains(ev.relatedTarget)))) return;
+      if (el.classList.contains('ef-tool') && doc.activeElement !== el) hideTip();
+      preview(null);
+    });
+    root.addEventListener('focusout', function (ev) { var el = ev.target.closest && ev.target.closest('.ef-tool'); if (el) hideTip(); });
     // a long press on an element that has one (the selection: the frame by the shape)
     root.addEventListener('pointerdown', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-long]');
@@ -665,15 +869,21 @@
     var tg = ev.target, inField = tg.matches && tg.matches('input, textarea, select'), k = ev.key;
     if (isMx(ev)) { ev.preventDefault(); ev.stopPropagation(); prefix = null; core('execute-extended-command', f); return; }
     if (inField) return;
+    // ESC is a prefix only for a plain key it binds (ESC x); any other key clears it and is itself, so an
+    // Escape that dismissed a tooltip never eats the next key
+    if (prefix === 'ESC' && k !== 'Shift' && k !== 'Control' && k !== 'Alt' && (ev.ctrlKey || ev.altKey || ev.metaKey || (k !== 'x' && k !== 'X' && k !== 'Escape'))) prefix = null;
     if (prefix) {
       ev.preventDefault(); ev.stopPropagation();
       if (k === 'Shift' || k === 'Control' || k === 'Alt') return;
       var p = prefix; prefix = null;
       if (k === 'Escape' || (ev.ctrlKey && (k === 'g' || k === 'G'))) { f.say('Quit'); return; }
-      var table = { 'C-x': { '2': 'split-window-below', '3': 'split-window-right', '0': 'delete-window', '1': 'delete-other-windows', 'o': 'other-window', '5': 'C-x 5' },
-        'C-x 5': { '2': 'make-frame', '0': 'delete-frame', 'o': 'other-frame' }, 'C-c': { '.': 'here' }, 'ESC': { 'x': 'execute-extended-command' } }[p];
+      var table = { 'C-x': { '2': 'split-window-below', '3': 'split-window-right', '0': 'delete-window', '1': 'delete-other-windows', 'o': 'other-window', '5': 'C-x 5',
+          'b': 'switch-to-buffer', '{': 'shrink-frame', '}': 'enlarge-frame', 't': 'C-x t' },
+        'C-x 5': { '2': 'make-frame', '0': 'delete-frame', 'o': 'other-frame' }, 'C-x t': { '2': 'nav:newbuf', '0': 'nav:closebuf', 'o': 'nav:nextbuf' },
+        'C-c': { '.': 'here', 'p': 'nav:pin', 'm': 'nav:setmode', 'k': 'nav:clearmode' }, 'ESC': { 'x': 'execute-extended-command' } }[p];
       var name = table[k] || table[k.toLowerCase && k.toLowerCase()];
-      if (name === 'C-x 5') { prefix = 'C-x 5'; f.say('C-x 5-'); return; }
+      if (name === 'C-x 5' || name === 'C-x t') { prefix = name; f.say(name + '-'); return; }
+      if (name && name.indexOf('nav:') === 0) { run(name, f); return; }
       if (name) core(name, f); else f.say(p + ' ' + k + ' is undefined');
       return;
     }
@@ -696,12 +906,16 @@
     if (ev.ctrlKey && !ev.altKey && !ev.metaKey && (k === 'x' || k === 'X')) { ev.preventDefault(); prefix = 'C-x'; f.say('C-x-'); return; }
     if (ev.ctrlKey && !ev.altKey && !ev.metaKey && (k === 'c' || k === 'C') && !String(window.getSelection && window.getSelection())) { ev.preventDefault(); prefix = 'C-c'; f.say('C-c-'); return; }
     if (ev.ctrlKey && (k === 'g' || k === 'G')) { ev.preventDefault(); f.say('Quit'); return; }
+    if (k === 'Escape' && tip.shown) hideTip();   // the tooltip goes (WCAG 1.4.13), and Escape is still Emacs's ESC prefix
+    // 1.9: Escape in a frame gives up a shape armed in the drawing, as Escape in the drawing does
+    var t9 = k === 'Escape' && nine('place');
+    if (t9 && t9.placing) { ev.preventDefault(); t9.place(null); f.say('The armed shape is given up.'); return; }
     if (k === 'Escape' && !ev.ctrlKey && !ev.altKey) { ev.preventDefault(); prefix = 'ESC'; f.say('ESC-'); return; }
-    // the tool-bar: arrows move along it
-    var tile = tg.closest && tg.closest('.ef-tile');
+    // the tool-bar: arrows move along the whole of it, group to group
+    var tile = tg.closest && tg.closest('.ef-tool');
     if (tile && (k === 'ArrowRight' || k === 'ArrowLeft' || k === 'Home' || k === 'End')) {
       ev.preventDefault();
-      var ts = Array.prototype.slice.call(f.toolbar.querySelectorAll('.ef-tile')), a = ts.indexOf(tile);
+      var ts = Array.prototype.slice.call(f.toolbar.querySelectorAll('.ef-tool')), a = ts.indexOf(tile);
       var b = k === 'Home' ? 0 : k === 'End' ? ts.length - 1 : (a + (k === 'ArrowRight' ? 1 : ts.length - 1)) % ts.length;
       ts.forEach(function (x, z) { x.setAttribute('tabindex', z === b ? '0' : '-1'); }); ts[b].focus(); return;
     }
@@ -728,6 +942,91 @@
     frames.forEach(function (f) { if (f.openMenu !== null && f.openMenu !== undefined && !f.menubar.contains(ev.target) && !f.pop.contains(ev.target)) f.menuClose(false); });
   });
 
+  // ---- the navigator's one window ----------------------------------------------------------------------
+  function checkNav() {
+    if (!NAVAT) return;
+    var ok = frames.indexOf(NAVAT.f) >= 0 && NAVAT.f.st.wins[NAVAT.w] && NAVAT.f.st.wins[NAVAT.w].buf === 'navigator';
+    if (ok) return;
+    NAVAT = null;
+    var h = nav() && nav().host;
+    if (h) { h.hidden = true; grid.appendChild(h); }
+  }
+
+  // ---- tool icons: small line drawings, 16 by 16, in the text's colour --------------------------------
+  var GLYPHS = {
+    undo: 'M5 4 2 7l3 3M2 7h7a4 4 0 0 1 0 8H6', redo: 'M11 4l3 3-3 3M14 7H7a4 4 0 0 0 0 8h3',
+    dup: 'M2 5h8v9H2zM6 2h8v9', del: 'M3 3l10 10M13 3 3 13', front: 'M2 2h8v8H2zM6 6h8v8H6', back: 'M6 6h8v8H6zM2 2h8v8H2',
+    zsel: 'M4 4h5v5H4zM7 7l7 7M2 2h0', here: 'M2 3h12v8H7l-3 3v-3H2z',
+    zout: 'M6.5 2.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM9.5 9.5 14 14M4.5 6.5h4', zin: 'M6.5 2.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM9.5 9.5 14 14M4.5 6.5h4M6.5 4.5v4',
+    fit: 'M2 6V2h4M10 2h4v4M14 10v4h-4M6 14H2v-4', split: 'M2 2h12v12H2zM8 2v12', frame: 'M2 5h9v9H2zM5 2h9v9',
+    nav: 'M2 3h12M2 6h12M2 9h8M2 12h5M12 9v5l2-2', finder: 'M2 2h5v5H2zM9 2h5v5H9zM2 9h5v5H2zM9 9h5v5H9z', one: 'M2 2h12v12H2z'
+  };
+  function glyph(name) {
+    var NS = 'http://www.w3.org/2000/svg', svg = doc.createElementNS(NS, 'svg'), path = doc.createElementNS(NS, 'path');
+    svg.setAttribute('viewBox', '0 0 16 16'); svg.setAttribute('class', 'ef-icon ef-glyph'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+    path.setAttribute('d', GLYPHS[name] || GLYPHS.one); path.setAttribute('fill', 'none'); path.setAttribute('stroke', 'currentColor');
+    path.setAttribute('stroke-width', '1.5'); path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+    svg.appendChild(path);
+    return svg;
+  }
+
+  // ---- tooltips (WCAG 1.4.13: on hover and on focus; stays while pointed at; Escape dismisses) ----------
+  var tip = { el: mk('div', { cls: 'ef-tip', id: 'ef-tip', role: 'tooltip', hidden: true }), shown: false, owner: null };
+  grid.appendChild(tip.el);
+  tip.el.addEventListener('mouseleave', function (ev) { if (!(tip.owner && tip.owner.contains(ev.relatedTarget))) hideTip(); });
+  function showTip(b) {
+    var text = b.getAttribute('data-tip');
+    if (!text) return;
+    if (tip.owner && tip.owner !== b) tip.owner.removeAttribute('aria-describedby');
+    tip.el.textContent = text; tip.el.hidden = false; tip.shown = true; tip.owner = b;
+    b.setAttribute('aria-describedby', 'ef-tip');
+    var r = b.getBoundingClientRect(), g = grid.getBoundingClientRect(), W = grid.clientWidth;
+    var x = Math.max(4, Math.min(W - tip.el.offsetWidth - 4, r.left - g.left)), y = r.bottom - g.top + 4;
+    tip.el.style.setProperty('--tx', Math.round(x) + 'px'); tip.el.style.setProperty('--ty', Math.round(y) + 'px');
+  }
+  function hideTip() {
+    if (tip.owner) tip.owner.removeAttribute('aria-describedby');
+    tip.el.hidden = true; tip.shown = false; tip.owner = null;
+  }
+
+  // ---- the preview: what a press would do, in a small box above the app's overview map; topology forge
+  // 1.9's preview() shows it on the map itself, and then the box stands down ---------------------------
+  var hud = mk('aside', { cls: 'ef-hud', id: 'ef-hud', 'aria-label': 'Preview of what is pointed at', hidden: true }, [mk('p', { cls: 'ef-hud-h' }), mk('p', { cls: 'ef-hud-b' }),
+    mk('p', { cls: 'ef-hud-n', text: 'A stand-in until the overview map can show it (topology forge 1.9).' })]);
+  grid.appendChild(hud);
+  var hudT = null;
+  function describe(el) {
+    var id;
+    if ((id = el.getAttribute('data-cat'))) {
+      var c = CATS.filter(function (x) { return x.id === id; })[0];
+      return c ? { h: c.label + ': ' + c.shapes.length + ' shapes', b: c.shapes.map(function (x) { return x.label; }).join(', '), target: { category: c.id } } : null;
+    }
+    if ((id = el.getAttribute('data-shape'))) {
+      var sh = SHAPE[id];
+      return sh ? { h: sh.label, b: 'A shape in ' + ((CATS.filter(function (x) { return x.id === sh.category; })[0] || {}).label || 'the palette') + '. Enter: in the middle of the view; a click arms it; or drag it.', target: { category: sh.category } } : null;
+    }
+    if ((id = el.getAttribute('data-item') || (el.closest('.navframe') && el.getAttribute('data-id')))) {
+      var it = (IX && IX.items.filter(function (x) { return x.id === id; })[0]) || (nav() && nav().item(id));
+      return it ? { h: it.name, b: (it.tip || it.description || '') + (it.page ? (it.tip ? ' ' : '') + 'Its page in the drawing: ' + it.page + '.' : ''), target: [it.id] } : null;
+    }
+    if (el.classList.contains('ef-tool')) return { h: el.getAttribute('data-tip') || '', b: el.getAttribute('aria-pressed') ? '' : 'A press runs it.', target: null };
+    return null;
+  }
+  function preview(el) {
+    clearTimeout(hudT);
+    var d = el && describe(el), t9 = nine('preview');
+    if (t9) { try { t9.preview(d ? d.target : null); } catch (e) { /* the app's own business */ } hud.hidden = true; return; }
+    if (!d) { hudT = setTimeout(function () { hud.hidden = true; }, 400); return; }
+    hud.querySelector('.ef-hud-h').textContent = d.h;
+    hud.querySelector('.ef-hud-b').textContent = d.b;
+    var tt = tf(), p = null;
+    try { p = tt && tt.panels && tt.panels().map; } catch (e) { p = null; }
+    var W = grid.clientWidth, H = grid.clientHeight;
+    hud.style.setProperty('--hr', Math.round(p && p.shown ? Math.max(8, W - p.x - p.w) : 12) + 'px');
+    hud.style.setProperty('--hb', Math.round(p && p.shown ? Math.max(8, H - p.y + 8) : 12) + 'px');
+    hud.hidden = false;
+  }
+
   // ---- frames: C-x 5 2 and friends ------------------------------------------------------------------
   function makeFrame() {
     if (narrowQ.matches) { say('On a narrow screen there is one frame.'); return; }
@@ -740,7 +1039,9 @@
   function deleteFrame(f) {
     if (frames.length < 2) { say('This is the only frame, so it stays (Emacs: "Attempt to delete the sole visible or iconified frame").'); return; }
     frames.splice(frames.indexOf(f), 1);
+    if (f.navFrame) fkeep('navFrame', false);
     f.root.parentNode.removeChild(f.root);
+    checkNav();
     cur = frames[0]; cur.focusWin(); cur.say('Frame deleted (C-x 5 0).');
   }
   function otherFrame() {
@@ -813,7 +1114,7 @@
     credits: ['*Credits*', function (b) {
       var lg = doc.getElementById('legend');
       if (!lg) return;
-      ['.lg-short', '.lg-grid'].forEach(function (s) {
+      ['.lg-line', '.lg-grid'].forEach(function (s) {
         var x = lg.querySelector(s); if (!x) return;
         var c = x.cloneNode(true);
         each(c.querySelectorAll('[id]'), function (e) { e.removeAttribute('id'); });
@@ -859,10 +1160,25 @@
     var f = new Frame(nextFrame++);
     frames.push(f); cur = f;
     f.root.classList.add('ef-selected');
+    window.CCFloat.credits = function () { openSmall('credits'); };
+    // yes, and (revision 5): on a wide screen the navigator opens beside the finder in a second frame,
+    // until it is closed (C-x 5 0 there), which this browser then remembers
+    if (!narrowQ.matches && fstate().navFrame !== false) {
+      var g = new Frame(nextFrame++, { buf: 'navigator', toolbar: false, width: 360 });
+      g.navFrame = true; frames.push(g);
+      g.say('*navigator*. C-x b: *finder*.');
+    }
+    var mountNav = function () {
+      var target = null;
+      frames.forEach(function (fr) { fr.leaves().forEach(function (w) { if (!target && fr.st.wins[w].buf === 'navigator') target = { f: fr, w: w }; }); });
+      if (target) { NAVAT = target; target.f.render(); }
+      frames.forEach(function (fr) { fr.render(); });
+    };
+    if (nav()) mountNav(); else doc.addEventListener('ccnav:ready', mountNav);
     // what stage.js says (about the drawing kept in this browser) is said here too
     var sm = doc.getElementById('stage-msg');
     if (sm && window.MutationObserver) new MutationObserver(function () { if (sm.textContent) say(sm.textContent); }).observe(sm, { childList: true, characterData: true, subtree: true });
-    if (sm && sm.textContent) say(sm.textContent); else say('Alt+x or a click here: M-x. F10: the menus. The tiles narrow the shapes; Enter on a shape places it.');
+    if (sm && sm.textContent) say(sm.textContent); else say('Alt+x or a click here: M-x. F10: menus.');
     // Customize's Reduce motion, if kept: this page's motion button is on the mode-line
     var calm = doc.querySelector('#custom-panel input[name="calm"]');
     if (calm && calm.checked && MOTION) toggleMotion();
@@ -875,6 +1191,7 @@
     .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then(function (d) { IX = d; IX.items.forEach(function (it) { it.words = it.words || tok(it.name); }); frames.forEach(function (f) { f.render(); }); }, function () { say('The finder’s index did not load: the shapes and M-x still work.'); });
   // the tests' handle: the template and the table, read-only
-  window.CCFree = { template: MODE_LINE, elements: Object.keys(ELEMENTS), frames: function () { return frames.length; } };
+  window.CCFree = { template: MODE_LINE, elements: Object.keys(ELEMENTS), frames: function () { return frames.length; },
+    navAt: function () { return NAVAT ? { frame: NAVAT.f.n, win: NAVAT.w } : null; }, nineteen: function () { return !!nine(); } };
 })();
 // @license-end

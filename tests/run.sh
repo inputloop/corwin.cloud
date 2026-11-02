@@ -4,6 +4,7 @@
 #
 # sh tests/run.sh               build, then every check this machine can run
 # sh tests/run.sh --prove-red   plant one fault per promise in a copy; each must turn a check red
+#   (PLANT_ONLY=words: only the plants whose name has those words; PLANT_SHARD=i/n: every n-th from the i-th)
 # TOPOLOGY_DIR=../topology picks the topology checkout (the default); without one the home page
 # gets a placeholder and the checks still run.
 set -u
@@ -38,6 +39,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/home-browser.cjs || fail=1
       step "the home page in free, and the switch: the Emacs frame, the tool-bar, the mode-line, the watermark (playwright)"
       SITE_OUT=$out "$node" tests/free-browser.cjs || fail=1
+      step "revision 5, yes and: the one-line legend, the frame's place and width, the three lines, the navigator in free, the tool-bar, the switch (playwright)"
+      SITE_OUT=$out "$node" tests/free5-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -49,9 +52,13 @@ run_checks() {
 
 prove_red() {
   tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT INT TERM
-  bad=0
+  bad=0 pi=0
+  # PLANT_SHARD=i/n runs every n-th plant from the i-th (0-based), so n copies can run side by side
+  shard() { pi=$((pi + 1)); [ -z "${PLANT_SHARD:-}" ] && return 0; [ $((pi % ${PLANT_SHARD#*/})) = "${PLANT_SHARD%/*}" ]; }
   plant() {
     name=$1 file=$2 expr=$3
+    case $name in *"${PLANT_ONLY:-}"*) ;; *) return ;; esac   # PLANT_ONLY=words runs only the plants whose name has them
+    shard || return
     rm -rf "$tmp/w"; mkdir "$tmp/w"
     (cd "$here" && tar cf - --exclude=./public --exclude=./node_modules --exclude=./.git --exclude=__pycache__ .) | (cd "$tmp/w" && tar xf -)
     sed "$expr" "$tmp/w/$file" > "$tmp/x" && cp "$tmp/x" "$tmp/w/$file"
@@ -66,6 +73,8 @@ prove_red() {
   # a planted fault only a browser can see: build the copy, then run the navigator's browser checks on it
   plant_b() {
     name=$1 file=$2 expr=$3 suite=${4:-tests/nav-browser.cjs}
+    case $name in *"${PLANT_ONLY:-}"*) ;; *) return ;; esac
+    shard || return
     rm -rf "$tmp/w"; mkdir "$tmp/w"
     (cd "$here" && tar cf - --exclude=./public --exclude=./node_modules --exclude=./.git --exclude=__pycache__ .) | (cd "$tmp/w" && tar xf -)
     sed "$expr" "$tmp/w/$file" > "$tmp/x" && cp "$tmp/x" "$tmp/w/$file"
@@ -134,8 +143,11 @@ prove_red() {
   plant "float.js asks another host"         src/js/float.js 's#^  var all = {}, list = \[\];#  var all = {}, list = []; fetch("https://x.example/");#'
   # the legend (revision 2): Bryant named with his link, TopoForge's licence as its README.org says
   plant "the legend loses Bryant's link"     build.py     's#^BRYANT_URL = "https://github.com/takushieternal"#BRYANT_URL = "\#bryant"#'
-  plant "the legend's licence altered"       build.py     's#">GPL-3.0-or-later</a> or #">GPL-2.0-only</a> or #'
-  plant "the legend's hidden row drops him"  build.py     "s#<p class=\"lg-short\">' + TF_NAME + ' by %s · code#<p class=\"lg-short\">' + TF_NAME + '%.0s by Bryant · code#"
+  plant "the legend's licence altered"       build.py     's#">GNU General Public License, version 3</a> #">GNU General Public License, version 2</a> #'
+  plant "the legend's line drops his link"   build.py     's#("lg-c-app", .topology forge · %s. % gh)#("lg-c-app", "topology forge · Bryant")#'
+  # revision 5 (docs/NAV.md): the legend is one line, in words
+  plant "the legend's line in SPDX again"    build.py     's#<abbr title="%s">GPLv3+ or LGPLv3+</abbr>. % lic_words#GPL-3.0-or-later OR LGPL-3.0-or-later%.0s" % lic_words#'
+  plant "a sentence in the legend's line"    build.py     's#("lg-c-src", .<a href="%s">source</a>. % TF_SRC_PROJECT)#("lg-c-src", "Its source is public. <a href=\\"%s\\">source</a>" % TF_SRC_PROJECT)#'
   # topology forge 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
   plant "scripts cached for a day again"    deploy/nginx-corwin.cloud.conf 's#^        add_header Cache-Control "no-cache" always;\(.*\)$#        add_header Cache-Control "public, max-age=86400";#'
   plant "topology not revalidated"          deploy/corwin.cloud.interim.conf '/corwin-cloud-topology-csp.conf;/{n;d;}'
@@ -198,10 +210,9 @@ prove_red() {
     plant_b "the echo area in another face"       src/css/site.css 's#height: 60px; overflow: auto; font: inherit;#max-height: 6.5em; overflow: auto; font: 14px/22px var(--sans);#' $H
     plant_b "the selection not in the mode-line" src/js/nav.js "s#drawSel = m.detail.count ? m.detail : null;#drawSel = null;#" $H
     F=tests/free-browser.cjs
-    plant_b "the legend covers focus"             src/js/float.js 's#L.temp = true; L.apply();#L.apply();#' $F
     plant_b "the top bar shown in free"           src/css/site.css 's#^html\[data-ui="free"\] body\[data-page="home"\] header.top,$##' $F
     plant_b "the top bar hidden in classic"       src/css/site.css 's#^html\[data-ui="free"\] body\[data-page="home"\] .custom .custom-btn { display: none; }#& body[data-page="home"] header.top { display: none; }#' $H
-    plant_b "long prose shown in classic"         src/css/site.css 's#^html\[data-ui="classic"\] .legend .lg-you dt, html\[data-ui="classic"\] .legend .lg-keep { display: none; }#html[data-ui="classic"] .legend .lg-you dt { display: none; } .lg-you dd::after { content: " This drawing app is the finest thing anyone has ever made, and we are proud to say so at length, every time, here."; }#' $H
+    plant_b "long prose shown in classic"         src/css/site.css 's#^html\[data-ui="classic"\] .legend:not(.lg-open) .lg-you dt, html\[data-ui="classic"\] .legend:not(.lg-open) .lg-keep { display: none; }#html[data-ui="classic"] .legend .lg-you dt { display: none; } .lg-you dd::after { content: " This drawing app is the finest thing anyone has ever made, and we are proud to say so at length, every time, here."; }#' $H
     plant_b "the switch not kept"                 src/js/ui.js 's#^  if (asked === ui) keep(ui);##' $F
     plant_b "a link to a tab stays free"          src/js/ui.js "s#: deep ? 'classic' :#: false ? 'classic' :#" $F
     plant_b "a tile that does not narrow"         src/js/free.js 's#return !s.tiles.length || s.tiles.indexOf(c.id) >= 0;#return true;#' $F
@@ -210,7 +221,7 @@ prove_red() {
     plant_b "the selection not in %select"        src/js/free.js "s#else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null;#else if (m.type === 'topoforge:select') { SEL = null;#" $F
     plant_b "the input stays when focus leaves"   src/js/free.js "s#f.form.addEventListener('focusout'#f.form.addEventListener('focusoutx'#" $F
     plant_b "ESC x is not M-x"                    src/js/free.js "s#'ESC': { 'x': 'execute-extended-command' }#'ESC': {}#" $F
-    plant_b "C-x 5 2 undefined"                   src/js/free.js "s#, '5': 'C-x 5' }#}#" $F
+    plant_b "C-x 5 2 undefined"                   src/js/free.js "s#, '5': 'C-x 5',#,#" $F
     plant_b "a split without its mode-line (free)" src/js/free.js "s#}, \[body, ml\]);#}, [body]);#" $F
     plant_b "an app command left out of the menus" src/js/free.js "s#refreshCmds().filter(function (c) { return c.menu.toLowerCase() === menu.toLowerCase(); })#refreshCmds().filter(function (c) { return c.menu.toLowerCase() === menu.toLowerCase() \&\& c.label !== 'Grid'; })#" $F
     plant_b "GPL dropped from the mode-line"      src/js/free.js "s#\['GPL', 'credits', #['', 'credits', #" $F
@@ -219,6 +230,23 @@ prove_red() {
     plant_b "*Here* without the access settings"  src/js/free.js "s#mk('span', { cls: 'ef-gl', text: 'Colours: ' })#mk('span', { cls: 'ef-gl', text: 'Paint: ' })#" $F
     plant_b "the free page scrolls sideways at 390" src/css/site.css 's#^  .ef { flex: none; border-width: 1px 0 0; }#  .ef { flex: none; border-width: 1px 0 0; min-width: 480px; }#' $F
     plant_b "the frame's text below AA"           src/css/site.css 's#^\.ef-count { font-weight: 400; color: var(--text-dim);#.ef-count { font-weight: 400; color: var(--canvas-active);#' $F
+    # revision 5 (docs/NAV.md): yes, and
+    R=tests/free5-browser.cjs
+    plant_b "the legend more than one line"       src/css/site.css 's#^\.lg-line { display: flex; flex-wrap: wrap;#.lg-line { display: grid; flex-wrap: wrap;#' $R
+    plant_b "the frame's width not kept"          src/js/float.js 's#w: saved \&\& isFinite(saved.w) ? saved.w : (o.width || 320),#w: (o.width || 320),#' $R
+    plant_b "the frame's edge keys dead"          src/js/float.js 's#if (nw === null) return;#if (true) return;#' $R
+    plant_b "the menu bar does not drag the frame" src/js/free.js 's#grip: f.grip, drag: \[f.menubar\], edge#grip: f.grip, edge#' $R
+    plant_b "the mode-line left out of the lines" src/css/site.css 's#^\.ef \.ef-ml { align-content: flex-start; min-height: calc(var(--ef-lines, 1) \* 24px + 1px); }#.ef .ef-ml { align-content: flex-start; }#' $R
+    plant_b "the message area left out of the count" src/js/free.js "s#var parts = \[f.menubar, f.form.hidden ? f.msg : f.form\]#var parts = [f.menubar]#" $R
+    plant_b "the navigator put away in free"      src/js/nav.js "s#^  var FREE = doc.documentElement.getAttribute('data-ui') !== 'classic';#  var FREE = doc.documentElement.getAttribute('data-ui') !== 'classic'; if (FREE) return;#" $R
+    plant_b "no second frame for the navigator"   src/js/free.js "s#if (!narrowQ.matches \&\& fstate().navFrame !== false) {#if (false) {#" $R
+    plant_b "tool labels back"                    src/js/free.js 's#tabindex: first ? .0. : .-1. }, \[glyph(t.icon)\]);#tabindex: first ? "0" : "-1" }, [glyph(t.icon), t.label]);#' $R
+    plant_b "no tooltip on keyboard focus"        src/js/free.js "s#if (el.classList.contains('ef-tool')) showTip(el, ev.type === 'focusin');#if (el.classList.contains('ef-tool') \&\& ev.type !== 'focusin') showTip(el);#" $R
+    plant_b "a tool-bar group's rows uneven"      src/js/free.js 's#cols = n <= max ? n : Math.ceil(n / Math.ceil(n / max));#cols = n <= max ? n : max;#' $R
+    plant_b "no preview box"                      src/js/free.js 's#^    hud.hidden = false;#    hud.hidden = true;#' $R
+    plant_b "the 1.9 hooks on with 1.8"           src/js/free.js "s#return t \&\& vge(t.version, '1.9')#return t \&\& vge(t.version, '1.8')#" $R
+    plant_b "the switch moves in classic"         src/css/site.css 's#^html\[data-ui="classic"\] \.ui-switch { background: var(--canvas);#html[data-ui="classic"] .ui-switch { top: 3rem; background: var(--canvas);#' $R
+    plant_b "the switch in every classic visit"   src/js/ui.js "s#if (ui !== 'free' \&\& !blinking()) return;#if (false) return;#" $R
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

@@ -216,14 +216,15 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     }
 
     // the legend, in classic: its one row under the drawing (the five cells are free's watermark and *Credits*)
-    const row = p.locator('#legend .lg-short a[href="https://github.com/takushieternal"]');
+    const row = p.locator('#legend .lg-line a[href="https://github.com/takushieternal"]');
     assert.ok(await row.isVisible(), 'classic does not credit Bryant under the drawing');
-    assert.match(await p.textContent('#legend .lg-short'), /GPL-3\.0-or-later or LGPL-3\.0-or-later · prose CC-BY-SA-4\.0/);
+    assert.match(await p.textContent('#legend .lg-line'), /GPLv3\+ or LGPLv3\+ ?prose CC BY-SA 4\.0/);
+    assert.ok(!/-or-later|CC-BY-SA-/.test(await p.textContent('#legend .lg-line')), 'the legend line carries a machine-formatted licence string');
     assert.equal(await p.isVisible('#legend .lg-app'), false, 'classic shows the five-cell legend');
     assert.ok(await p.isVisible('#stage-full') && await p.isVisible('#stage-fresh'), 'classic hides the app full size or Start again');
-    const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-short'); let el = c, bg; while (el) { bg = getComputedStyle(el).backgroundColor; if (!/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) break; el = el.parentElement; } return [getComputedStyle(c).color, bg || 'rgb(255, 255, 255)']; });
+    const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-line'); let el = c, bg; while (el) { bg = getComputedStyle(el).backgroundColor; if (!/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) break; el = el.parentElement; } return [getComputedStyle(c).color, bg || 'rgb(255, 255, 255)']; });
     assert.ok(contrast(lgc[0], lgc[1]) >= 4.5, 'the credit row is below AA');
-    ok(`classic credits Bryant with his link and the licence in one row, AA, with the app full size and Start again, at ${tag}`);
+    ok(`classic credits Bryant with his link and the licence in words in one line, AA, with the app full size and Start again, at ${tag}`);
     // no long prose outside the project panels (Corwin: "loose all of the self congratulatory extemporizing");
     // the colophon is the site's credit and licence words, which stay
     const long = await p.evaluate(() => [...document.querySelectorAll('body *')].filter((el) => el.offsetParent && !el.closest('[role="tabpanel"], #nav, #custom-panel, .shared-ci, .colophon')
@@ -256,7 +257,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     const b0 = await p.locator('#nav').boundingBox();
     await p.focus('#nav-grip'); await p.keyboard.press('ArrowDown');
     assert.ok(Math.abs((await p.locator('#nav').boundingBox()).y - b0.y - 16) <= 1, 'with storage refused the navigator does not move');
-    assert.ok(await p.locator('#legend .lg-short').isVisible());
+    assert.ok(await p.locator('#legend .lg-line').isVisible());
     assert.deepEqual(errs, [], 'errors with storage refused: ' + errs.join(' | '));
     await ctx.close();
     ok('with storage refused (classic from the address) the navigator still floats and moves, and the credit row shows');

@@ -4,9 +4,308 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 # The left nav: an Emacs frame beside topology forge (formerly TopoForge)
 
-Status: revision 4, 2026-11-01 night: two settings, **free** (the default) and **classic**. Revision 3
-and the earlier designs, below, stand where revision 4 does not replace them; in classic the navigator
-of revisions 1 to 3 is still the finder. Correct it by editing this file.
+Status: revision 5, 2026-11-02 morning: **yes, and**. The navigator of revisions 1 to 3 comes back in
+free beside the shape finder; the legend is one line; the frame moves, widens and grows its three
+lines together; the tool-bar is icons in even groups; a light switch for the layout that never moves.
+Revisions 4 and earlier, below, stand where revision 5 does not replace them. Correct it by editing
+this file.
+
+## Revision 5: yes, and (2026-11-02, morning)
+
+### What Corwin asked (his words, 08:57; the whole prompt is c4 `q/2026-11-02-yes-and/PROMPT.md`)
+
+"legend is too much still: lets try one line; we are trying for the architectural draft-persons
+astatic but this hits visually and also reads like a ptich. Why would we use a machine formatted
+explainer of the license, for instance? GPLv3+ would fit into a small hair-line separated compartment
+on the legend [...] machine-formatted-symbiology in the footer hits as dissonence/confusion"
+
+"ability to move the Emacs frame around, change it's width; menu, modeline, and message/input areas
+each get +1 line together when any need to wrap (most likely the menu/modeline)"
+
+"Lost the original nagivation tool: we are looking for two different views that can be side by side
+when we have a second frame: it is two rather big features in a row where I have asked YES AND and you
+have replied NO INSTEAD [...] Let's really try hard to avoid throwing away work a user likes because
+they want to try something else"
+
+"flexible container groups based on what is shown and flexible grid for items that are currently
+shown in the same group (even spacing and seperaters in the main tool selection/display area, rather
+than long stretches of horizontal gap) [...] More than one toolbar row; segment the groups; really
+study the emacs toolbar here to decide if this can work."
+
+"For the free toolbar, Git rid of tool labels, add hover and reuse the mini-map as a preview and
+legend [...] Allow the minimap to be resized and moved [...] put the positioning controls for it
+OUTSIDE the visible frame of the minimap; display them only when the mouse is near, as if a door
+handle appears when you reach for the car door"
+
+"Provide a new control in the free view only that floats where "customize" is now in the classic
+view. Visually like our d-pad but just to classic; in class the setting to switch to free stays in
+customize where it is. The button to undo a visual change should not jump away when I execute that
+change: it's sometimes nice to "blink compare" [...] maybe a simple light-swich that never moves [...]
+On the classic the ascetic value is having it look "normal", like regular productivity/business
+software"
+
+"The list of tabs on the classic view needs some work [...] limit how many we show and put the full
+list under a fly-up menu, then have < and > controls [...] for the free look I wasn't sure how to
+change views at all without the (gone) navigation focused version of the Emacs controls that we had
+before."
+
+"This is worth the effort to put every single control and behavior exactly in terms of an intention
+or several."
+
+### The standing rule this revision answers
+
+Yes, and: a feature he likes is not put away unless he says replace, remove, instead, "don't like" or
+"want to try without". Revision 4 put the navigator away in free without his saying so; that was
+wrong, and it is back. Every control below carries its intention.
+
+### The Emacs tool-bar, studied (sources, read 2026-11-02)
+
+- GNU Emacs Lisp Reference Manual, "Tool Bar"
+  (https://www.gnu.org/software/emacs/manual/html_node/elisp/Tool-Bar.html): the tool bar is drawn
+  from `tool-bar-map`; separators are `(menu-item "--")` entries; an item's `:help` is its help-echo,
+  shown on hover like any help-echo (a tooltip); `auto-resize-tool-bars` non-nil "the tool bar
+  automatically resizes to show all defined tool bar items", "but not larger than a quarter of the
+  frame's height"; "If Emacs is built with GTK+ or Nextstep, the tool bar can only show one line, so
+  this variable has no effect"; `tool-bar-button-margin` (default 4 pixels) and
+  `tool-bar-button-relief` (default 1) space and bevel the buttons; GTK and NS draw separators natively.
+- Elisp manual, "Frame Layout"
+  (https://www.gnu.org/software/emacs/manual/html_node/elisp/Frame-Layout.html): the tool bar is
+  internal (drawn by Emacs: Lucid, Motif, no toolkit, Windows) or external (GTK and NS); with
+  `auto-resize-tool-bars` "Emacs wraps the internal tool bar when its width becomes too large for its
+  frame", and a GTK build "never wraps the tool bar but may automatically increase the outer width of
+  a frame".
+- Elisp manual, "Layout Parameters"
+  (https://www.gnu.org/software/emacs/manual/html_node/elisp/Layout-Parameters.html): `tool-bar-lines`
+  "may change whenever the tool bar wraps"; `tool-bar-position` is top, bottom, left or right (left
+  and right on GTK only).
+- `tool-bar-style`'s docstring (Emacs 30.2, https://doc.emacsen.de/30.2/var/tool-bar-style.html):
+  image, text, both, both-horiz, text-image-horiz; "This variable only affects the GTK+ toolkit version
+  of Emacs." So labels are a GTK thing; the internal tool bar is images.
+- The Emacs manual's own "Tool Bars" page was refused to the reader (robots), so it is not quoted here.
+
+**What that decides.** Emacs's internal tool bar is exactly what he asked for: icons only, help-echo on
+hover, separators between groups, and more than one row when the frame is narrow (up to a quarter of
+the frame). It does wrap item by item, so a separator can land at a row's end and a group can split
+across rows; GTK instead keeps one row and widens the frame. So more rows **can work**, and we do one
+thing Emacs does not: a group never splits unevenly. Each group is a grid whose column count is chosen
+so its rows are as even as they can be (eight tools in room for six make two rows of four, not six and
+two), and groups wrap whole. The undockable palette (his fallback) is therefore not built; it is
+written down as a fork below.
+
+### What is built, control by control, each with its intention
+
+**The legend: one line.** Hairline compartments in the drafting manner, small type, no sentences:
+`topology forge · Bryant Frankford` | `GPLv3+ or LGPLv3+` | `prose CC BY-SA 4.0` | `source` |
+`rev <sha> · <date>` | `credits`. Intentions: credit Bryant first and link him; say the licence in the
+words people use for it (GPLv3+, as he wrote it; CC BY-SA 4.0 is Creative Commons' own short name),
+never the SPDX expression meant for machines; keep the drawing's revision, as a title block does;
+leave the whole words to Credits. `credits` opens Help, Credits and licence in free (the `*Credits*`
+frame) and unfolds the whole words under the line in classic: the drawing app, made by Bryant
+Frankford for Corwin Brust; its licence in full words (GNU General Public License, version 3 or any
+later version, or GNU Lesser General Public License, version 3 or any later version, as you choose;
+prose under Creative Commons Attribution-ShareAlike 4.0; no warranty to the extent the law allows);
+its source; your drawing; the sheet. That keeps GPLv3 section 5(d)'s Appropriate Legal Notices one
+press away, with `GPL` on every mode-line too. The licence compartment is an `abbr` whose title is the
+whole words, so pointing at it says them. In free the line floats as the watermark (grip `⠿`: drag or
+arrow keys; `off`: Options, Legend watermark brings it back); in classic it sits under the drawing.
+Below 47.5rem the compartments may wrap to a second line, whole compartments only. Without scripts:
+the line and the whole words as a block.
+
+**The frame moves.** Drag its grip `⠿`, or any empty part of the menu bar (the title, as a window
+manager's title bar; menus still open on their names); arrow keys on the grip (16 pixels, 64 with
+Shift); Options, Move (left, right, up, down, back to its start: one press, WCAG 2.5.7). Kept per
+browser. Intention: the frame never sits over what you are drawing.
+
+**The frame widens.** Its right edge is a handle (`role=separator`): drag it, or focus it and use Left
+and Right (16 pixels), Page Up and Page Down (64), Home (narrowest, 220) and End (widest: 60 % of the
+window, at most 900); C-x { and C-x } (Emacs's shrink and enlarge, 16 pixels); Options, Wider and
+Narrower. Kept per browser (`corwin.cloud.float.v1`). Intention: room for C-x 3 when you want both
+views in one frame, narrow when you want the drawing.
+
+**Three lines grow together.** The menu bar, every mode-line in the frame and the message area (or
+the M-x input) each take the same number of lines: when any of them needs to wrap (most likely the
+menu bar or a mode-line, in a narrow frame), all three grow by a line together, and shrink together.
+Intention: the frame keeps its Emacs proportions and its rhythm; nothing is cut off with an ellipsis.
+The message area now wraps instead of ending in `…`. At most four lines each (the house's GRAIN
+number, picked).
+
+**The navigator comes back in free** as the buffer `*navigator*`: everything it was (the layered
+category tool bar, the Narrow prompt and its intersection with the categories, splits, pins, buffers
+as tabs, Pin as buffer and the kept-filter light), now shown in a window of the Emacs frame, beside
+`*finder*`. On a wide screen a first visit opens two frames side by side: frame 1 shows `*finder*`,
+frame 2 shows `*navigator*` (Emacs's C-x 5 2), each movable and widenable on its own. Any window of
+any frame can show either buffer: `%buffer` on its mode-line, C-x b, or the tool-bar's navigator tool
+switch the selected window; C-x 3 in a wide frame puts both side by side in one frame. Changing pages
+and views goes through it, as before: its Projects, Processes and Pages list the drawing's pages and
+open them; `*Pages*` stays too. In free the navigator's own menus join the frame's menu bar
+(Navigator: its Buffers, Window and Filter items) while a window showing it is selected, as a major
+mode adds its menu in Emacs; its tab bar, tool bar, windows, mode-lines and Narrow line are its own,
+inside the buffer. Keys: C-x 2, 3, 0, 1 and o act on the frame's windows (Emacs's windows); the
+navigator's own splits are in the Navigator menu; C-x t 2, 0 and o (its buffers) and C-c p, m and k
+(pin, keep the filter, drop it) reach it from the frame. One navigator lives in one window at a time:
+showing it in another window moves it there and says so. Intention: two views of the shop side by
+side, the one he liked kept whole. Classic keeps the navigator where it was.
+
+**The tool-bar: icons only, in even groups.** Groups, from what is there now, each a grid with even
+cells and a hairline separator between groups:
+1. **Shapes**: one tile per category of the app's `shapes()` (seven today), the category's first
+   shape as its icon; pressed narrows the finder (as revision 4).
+2. **Edit**: Undo, Redo (the app's own commands, greyed when they cannot run).
+3. **Selection**, only while something is selected in the drawing: Duplicate, Delete, Bring to front,
+   Send to back, Zoom to selection, the frame by the shape (C-c .).
+4. **View**: Zoom out, Fit to window, Zoom in.
+5. **Windows**: Split right (C-x 3), New frame (C-x 5 2), `*navigator*` here, `*finder*` here, and One
+   window (C-x 1) only while split.
+No labels: each tool has an accessible name and a tooltip, shown on hover and on keyboard focus (with
+its key, if it has one), that stays while pointed at and goes with Escape (WCAG 1.4.13). Arrow keys
+move along the whole tool-bar. A frame's tool-bar can be turned off (Options, Tool-bar in this frame,
+Emacs's `tool-bar-lines` 0); frame 2, made for the navigator, starts without one. Intention: the
+shape picker first, the drawing's most used commands next to it, no word that a picture and a tooltip
+already say.
+
+**The preview (HUD).** Pointing at or focusing a tool, a shape row or a navigator item shows what you
+are looking for in a small read-only box in the bottom right corner, just above the app's overview
+map: the category and its shapes, the command and its key, the item and what it says. Intention: a
+little dashboard of what a press would do, before you press. When topology forge 1.9 is there
+(`TopoForge.version` 1.9 or later and `TopoForge.preview` a function), the page asks the app to show
+it on the overview map itself (`preview({ category })`, `preview(refs)`, `preview(null)` on leaving),
+and the plain box stands down.
+
+**The minimap (1.9).** Planned, waiting for the app: once 1.9 lands, the overview map moves and
+resizes (by dragging, and by position controls), and its door-handle controls (outside the map's
+frame, shown when the pointer comes near, so a hand that knows where they are finds them there) are
+the app's. This page then (1) stops placing its preview box (the map is the preview), (2) places the
+legend and the frames from `panels().map` as the map moves, (3) adds Options, Overview map: Move and
+Reset, which call the app's own controls, so no drag is ever needed. Nothing of this is built before
+1.9.
+
+**The layout switch, free only, a light switch that never moves.** A small switch floats just under
+where Customize sits in classic (top right). Its body rhymes with about-corwin's d-pad, quietly: a
+domed thumb in a rounded track, no glow, no accent bezel. Pressed, the page opens in classic, and the
+switch is there in classic too, in the same box, for that tab (so a press undoes the change: blink
+compare); it is drawn there as a plain toggle, as business software draws one. A classic visit not
+reached by the switch shows only Customize, whose "Page layout" row still switches back. The change
+cross-fades where the browser can (a view transition; none with reduced motion, and not with Motion
+off); no strobe. Intention: compare the two layouts by pressing one control twice, without looking
+for it.
+
+**Classic tabs.** The app's page tabs are the app's (1.9 fixes their overflow); this page adds nothing
+around them. Our own project tabs further down wrap onto more rows and never scroll sideways
+(observed); they are left as they are. If this page ever adds anything around the app's tabs, it
+follows 1.9: a limited count, a fly-up list, our own `<` and `>`, no browser-chrome scrolling.
+
+**1.9 hooks.** Each turns on only when `TopoForge.version` is 1.9 or later and the call is there:
+`preview` (above); `place(null)`, so Escape in a frame gives up an armed shape; a `keys` switch asked
+for in the address (`embed=...,keys`), so Alt+x, F10, C-x and C-c pressed in the drawing reach the
+frames; `topoforge:context` (long press or right click on a shape) opens `*Here*`; `setProps`, so
+`*Properties*` edits; `topoforge:pages`, so `*Pages*` and the navigator follow a renamed page. Each
+waits for its spec text before its exact shape is fixed.
+
+### Decisions, each with what would prove it wrong
+
+- [HIS] The navigator is back in free, whole. Falsifier: he says it should stay classic's only.
+- [MINE] On a wide first visit, two frames side by side (finder, navigator). Falsifier: he finds two
+  frames too much on a first visit; then frame 2 opens only on C-x 5 2 (one line, `start()`).
+- [MINE] In free, C-x 2, 3, 0, 1, o are the frame's; the navigator's own splits are in its menu.
+  Falsifier: he reaches for C-x 3 inside the navigator and expects the navigator's split.
+- [MINE] The switch shows in classic only in a tab that got there by the switch. Falsifier: he wants
+  it always in classic, or never.
+- [MINE] The switch sits just under Customize's place, not on it, so the two never overlap in classic.
+  Falsifier: he wants it exactly where Customize is.
+- [PLATFORM] Switching still reloads the page (the app's switches are read from its address); a view
+  transition softens it. Falsifier: a live switch is wanted; then `embed({...})` does it without reload.
+- [DOMAIN] `GPLv3+ or LGPLv3+` and `CC BY-SA 4.0` are short names people use; the SPDX expressions
+  stay in file headers, where machines read them. Falsifier: he reads either as machine syntax.
+- [MINE] The site's colophon on every page still says `Code GPL-3.0-or-later OR LGPL-3.0-or-later;
+  prose CC-BY-SA-4.0.`; this revision changes only the home page's legend. Falsifier: he means that
+  footer too; then `LICENCE_LINE` in `build.py` becomes words.
+
+### Found while building (each written where it was decided)
+
+- **The frame you touch comes to the front**, as a window manager raises it: widening frame 1 slid it
+  under frame 2, and a press meant for frame 1 moved frame 2 (the test caught it). The selected frame is
+  drawn above the others.
+- **The legend no longer hides itself when focus goes into the drawing** (revision 2 did, to one row): it
+  is one row now, so there is nothing left to hide. Not a feature of his put away; it was ours, and it
+  has no work left to do.
+- **What free keeps** (the watermark off, the navigator's frame closed) is kept by `js/float.js` under
+  `corwin.cloud.free.v1`; `js/free.js` still keeps nothing itself (the check that says so caught it).
+- **The 1.9 draft spec** (topology, uncommitted, read 2026-11-02 morning) names `topoforge:key` with
+  Emacs's key names (`M-x`, `<f10>`, `C-x`, ...), a sequence held open until the page calls
+  `TopoForge.endKeys()`, and the switch words `keys`, `context` and `pagelist`; the hooks follow those
+  names. `preview` and `map` are named there but not yet described, so `preview(...)`'s argument here
+  is the caller's description (`refs`, `{ category }`, `null`) until the spec says.
+- **This build stages committed 1.8** (topology, branch corwin, HEAD `847c8cf`, taken with `git
+  archive`, read-only), not the shared checkout, which holds the other helper's unfinished 1.9.
+
+### Forks written, not taken
+
+- The tool-bar as an undockable palette (dock to the frame or float). Not needed: more rows work.
+- A strobe (automatic blink compare). He said skip it.
+
+### Built and checked (2026-11-02, stage 1: before topology forge 1.9)
+
+Observed with `sh tests/run.sh` against committed topology forge 1.8: ALL CHECKS PASSED (Python,
+node 29, browser 33, navigator 31, home in classic 34, free 46, revision 5 30). The revision 5 suite,
+`tests/free5-browser.cjs`, checks each promise above at 1280 and 390, light and dark; its planted
+faults (16 new, and 7 earlier ones rewritten for the one-line legend and the new keys table) each
+turned red in `PLANT_ONLY=... sh tests/run.sh --prove-red`; `--prove-red` takes `PLANT_ONLY` now, to
+prove a subset. The QA passes found and fixed: a frame widened under another took the other's
+presses (now the touched frame comes to the front); free.js kept a value itself (moved to float.js);
+the switch's cross-fade sat in the "frames never animate" section (moved to its own); an Escape that
+dismissed a tooltip ate the next key (ESC now prefixes only a key it binds); the legend, shown again
+after being off, ran off the canvas (placed again from its width, and never wider than the canvas).
+Screenshots: `SHOTS=dir node tests/free5-browser.cjs`.
+
+Stage 2 (when 1.9 lands in topology, branch corwin): run the suites against it; the preview, keys,
+context and pages hooks then run for real; the minimap plan above is built.
+
+### QA plan for revision 5 (written before the build)
+
+Where: a new browser suite, `tests/free5-browser.cjs` (1280 and 390, light and dark, under the deploy
+policies), and the existing suites updated where revision 5 changes what they check. Each promise
+gets a planted fault in `tests/run.sh --prove-red`.
+
+TOWER
+- The legend is one line at 1280: its line's height is one line of its text; no SPDX-style string
+  (`-or-later`, `-only`, `CC-BY-SA-`) in its visible text; it names topology forge and Bryant first with
+  his link; `GPLv3+` is there. (browser and Python; plant: the SPDX line back)
+- The frame moves and its width persists: grip drag and ArrowRight move it; the edge's End and
+  ArrowLeft change the width; both survive a reload. (browser; plants: width not kept; edge keys dead)
+- The three lines grow together: at the narrowest width the menu bar wraps, and the menu bar, every
+  mode-line and the message area all have the same number of lines, more than one; widened, all one.
+  (browser; plant: the mode-line left out of the count)
+- The navigator is present in free: `*navigator*` shows in frame 2 beside frame 1 (no overlap, both
+  visible) with its category tool bar, Narrow prompt and mode-line; pressing Projects and typing a word
+  narrows it; an item opens its page; C-x 3 then switching a window shows finder and navigator side by
+  side in one frame. (browser; plant: nav.js returns in free)
+- No tool labels, but tooltips and names: no tool-bar button has visible text; every one has an
+  accessible name; hover and focus each show a tooltip naming it; Escape hides it. (browser; plant:
+  labels back)
+- Groups are evenly spaced: within a group every horizontal gap between neighbours is the same; no
+  gap between neighbours on a row is wider than one cell; the rows of a wrapped group differ by at
+  most one tool. (browser; plant: uneven columns)
+- The layout switch never moves: its box before the press (free) equals its box after (classic,
+  reached by it), and again after pressing back (free); classic not reached by it shows no switch.
+  (browser; plant: the switch moved in classic)
+- Classic looks unchanged otherwise: the top bar, Customize, the app's own chrome, the navigator's
+  grip row, no Emacs frame. (browser: home-browser.cjs, as before)
+LADDER
+- Every new control has a name; the edge is a separator with its value; tooltips appear on focus;
+  AA contrast of the legend, the tooltip, the preview box and the switch in light and dark. (browser)
+SIGNAGE
+- The preview box says what is pointed at, and says it is a stand-in until the overview map can show
+  it. (browser)
+ROOF
+- No console errors, no off-site request, in both layouts; no inline script or style; the 1.9 hooks
+  call nothing when `TopoForge.version` is 1.8. (browser, Python, node)
+PEERING: the app through its documented calls only; the hooks are feature-tested.
+REMOTES: topology is not changed here (another helper builds 1.9 there).
+DOME
+- Storage refused: the frames, the navigator and the switch still work. 1280 and 390, light and dark,
+  no sideways scroll. (browser)
+
+Manifest: none owed.
 
 ## Revision 4: free and classic (2026-11-01, night)
 

@@ -39,7 +39,8 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
   const app = (p) => p.frame({ url: (u) => /topoforge\/index\.html/.test(u.pathname) });
   const waitDoc = (p) => p.waitForFunction((nm) => { const f = document.getElementById('topology'); const d = f && f.contentWindow && f.contentWindow.TopoForge && f.contentWindow.TopoForge.doc; return d && d.name === nm; }, drawing.doc, { timeout: 15000 });
   const ready = async (p) => { await waitDoc(p); await p.waitForSelector('#stage-grid[data-free="yes"]', { timeout: 10000 }); await p.waitForSelector('#ef-1 .ef-tile', { state: 'attached', timeout: 10000 }); await p.waitForSelector('#ef-1 .ef-it[data-item]', { state: 'attached', timeout: 10000 }); await p.waitForTimeout(200); };
-  const fresh = async (p) => { await p.goto(base + '404.html'); await p.evaluate(() => localStorage.clear()); };
+  // revision 4's checks run with one frame: the navigator's frame (revision 5) is closed for them; free5-browser.cjs checks it
+  const fresh = async (p) => { await p.goto(base + '404.html'); await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('corwin.cloud.free.v1', JSON.stringify({ navFrame: false })); }); };
   const msg = (p, f = 1) => p.textContent(`#ef-${f} .ef-msg`);
   const nodes = (p) => app(p).evaluate(() => TopoForge.doc.pages[TopoForge.doc.cur].nodes.length);
   const keys = async (p, ...ks) => { for (const k of ks) await p.keyboard.press(k); await p.waitForTimeout(60); };
@@ -61,7 +62,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
       if (r.width <= 1 || r.height <= 1 || cs.visibility === 'hidden' || !el.getClientRects().length) return false;
       if (r.bottom <= 0 || r.top >= innerHeight || r.right <= 0 || r.left >= innerWidth) return false;
-      return !el.closest('.ef, #legend, .stage-drawing');
+      return !el.closest('.ef, #legend, .stage-drawing, #ui-switch');
     }).map((el) => el.tagName + (el.id ? '#' + el.id : '') + (el.className && typeof el.className === 'string' ? '.' + el.className.split(' ')[0] : '')));
     assert.deepEqual(stray, [], 'visible outside the frame, the legend and the drawing: ' + stray.join(', '));
     for (const s of ['header.top', '.modeline', '.minibuffer-wrap', '#projects', '.colophon', '#nav', '#custom-btn']) assert.equal(await p.isVisible(s), false, s + ' shows in free');
@@ -240,7 +241,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     // ---- faces: AA contrast, no transition ----
     const faces = await p.evaluate(() => {
       const bg = (el) => { while (el) { const c = getComputedStyle(el).backgroundColor; if (!/rgba\(0, 0, 0, 0\)|transparent/.test(c)) return c; el = el.parentElement; } return 'rgb(255, 255, 255)'; };
-      return ['#ef-1 .ef-msg', '#ef-1 .ef-mb', '#ef-1 .ef-tl', '#ef-1 .ef-it .nm', '#ef-1 .ef-ml .ml-b', '#ef-1 .ef-foldb', '#ef-1 .ef-count'].map((s) => { const el = document.querySelector(s); return [s, getComputedStyle(el).color, bg(el)]; });
+      return ['#ef-1 .ef-msg', '#ef-1 .ef-mb', '#ef-1 .ef-it .nm', '#ef-1 .ef-ml .ml-b', '#ef-1 .ef-foldb', '#ef-1 .ef-count'].map((s) => { const el = document.querySelector(s); return [s, getComputedStyle(el).color, bg(el)]; });
     });
     for (const [s, c, b] of faces) assert.ok(contrast(c, b) >= 4.5, `${s} contrast ${contrast(c, b).toFixed(2)} below AA at ${tag}`);
     const moving = await p.evaluate(() => [...document.querySelectorAll('.ef, .ef *')].filter((el) => { const cs = getComputedStyle(el); return cs.transitionDuration.split(',').some((d) => parseFloat(d) > 0) || cs.animationName !== 'none'; }).length);
@@ -250,28 +251,18 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     // ---- the watermark, and the legal notices with it off ----
     const lg = p.locator('#legend');
     assert.ok(await lg.isVisible(), 'no watermark');
-    const credit = p.locator('#legend .lg-short a[href="https://github.com/takushieternal"]');
+    const credit = p.locator('#legend .lg-line a[href="https://github.com/takushieternal"]');
     assert.ok(await credit.isVisible(), 'the watermark does not credit Bryant');
-    assert.match(await p.textContent('#legend .lg-short'), /GPL-3\.0-or-later or LGPL-3\.0-or-later · prose CC-BY-SA-4\.0/);
+    assert.match(await p.textContent('#legend .lg-line'), /GPLv3\+ or LGPLv3\+ ?prose CC BY-SA 4\.0/);
     if (wide) {
-      const lb = await lg.boundingBox(), fb = await p.locator('#ef-1').boundingBox();
-      assert.ok(lb.x >= fb.x + fb.width - 1, 'the watermark sits under the frame');
       assert.equal(await lg.evaluate((e) => getComputedStyle(e).borderTopWidth), '0px', 'the watermark has a box');
-      await p.click('.lg-hide');
-      assert.ok(await p.locator('#legend .lg-app a[href="https://github.com/takushieternal"]').isVisible(), 'shown, the legend\'s cells do not credit Bryant');
-      const lic = await p.textContent('#legend .lg-lic');
-      for (const s of ['GPL-3.0-or-later', 'LGPL-3.0-or-later', 'your choice', 'CC-BY-SA-4.0']) assert.ok(lic.includes(s), 'the licence cell lacks ' + s);
-      const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-cell dd'); return [getComputedStyle(c).color, getComputedStyle(c.parentElement).backgroundColor, getComputedStyle(document.body).backgroundColor]; });
-      assert.ok(contrast(lgc[0], lgc[2]) >= 4.5, 'the watermark\'s words are below AA against the canvas');
-      const lb2 = await lg.boundingBox(); assert.ok(lb2.y + lb2.height <= h + 1, 'shown, the legend runs off the bottom');
-      await p.click('.lg-hide');
+      const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-line'); return [getComputedStyle(c).color, getComputedStyle(document.body).backgroundColor]; });
+      assert.ok(contrast(lgc[0], lgc[1]) >= 4.5, 'the watermark\'s words are below AA against the canvas');
+      const lb2 = await lg.boundingBox(); assert.ok(lb2.y + lb2.height <= h + 1, 'the legend runs off the bottom');
       if (scheme === 'dark') {
         const l0 = await lg.boundingBox();
         await p.focus('.lg-grip'); await keys(p, 'ArrowUp');
         assert.ok(Math.abs((await lg.boundingBox()).y - l0.y + 16) <= 1, 'ArrowUp on the legend\'s grip did not move it');
-        await p.click('.lg-hide');
-        await p.click('#topology', { position: { x: w - 300, y: 200 } }); await p.waitForTimeout(150);
-        assert.equal(await p.isVisible('#legend .lg-grid'), false, 'focus went into the drawing and the legend still covers it');
       }
     }
     await p.click('.lg-off');
@@ -280,7 +271,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.equal((await p.textContent('#ef-1 .ml-lighters button[data-act="credits"]')).trim(), 'GPL', 'the legal-notices lighter does not say GPL');
     await p.click('#ef-1 .ml-lighters button[data-act="credits"]'); await p.waitForSelector('#ef-credits:not([hidden])');
     assert.ok(await p.locator('#ef-credits a[href="https://github.com/takushieternal"]').first().isVisible(), '*Credits* does not link Bryant');
-    assert.match(await p.textContent('#ef-credits'), /GPL-3\.0-or-later or LGPL-3\.0-or-later/);
+    assert.match(await p.textContent('#ef-credits'), /GNU General Public License, version 3 or any later version/);
     await p.click('#ef-credits .ef-x');
     await p.reload(); await ready(p);
     assert.equal(await lg.isVisible(), false, 'the watermark\'s off was not kept');
@@ -288,9 +279,10 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.ok(await p.locator('#ef-1 .ef-pop [data-act="credits"]').isVisible(), 'Help has no Credits and licence');
     await p.click('#ef-1 .ef-mb[data-menu="Options"]'); await p.click('#ef-1 .ef-pop [data-act="legend"]');
     assert.equal(await lg.isVisible(), true, 'Options, Legend watermark did not turn it on');
-    ok(`the legend floats as a watermark (no box, AA, credits Bryant and the licence); off is kept, and then GPL on the mode-line and Help, Credits and licence still show Bryant and the licence, at ${tag}`);
+    ok(`the legend floats as a one-line watermark (no box, AA, credits Bryant and the licence in words); off is kept, and then GPL on the mode-line and Help, Credits and licence still show Bryant and the licence, at ${tag}`);
 
-    assert.ok((await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 0, 'the page scrolls sideways at ' + tag);
+    const wider = await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth > 0 ? [...document.querySelectorAll('body *')].filter((e) => e.getBoundingClientRect().right > innerWidth + 0.5).slice(0, 5).map((e) => e.tagName + '#' + e.id + '.' + String(e.className && e.className.baseVal !== undefined ? e.className.baseVal : e.className).split(' ')[0]) : []);
+    assert.deepEqual(wider, [], 'the page scrolls sideways at ' + tag + ': ' + wider.join(', '));
     assert.deepEqual(offsite, [], 'requests to other hosts: ' + offsite.join(' | '));
     assert.deepEqual(errors, [], 'console errors: ' + errors.join(' | '));
     ok(`free: no sideways scroll, no request to another host, no console errors, at ${tag}`);

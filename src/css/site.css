@@ -257,6 +257,27 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
 .table-scroll { overflow-x: auto; max-width: 100%; }
 .vendor td:nth-child(3), .vendor th:nth-child(3) { display: table-cell; }
 
+/* ---- the layout switch (docs/NAV.md, revision 5) ------------------------------------------------
+/* the layout switch (js/ui.js): a light switch that never moves. Free: a quiet cousin of about-corwin's
+   d-pad (a domed thumb in a rounded track, no glow, no accent). Classic (only in a tab that got there by
+   it): the same box drawn as a plain toggle. The page change cross-fades where the browser can. */
+.ui-switch { display: none; }
+.js .ui-switch { display: inline-flex; align-items: center; position: fixed; z-index: 41; top: 2.1rem; right: max(var(--gutter, 1rem), calc((100vw - 72rem) / 2 + var(--gutter, 1rem)));
+  width: 2.75rem; height: 1.5rem; padding: 2px; margin: 0; border-radius: 999px; cursor: pointer; view-transition-name: ui-switch;
+  border: 1px solid var(--border); background: radial-gradient(circle at 40% 30%, var(--canvas) 0, var(--canvas-dim) 70%, var(--canvas-line) 100%);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.18); }
+.ui-switch .ui-thumb { display: block; width: 1.1rem; height: 1.1rem; border-radius: 50%; border: 1px solid var(--control);
+  background: radial-gradient(circle at 38% 30%, var(--canvas) 0, var(--canvas-dim) 60%, var(--control) 140%); box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.45); }
+.ui-switch[aria-checked="true"] { justify-content: flex-end; }
+.ui-switch:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ui-switch:hover .ui-thumb { border-color: var(--link); }
+html[data-ui="classic"] .ui-switch { background: var(--canvas); box-shadow: none; border-color: var(--control); }
+html[data-ui="classic"] .ui-switch .ui-thumb { background: var(--control); border-color: var(--control); box-shadow: none; }
+@view-transition { navigation: auto; }
+@media (prefers-reduced-motion: reduce) { @view-transition { navigation: none; } }
+html:not(.motion-on)::view-transition-group(*), html:not(.motion-on)::view-transition-old(*), html:not(.motion-on)::view-transition-new(*) { animation: none; }
+@media print { .ui-switch { display: none !important; } }
+
 /* ---- the navigator and the legend: palettes over a frameless drawing (docs/NAV.md, revision 2) -----
    No transition or animation here: nothing moves unless you move it. Places and widths come from
    --fx, --fy, --fw and --dock-w, which js/float.js sets through the CSSOM (the policy forbids style
@@ -361,7 +382,7 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
 /* hidden to a strip: only the top row */
 .navframe.fl-hidden > :not(.nf-bar) { display: none; }
 .navframe.fl-hidden .nf-docks { display: none; }
-/* the legend: an architect's title block, a grid of hairline cells */
+/* the legend: one line of hairline compartments (docs/NAV.md, revision 5); the whole words (credits) under it */
 .legend { background: var(--canvas); color: var(--text); font: 12px/18px var(--mono); border-top: 1px solid var(--border); }
 .lg-h { font: 700 12px/18px var(--mono); text-transform: uppercase; letter-spacing: 0.08em; margin: 0; padding: 2px var(--s2); border-bottom: 1px solid var(--border); }
 .lg-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1px; margin: 0; background: var(--border); }
@@ -371,9 +392,15 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
 .lg-cell dt { font-size: 10px; line-height: 16px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-dim); }
 .lg-cell dd { margin: 0; overflow-wrap: anywhere; }
 .lg-cell code { font: inherit; }
-.lg-short { display: none; margin: 0; padding: 2px var(--s2); }
-.legend.fl-hidden .lg-grid, .legend.fl-hidden .lg-h { display: none; }
-.legend.fl-hidden .lg-short { display: block; }
+.lg-line { display: flex; flex-wrap: wrap; align-items: baseline; margin: 0; padding: 1px 0; font-size: 11px; line-height: 18px; }
+.lg-c { white-space: nowrap; }
+.lg-c { padding: 0 0.7em; }
+.lg-c + .lg-c { border-left: 1px solid var(--border); }
+.lg-c abbr { text-decoration: none; cursor: help; }
+.lg-c code { font: inherit; }
+.js .lg-line .lg-more { display: inline-block; font: inherit; color: var(--link); background: none; border: 0; border-left: 1px solid var(--border); border-radius: 0; min-height: 0; margin: 0; cursor: pointer; text-decoration: underline; }
+.js .legend:not(.lg-open) .lg-grid { display: none; }
+@media (max-width: 47.5rem) { .lg-line { flex-wrap: wrap; white-space: normal; } .lg-c { white-space: nowrap; } html[data-ui="free"] .legend.watermark .lg-line { flex: 1 1 0; } }
 .js .legend .lg-h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; border: 0; }
 .stage-notice { margin: 0; padding: var(--s1) var(--s2); background: var(--canvas); color: var(--text); border-bottom: 1px solid var(--border); border-left: 4px solid var(--warn); font-size: 13px; line-height: 20px; }
 .stage-notice[hidden] { display: none; }
@@ -395,8 +422,7 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
   .navframe.fl-right { border-right: 0; border-left: 1px solid var(--border); }
   .navframe.fl-left.fl-hidden .nf-bar, .navframe.fl-right.fl-hidden .nf-bar { flex-direction: column; height: 100%; padding: 2px 0; border-bottom: 0; }
   .navframe.fl-left.fl-hidden .fl-grip, .navframe.fl-right.fl-hidden .fl-grip { writing-mode: vertical-rl; flex: 1 1 auto; padding: var(--s2) 0; }
-  .legend.fl-float { position: absolute; left: var(--fx, 24px); top: var(--fy, 70%); width: var(--fw, 460px); z-index: 6; border: 1px solid var(--border); }
-  .legend.fl-float.fl-hidden { width: auto; max-width: min(var(--fw, 460px), calc(100% - 24px)); }
+  .legend.fl-float { position: absolute; left: var(--fx, 24px); top: var(--fy, 70%); width: max-content; max-width: calc(100% - var(--fx, 24px) - 8px); z-index: 6; border: 1px solid var(--border); }
 }
 /* the shapes: drawn as TopoForge draws them, small, always beside a word */
 .g { display: inline-block; flex: none; width: 14px; height: 10px; margin-right: 6px; border: 1.5px solid currentColor; vertical-align: middle; }
@@ -435,11 +461,12 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
 .legend .lg-msg { margin: 0; padding: 0 var(--s2); min-height: 0; }
 .legend .lg-msg:empty { display: none; }
 .proc-h { font-size: 14px; line-height: 22px; margin: 0; font-weight: 700; }
-html[data-ui="classic"] .legend .lg-h, html[data-ui="classic"] .legend .lg-grid .lg-cell:not(.lg-you) { display: none; }
-html[data-ui="classic"] .legend .lg-grid { display: block; background: none; }
-html[data-ui="classic"] .legend .lg-you { padding: 2px var(--s2); }
-html[data-ui="classic"] .legend .lg-you dt, html[data-ui="classic"] .legend .lg-keep { display: none; }
-html[data-ui="classic"] .legend .lg-short { display: block; }
+html[data-ui="classic"] .legend .lg-line { padding: 2px 0; }
+/* classic keeps its row of links under the line (the app full size, the drawings as a file, start again); credits unfolds the rest */
+html.js[data-ui="classic"] .legend:not(.lg-open) .lg-grid { display: block; background: none; }
+html[data-ui="classic"] .legend:not(.lg-open) .lg-cell:not(.lg-you) { display: none; }
+html[data-ui="classic"] .legend:not(.lg-open) .lg-you { padding: 2px var(--s2); }
+html[data-ui="classic"] .legend:not(.lg-open) .lg-you dt, html[data-ui="classic"] .legend:not(.lg-open) .lg-keep { display: none; }
 html[data-ui="free"] body[data-page="home"] .custom .custom-btn { display: none; }
 
 /* free: the page is the drawing; everything else is out of sight (the heading stays for screen readers) */
@@ -449,7 +476,7 @@ html[data-ui="free"] body[data-page="home"] .modeline,
 html[data-ui="free"] body[data-page="home"] .minibuffer-wrap,
 html[data-ui="free"] body[data-page="home"] main > :not(.stage),
 html[data-ui="free"] body[data-page="home"] .stage > :not(.stage-grid):not(.stage-h),
-html[data-ui="free"] #nav { display: none !important; }
+html[data-ui="free"] #stage-grid > #nav { display: none !important; }
 html[data-ui="free"] .stage-h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; border: 0; }
 html[data-ui="free"] .stage-grid { display: block; position: relative; height: 100vh; min-height: 0; border: 0; }
 html[data-ui="free"] .stage-grid > .stage-drawing { height: 100%; }
@@ -481,7 +508,7 @@ html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0;
 .ef-body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
 
 /* the tool-bar: Emacs's tool-bar-style "both": an icon over its word, raised; pressed, sunk in */
-.ef-toolbar { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; background: var(--canvas-dim); border-bottom: 1px solid var(--border); flex: none; }
+.ef-toolbar { display: flex; flex-wrap: wrap; align-items: flex-start; row-gap: 4px; padding: 3px 4px; background: var(--canvas-dim); border-bottom: 1px solid var(--border); flex: none; }
 .ef .ef-tile { display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; width: 57px; min-height: 52px; padding: 3px 2px 2px;
   font-size: 10px; line-height: 12px; background: var(--canvas); border: 1px solid var(--border);
   box-shadow: inset 1px 1px 0 var(--canvas-dim), inset -1px -2px 0 var(--canvas-active); }
@@ -521,7 +548,7 @@ html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0;
 
 /* the message area, which becomes the one-line input */
 .ef-echo { position: relative; flex: none; background: var(--canvas); border-top: 1px solid var(--border); }
-.ef-msg { margin: 0; padding: 0 4px; min-height: 24px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; color: var(--text); }
+.ef-msg { margin: 0; padding: 0 4px; min-height: 24px; line-height: 24px; white-space: normal; overflow-wrap: anywhere; overflow: hidden; max-height: calc(4 * 24px); cursor: text; color: var(--text); }
 .ef-msg[hidden] { display: none; }
 .ef-mb-form { display: flex; align-items: baseline; padding: 0 4px; margin: 0; }
 .ef-mb-form[hidden] { display: none; }
@@ -548,7 +575,8 @@ html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0;
 .ef-gl { color: var(--text-dim); }
 .ef-dl { margin: 0; } .ef-dl div { display: flex; gap: 1ch; } .ef-dl dt { color: var(--text-dim); min-width: 9ch; } .ef-dl dd { margin: 0; overflow-wrap: anywhere; }
 .ef-here-h { font-weight: 700; }
-.ef-credits.lg-short { display: block; padding: 0 0 4px; }
+.ef-credits.lg-line { display: flex; flex-wrap: wrap; white-space: normal; padding: 0 0 4px; }
+.ef-credits.lg-line .lg-c:first-child { padding-left: 0; }
 .ef-credits.lg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--border); }
 .ef-credits .lg-cell { grid-column: auto; }
 .ef-note { color: var(--text-dim); margin-top: 4px; }
@@ -556,23 +584,28 @@ html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0;
 /* the legend as a watermark: no box, the canvas at 90 % behind its words, hairlines only between cells */
 html[data-ui="free"] .legend.watermark { border: 0; background: color-mix(in srgb, var(--canvas) 90%, transparent); }
 html[data-ui="free"] .legend.watermark .lg-bar { background: none; border-bottom: 0; }
-html[data-ui="free"] .legend.watermark .lg-short, html[data-ui="free"] .legend.watermark .lg-cell { color: var(--text-dim); }
-html[data-ui="free"] .legend.watermark .lg-cell { background: color-mix(in srgb, var(--canvas) 92%, transparent); }
+html[data-ui="free"] .legend.watermark { display: flex; align-items: baseline; }
+html[data-ui="free"] .legend.watermark .lg-line { color: var(--text-dim); order: 1; flex: 1 1 auto; min-width: 0; }
+html[data-ui="free"] .legend.watermark .lg-bar { order: 2; padding: 0; gap: 0; flex: none; }
+html[data-ui="free"] .legend.watermark .lg-bar .fl-grip { flex: none; padding: 0 4px; min-height: 18px; line-height: 18px; font-size: 11px; color: var(--text-dim); }
+html[data-ui="free"] .legend.watermark .lg-bar .fl-btn { min-height: 18px; line-height: 18px; font-size: 11px; color: var(--text-dim); border-left: 1px solid var(--border); }
+html[data-ui="free"] .legend.watermark .lg-grid, html[data-ui="free"] .legend.watermark .stage-notice:not([hidden]) ~ .lg-grid { display: none; }
+html[data-ui="free"] .legend.watermark .lg-msg { display: none; }
+html[data-ui="free"] .legend.watermark .stage-notice { order: 0; margin: 0; padding: 0 0.7em; }
 html[data-ui="free"] .legend[hidden] { display: none !important; }
-html[data-ui="free"] .legend.fl-hidden .lg-bar { float: right; }
 
 @media (min-width: 47.51rem) {
   .ef.fl-float { position: absolute; left: var(--fx, 8px); top: var(--fy, 8px); width: var(--fw, 440px); max-height: calc(100% - var(--fy, 8px) - 8px); z-index: 7; }
   .ef.fl-float:not(.ef-small) { height: var(--fh, auto); }
   .ef.fl-float:not(.ef-open):not(.ef-small) { height: auto; }
   .ef-small.fl-float { z-index: 8; }
+  .ef.fl-float:not(.ef-small):not(.ef-selected) { z-index: 6; }   /* the frame you touch comes to the front, as a window manager raises it */
 }
 .ef:not(.ef-open) .ef-body { display: none; }
 @media (max-width: 47.5rem) {
   html[data-ui="free"] .stage-grid { display: flex; flex-direction: column; }
   html[data-ui="free"] .stage-grid > .stage-drawing { flex: 1 1 auto; min-height: 0; height: auto; }
   html[data-ui="free"] .stage-grid > .legend { flex: none; border: 0; border-top: 1px solid var(--border); }
-  html[data-ui="free"] .legend .lg-short { font-size: 11px; line-height: 16px; }   /* the credit row in as few lines as it can, AA kept */
   .ef { flex: none; border-width: 1px 0 0; }
   .ef.ef-open .ef-body { max-height: 45vh; }
   .ef-small { max-height: 40vh; }
@@ -585,3 +618,49 @@ html[data-ui="free"] .legend.fl-hidden .lg-bar { float: right; }
   .ef .ef-tile[aria-pressed="true"], .ef-win.selected .ef-ml, .ef-opt[aria-selected="true"] { outline: 2px solid Highlight; }
 }
 @media print { .ef { display: none !important; } }
+
+/* ---- revision 5: yes, and (docs/NAV.md) ---------------------------------------------------------- */
+/* the tool-bar: groups, each an even grid of icon cells (js/free.js sets --cols); a hairline between
+   groups on a row; no labels (the name and key are in the tooltip and the accessible name) */
+.ef-tg { display: grid; grid-template-columns: repeat(var(--cols, 8), 28px); grid-auto-rows: 28px; gap: 2px; padding: 0 4px; margin: 0; border-left: 1px solid var(--border); }
+.ef-tg.ef-tg-row { border-left-color: transparent; }
+.ef .ef-tool { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; min-height: 28px; padding: 0; border: 1px solid transparent; }
+.ef .ef-tool .ef-icon { width: 20px; height: 20px; margin: 0; }
+.ef .ef-tool .ef-glyph { width: 16px; height: 16px; }
+.ef .ef-tool[aria-disabled="true"] { color: var(--text-dim); cursor: default; }
+.ef .ef-tool[aria-disabled="true"] .ef-glyph { opacity: 0.55; }
+.ef .ef-tile[aria-pressed="true"] { background: var(--canvas-active); border-color: var(--control); box-shadow: inset 1px 1px 0 var(--border); }
+.ef-notools .ef-toolbar { display: none; }
+.ef-tip { position: absolute; left: var(--tx, 0); top: var(--ty, 0); z-index: 12; max-width: 22rem; padding: 1px 6px; background: var(--canvas); color: var(--text);
+  border: 1px solid var(--control); font: calc(12px * var(--read-scale, 1))/20px var(--mono); white-space: pre; pointer-events: auto; }
+.ef-tip[hidden], .ef-hud[hidden] { display: none; }
+/* the preview box: above the app's overview map, read-only */
+.ef-hud { position: absolute; right: var(--hr, 12px); bottom: var(--hb, 150px); z-index: 6; width: 16rem; max-width: calc(100% - 24px); padding: 2px 6px 4px;
+  background: var(--canvas); color: var(--text); border: 1px solid var(--border); font: calc(12px * var(--read-scale, 1))/18px var(--mono); pointer-events: none; }
+.ef-hud p { margin: 0; overflow-wrap: anywhere; }
+.ef-hud-h { font-weight: 700; }
+.ef-hud-n { color: var(--text-dim); font-size: 11px; margin-top: 2px !important; }
+/* the frame's width: its right edge */
+.ef-edge { position: absolute; top: 0; bottom: 0; right: -4px; width: 8px; cursor: ew-resize; touch-action: none; z-index: 3; }
+.ef-edge:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; background: var(--canvas-line); }
+.ef-small .ef-edge { display: none; }
+/* the menu bar is the frame's title too: an empty part of it drags the frame */
+@media (min-width: 47.51rem) { .ef:not(.ef-small) .ef-menubar { cursor: move; } .ef-menubar button { cursor: pointer; } }
+/* the three lines grow together (js/free.js sets --ef-lines; ef-measure lets each find its own height) */
+.ef .ef-menubar { align-content: flex-start; min-height: calc(var(--ef-lines, 1) * 24px + 3px); }
+.ef .ef-ml { align-content: flex-start; min-height: calc(var(--ef-lines, 1) * 24px + 1px); }
+.ef .ef-msg, .ef .ef-mb-form { min-height: calc(var(--ef-lines, 1) * 24px); }
+.ef.ef-measure .ef-menubar, .ef.ef-measure .ef-ml, .ef.ef-measure .ef-msg, .ef.ef-measure .ef-mb-form { min-height: 0 !important; }
+.ef.ef-measure .ef-msg { max-height: none; }
+.ef .ef-menubar .ef-mb, .ef .ef-menubar .ef-grip, .ef .ef-menubar .ef-fold { min-height: 24px; }
+/* the navigator as a buffer in a frame's window: no grip row, no edge (the frame has both) */
+.ef-navwb { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.ef-navwb > .navframe { flex: 1 1 auto; min-height: 0; height: auto; width: auto; position: static; border: 0; font-size: 1em; }
+.navframe.nf-free .nf-bar, .navframe.nf-free .nf-handle, .navframe.nf-free .nf-menu, .navframe.nf-free .nf-pop { display: none !important; }
+html[data-ui="free"] .ef .navframe button { background: none; border-color: transparent; }
+html[data-ui="free"] .ef .navframe button:hover { border-color: var(--border); }
+html[data-ui="free"] .ef .navframe .tb[aria-pressed="true"] { background: var(--canvas-active); border-color: var(--control); }
+@media (max-width: 47.5rem) { .ef-edge { display: none; } .ef-hud { display: none; } }
+@media (forced-colors: active) { .ef-tip, .ef-hud { border: 1px solid CanvasText; } .ef .ef-tool[aria-pressed="true"] { outline: 2px solid Highlight; } }
+
+@media print { .ef-hud, .ef-tip { display: none !important; } }

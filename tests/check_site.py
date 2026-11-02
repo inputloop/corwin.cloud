@@ -333,7 +333,25 @@ class SiteChecks(unittest.TestCase):
         app = re.sub(r"<[^>]+>", "", re.search(r'<div class="lg-cell lg-app">(.*?)</div>', lg, re.S).group(1))
         self.assertIn("topology forge (formerly TopoForge)", app)
         self.assertLess(app.index("Bryant Frankford"), app.index("Corwin"), "Bryant is not named first")
-        self.assertIn("topology forge (formerly TopoForge) by", re.sub(r"<[^>]+>", "", lg))
+        line = re.sub(r"<[^>]+>", "", re.search(r'<p class="lg-line">(.*?)</p>', lg, re.S).group(1))
+        self.assertTrue(line.startswith("topology forge · Bryant Frankford"), "the legend's line does not start with the app and Bryant: " + line[:60])
+
+    def test_the_legend_is_one_line_in_words(self):
+        """Corwin, 2026-11-02: "lets try one line" in hairline compartments; "Why would we use a machine
+        formatted explainer of the license"? The legend's line holds GPLv3+ and no SPDX-style string; its
+        whole words, and no SPDX string, are in the credits under it."""
+        h = read("index.html")
+        if not os.path.isdir(os.path.join(OUT, "topology")):
+            return
+        lg = re.search(r'<aside class="legend" id="legend".*?</aside>', h, re.S).group(0)
+        line = re.search(r'<p class="lg-line">(.*?)</p>', lg, re.S)
+        self.assertTrue(line, "no one-line legend")
+        words = re.sub(r"<[^>]+>", " ", lg)
+        for bad in ("-or-later", "-only", "CC-BY-SA-", "SPDX"):
+            self.assertNotIn(bad, words, "a machine-formatted licence string in the legend: " + bad)
+        self.assertIn("GPLv3+", line.group(1))
+        self.assertGreaterEqual(line.group(1).count('class="lg-c '), 5, "the line has fewer than five compartments")
+        self.assertNotIn(". ", re.sub(r"<[^>]+>", "", line.group(1)), "a sentence in the legend's line")
 
     def test_the_name_is_never_misspelled(self):
         """Corwin, 2026-11-01 20:51: "topology is the correct name." The misspelling appears in none of the
@@ -366,12 +384,14 @@ class SiteChecks(unittest.TestCase):
         lg = m.group(0)
         bryant = "https://github.com/takushieternal"
         self.assertIn('href="%s">Bryant Frankford</a>' % bryant, lg)
-        self.assertEqual(lg.count('href="%s"' % bryant), 2, "Bryant is linked in the legend and in its hidden row")
+        self.assertEqual(lg.count('href="%s"' % bryant), 2, "Bryant is linked in the legend's line and in its credits")
         if os.path.isdir(ABOUT):   # the link is the one about-corwin publishes for him
             with open(os.path.join(ABOUT, "content", "personae", "bryant.txt"), encoding="utf-8") as f:
                 self.assertIn("takushieternal", f.read())
-        text = re.sub(r"<[^>]+>", "", lg)
-        for s in ("GPL-3.0-or-later or LGPL-3.0-or-later, your choice", "CC-BY-SA-4.0"):
+        text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", lg))
+        # the licence in words (docs/NAV.md, revision 5), the same licence TopoForge's README states in SPDX
+        for s in ("GNU General Public License, version 3 or any later version, or the GNU Lesser General Public License, version 3 or any later version, as you choose",
+                  "Creative Commons Attribution-ShareAlike 4.0 International", "There is no warranty"):
             self.assertIn(s, text)
         readme = os.path.join(TOPO, "topoforge", "README.org")
         if os.path.isfile(readme):   # and it is what TopoForge's own README says
