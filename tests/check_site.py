@@ -260,13 +260,65 @@ class SiteChecks(unittest.TestCase):
     def test_home_has_topology_or_says_it_does_not(self):
         h = read("index.html")
         if os.path.isdir(os.path.join(OUT, "topology")):
-            self.assertIn('data-first="topology/topoforge/index.html?load=/drawings/inputloop.json"', h)
-            self.assertIn('data-resume="topology/topoforge/index.html"', h)
+            self.assertIn('data-first="topology/topoforge/index.html?load=/drawings/inputloop.json&amp;embed=', h)
+            self.assertIn('data-resume="topology/topoforge/index.html?embed=', h)
             self.assertNotIn("topology/app.html", h, "the home page frames TopoForge itself, not a host page around it")
             self.assertTrue(os.path.isfile(os.path.join(OUT, "topology", "topoforge", "index.html")))
             self.assertIn("Bryant Frankford", h)
         else:
             self.assertIn("placeholder", h)
+
+    def test_the_frame_asks_for_the_apps_switches_and_full_size_for_none(self):
+        """topology forge 1.8's switches (topology's topoforge/spec/EMBED-v1.md): the home page frames it
+        frameless, with Properties floating, the page tabs in the overview, and the selection and ready
+        messages; "Full size" opens it on its own, with no switch."""
+        h = read("index.html")
+        if not os.path.isdir(os.path.join(OUT, "topology")):
+            return
+        want = "embed=frameless,props,pages,select,ready"
+        m = re.search(r'<iframe id="topology"[^>]*>', h)
+        self.assertTrue(m)
+        for a in ("data-first", "data-resume"):
+            v = re.search(a + r'="([^"]*)"', m.group(0)).group(1)
+            self.assertIn(want, v.replace("&amp;", "&"), a + " does not ask for every switch")
+        full = re.search(r'<a href="([^"]*)" id="stage-full">', h).group(1)
+        self.assertNotIn("embed=", full, '"Full size" asks for switches: it should show the app as it is on its own')
+        spec = os.path.join(TOPO, "topoforge", "spec", "EMBED-v1.md")
+        if os.path.isfile(spec):   # every word asked for is one the app's spec defines
+            with open(spec, encoding="utf-8") as f:
+                s = f.read()
+            for w in want.split("=")[1].split(","):
+                self.assertIn("| `%s` |" % w, s, "the app's spec has no switch " + w)
+
+    def test_the_app_is_named_topology_forge_with_bryant_first(self):
+        """Corwin, 2026-11-01: the app is "topology forge (formerly TopoForge)" in our text; Bryant first."""
+        h = read("index.html")
+        if not os.path.isdir(os.path.join(OUT, "topology")):
+            return
+        lg = re.search(r'<aside class="legend" id="legend".*?</aside>', h, re.S).group(0)
+        app = re.sub(r"<[^>]+>", "", re.search(r'<div class="lg-cell lg-app">(.*?)</div>', lg, re.S).group(1))
+        self.assertIn("topology forge (formerly TopoForge)", app)
+        self.assertLess(app.index("Bryant Frankford"), app.index("Corwin"), "Bryant is not named first")
+        self.assertIn("topology forge (formerly TopoForge) by", re.sub(r"<[^>]+>", "", lg))
+
+    def test_the_name_is_never_misspelled(self):
+        """Corwin, 2026-11-01 20:51: "topology is the correct name." The misspelling appears in none of the
+        site's sources, documents or built pages."""
+        bad = []
+        for dp, ds, fs in os.walk(ROOT):
+            ds[:] = [d for d in ds if d not in (".git", "public", "node_modules", "__pycache__", "vendor")]
+            for f in fs:
+                if f.endswith((".py", ".js", ".css", ".md", ".html", ".cjs", ".mjs", ".sh", ".conf")):
+                    p = os.path.join(dp, f)
+                    if p == os.path.abspath(__file__):
+                        continue
+                    with open(p, encoding="utf-8", errors="replace") as fh:
+                        if "topograph" + "y" in fh.read().lower():
+                            bad.append(os.path.relpath(p, ROOT))
+        for page in ("index.html", "directory.html"):
+            if "topograph" + "y" in read(page).lower():
+                bad.append("built " + page)
+        self.assertEqual(bad, [], "misspelled name in: " + ", ".join(bad))
 
     def test_legend_credits_bryant_and_states_topoforges_licence(self):
         """The legend under the drawing (docs/NAV.md, revision 2): Bryant named with his public link,

@@ -132,7 +132,14 @@ prove_red() {
   # the legend (revision 2): Bryant named with his link, TopoForge's licence as its README.org says
   plant "the legend loses Bryant's link"     build.py     's#^BRYANT_URL = "https://github.com/takushieternal"#BRYANT_URL = "\#bryant"#'
   plant "the legend's licence altered"       build.py     's#">GPL-3.0-or-later</a> or #">GPL-2.0-only</a> or #'
-  plant "the legend's hidden row drops him"  build.py     's#<p class="lg-short">TopoForge by %s · code#<p class="lg-short">TopoForge%.0s by Bryant · code#'
+  plant "the legend's hidden row drops him"  build.py     "s#<p class=\"lg-short\">' + TF_NAME + ' by %s · code#<p class=\"lg-short\">' + TF_NAME + '%.0s by Bryant · code#"
+  # topology forge 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
+  plant "the frame asks for no selection"   build.py     's#^TF_EMBED = "frameless,props,pages,select,ready"#TF_EMBED = "frameless,props,pages,ready"#'
+  plant "Full size asks for switches"       build.py     's#% (e(first, quote=True), e(index\["file"\], quote=True))),#% (e(first + "\&embed=all", quote=True), e(index["file"], quote=True))),#'
+  plant "the legend says only TopoForge"    build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "TopoForge"#'
+  plant "the name misspelled"               build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "topograph""y forge (formerly TopoForge)"#'
+  plant "nav.js reaches into the app again" src/js/nav.js "s#if (w.TopoForge.showPage(it.page))#if (frame.contentDocument.querySelector('\#pagetabs .ptab'))#"
+  plant "a message heard from any frame"    src/js/stage.js 's#ev.origin !== window.location.origin || ev.source !== f.contentWindow || ##'
   plant "TopoForge's source not linked"      build.py     's#^TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"#TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin"#'
   plant "nav.js asks another host"           src/js/nav.js "s#window.fetch('nav/index.json'#window.fetch('https://x.example/nav/index.json'#"
   plant "nav.js reads storage outside try"   src/js/nav.js 's#^  function save() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function save() {#'
@@ -153,7 +160,7 @@ prove_red() {
     plant_b "the browser ignores the facets"  src/js/nav.js 's#      if (p.length \&\& !p.some(#      if (false \&\& !p.some(#'
     plant_b "an emptied section still shown"   src/js/nav.js "s#if (!ix.items.some(function (it) { return it.section === sid \&\& model.pass\[it.id\]; })) return;##"
     plant_b "a fifth window allowed"          src/js/nav.js "s#MAXWIN = 4;#MAXWIN = 5;#"
-    plant_b "an item does not open its page"  src/js/nav.js 's#if (b) { b.click();#if (b) {#'
+    plant_b "an item does not open its page"  src/js/nav.js 's#if (w.TopoForge.showPage(it.page)) say#if (false) say#'
     plant_b "the echo gives no reasons"       src/js/nav.js 's#say(reasons(ITEMS\[#say((ITEMS[#'
     plant_b "refused storage stops the nav"   src/js/nav.js "s#function load() { try { return JSON.parse(window.localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }#function load() { return JSON.parse(window.localStorage.getItem(KEY) || 'null'); }#"
     plant_b "the nav scrolls sideways at 390" src/css/site.css 's#^  .nf-handle { display: none; }#  .nf-handle { display: none; } .navframe { min-width: 480px; }#'
@@ -171,6 +178,7 @@ prove_red() {
     plant_b "a menu item that does nothing"       src/js/nav.js "s#'nextbuf': nextTab,#'nextbuf': function () {},#" $H
     plant_b "the minibuffer input boxed again"    src/css/site.css 's#background: transparent; border: 0; border-radius: 0; padding: 0; margin: 0; min-height: 24px; caret#background: transparent; border: 1px solid; border-radius: 0; padding: 0; margin: 0; min-height: 24px; caret#' $H
     plant_b "the echo area in another face"       src/css/site.css 's#height: 60px; overflow: auto; font: inherit;#max-height: 6.5em; overflow: auto; font: 14px/22px var(--sans);#' $H
+    plant_b "the selection not in the mode-line" src/js/nav.js "s#drawSel = m.detail.count ? m.detail : null;#drawSel = null;#" $H
     plant_b "the legend covers focus"             src/js/float.js 's#L.temp = true; L.apply();#L.apply();#' $H
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"

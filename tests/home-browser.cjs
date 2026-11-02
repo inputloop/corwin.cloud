@@ -199,6 +199,21 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       ok(`on a narrow screen nothing floats: the navigator sits above the drawing, with no dock buttons, at ${tag}`);
     }
 
+    // the app's switches, as the frame asks for them, and its selection in the navigator's mode-line
+    if (wide && scheme === 'light') {
+      const fr = p.frame({ url: (u) => /topoforge\/index\.html/.test(u.pathname) });
+      const cls = await fr.evaluate(() => document.body.className);
+      for (const c of ['tf-frameless', 'tf-fl-props', 'tf-pages']) assert.ok(cls.includes(c), 'the app was not asked for ' + c + ' (' + cls + ')');
+      assert.ok(!cls.includes('tf-fl-shapes'), 'the shapes float: this page keeps them as a column');
+      const id = await fr.evaluate(() => { const n = TopoForge.doc.pages[TopoForge.doc.cur].nodes.find((x) => x.data && x.data.what); TopoForge.select([n.id]); return { text: n.text.split('\n')[0], what: n.data.what }; });
+      await p.waitForFunction((t) => [...document.querySelectorAll('#nav .ml-item')].some((s) => s.textContent.includes('Selected in the drawing: ' + t)), id.text, { timeout: 5000 });
+      const line = await p.textContent('#nav .ml-item');
+      assert.ok(line.includes(id.what), 'the mode-line does not carry the shape\'s tooltip: ' + line);
+      await fr.evaluate(() => TopoForge.select([])); await p.waitForTimeout(200);
+      assert.ok(!(await p.textContent('#nav .ml-item')).includes('Selected in the drawing'), 'the selection stays in the mode-line after it is cleared');
+      ok('the app opens frameless, Properties floating, page tabs in the overview; what is selected in it shows in the mode-line with its tooltip, and clears');
+    }
+
     // the legend
     const bryant = p.locator('#legend .lg-app a[href="https://github.com/takushieternal"]');
     assert.equal(await bryant.count(), 1, 'the legend does not link Bryant'); assert.ok(await bryant.isVisible());

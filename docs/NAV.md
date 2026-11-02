@@ -2,11 +2,64 @@
 SPDX-FileCopyrightText: 2026 INPUTLOOP
 SPDX-License-Identifier: CC-BY-SA-4.0
 -->
-# The left nav: an Emacs frame beside TopoForge
+# The left nav: an Emacs frame beside topology forge (formerly TopoForge)
 
-Status: revision 2, written 2026-11-01 evening before its build (the first design, below the
-revision, stands where the revision does not replace it). The QA plan for revision 2 is at the end of
-its section. Correct it by editing this file.
+Status: revision 3, built 2026-11-01 late evening on the app's own switches (revision 2 and the
+first design, below, stand where revision 3 does not replace them). Correct it by editing this file.
+
+## Revision 3: the page asks the app (2026-11-01, late evening)
+
+### What Corwin said (his words)
+
+20:20: "We are subsuming 'TOPOForge'. A number of us discussed. ... It is fine to call it topology
+forge. Our work is focused on the corwin branch of the topology repo. Please make sure we are
+collecting our 'best of' there, and building from there." (Quoted with the spelling he corrected at
+20:51: "topology is the correct name.") 20:35, in this repository's AGENTS.md: TopoForge's project is
+obsolete; its work is merged forward into topology, branch corwin, which is kept current and built from.
+
+### The name
+
+The drawing app is **topology forge (formerly TopoForge)**, made by Bryant Frankford, with Corwin
+Brust and contributors. Bryant is named first. Our own text (this file, the legend, the catalog's
+credits, README) says the new name; the app's internal names stay (`window.TopoForge`, its JSON
+format, its storage keys), because saved drawings and this page rely on them.
+
+### What was built in the app (topology, branch corwin, `www/topoforge/`, version 1.8)
+
+The six changes proposed in revision 2 ("The TopoForge-side changes, proposed", below), built as
+switches that are all off when the app is opened on its own; its spec is topology's
+`topoforge/spec/EMBED-v1.md`, its checks `topoforge/tests/browser/embed.browser.mjs`. Opened on its
+own, 1.8 draws the same pixels as 1.7 (that kit compares them at three widths, light and dark).
+
+### What this page now asks for, and what went
+
+- The frame's address asks for `embed=frameless,props,pages,select,ready` (with `load=` on a first
+  visit): no frame, Properties floating from the right, the page tabs in the overview box at the
+  drawing's bottom right, and the selection and ready messages. The shapes stay a column: the
+  navigator floats beside them. "The app full size" opens it on its own, with no switch.
+- `stage.js` waits for the app's `topoforge:ready` message and opens a project's page with the app's
+  own `TopoForge.showPage`. Gone: polling `TopoForge.doc` every 100 ms (`fit`, `choose`) and pressing
+  the app's page-tab buttons from outside.
+- `nav.js` opens an item's page with `TopoForge.showPage`, and follows the page in view and the
+  selection from the app's messages. Gone: the 700 ms poll (`watch`) and the tab-button clicks. What
+  is selected in the drawing fills each window's item line when nothing is pointed at:
+  "Selected in the drawing: <name>: <tooltip> · <kind> · page <page>".
+- `float.js` asks `TopoForge.panels()` where the shapes, Properties and the overview are, and places
+  the navigator and the legend from that and from the ready message. Gone: reading the app's page
+  (`contentDocument`) and re-placing on a timer after the frame loads.
+- Each message listener hears only its own frame, of this site's origin (`ev.origin` and
+  `ev.source` both checked); the app itself posts only to its own origin.
+- The legend says "topology forge (formerly TopoForge), made by Bryant Frankford ..." and its hidden
+  row "topology forge (formerly TopoForge) by Bryant Frankford ...".
+
+### Checks added (each with a planted fault in `tests/run.sh --prove-red`)
+
+The frame asks for every switch and "Full size" for none (and each word is one the app's spec
+defines); the legend names the app by its new name with Bryant first; the misspelling of the name is
+in no source, document or built page; no home-page script reaches into the app's page or hears a
+message from any other frame or origin, and no poll for the app is back; in the browser, the app
+opens frameless with Properties floating and the tabs in the overview, and a selection in it shows in
+the mode-line with its tooltip and clears.
 
 ## Revision 2: frameless, floating, every word earning its place (2026-11-01 evening)
 
@@ -157,7 +210,7 @@ Checked in `www/topoforge/index.html` (topology, branch corwin, TopoForge 1.7):
   top bar; and nothing says what is selected. Restyling TopoForge from outside (writing CSS into its
   document) would be a change to TopoForge in all but name, so it is not done.
 
-### The TopoForge-side changes, proposed (not made: topology's AGENTS.md keeps `www/topoforge/` unchanged)
+### The TopoForge-side changes, proposed (built in topology forge 1.8: see revision 3 above)
 
 Credit: TopoForge is Bryant Frankford's; these would go into topology (branch corwin) under
 `www/topoforge/`, with a version bump (1.8), his name first in AUTHORS as now, and only after Corwin
@@ -230,7 +283,7 @@ ROOF
 - Every external address in the legend is on `PUBLIC_URLS`. (Python; the existing plant shape)
 PEERING: TopoForge, unchanged, through `?load=`, `window.TopoForge.doc`, its page tabs, and reading
 (never writing) its kept working copy and its palette's width. (browser)
-REMOTES: the TopoForge-side proposal above is written, not built.
+REMOTES: the TopoForge-side proposal above was written, not built, in revision 2; revision 3 built it.
 DOME
 - Storage refused: the navigator and the legend still render, float, move and filter. (browser)
 - No sideways scroll at 1280 and 390 in either theme. (browser)

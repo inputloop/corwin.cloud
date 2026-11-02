@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 INPUTLOOP
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// stage.js: opens TopoForge on the home page, and does nothing else. It reads one thing this
+// stage.js: opens topology forge (formerly TopoForge) on the home page, and does nothing else. It reads one thing this
 // browser keeps, TopoForge's own working copy (the key TopoForge writes, topoforge.autosave.v1): its
 // name, its page names and whether any page has a shape. It never writes it, writes nothing else,
 // and asks the network for nothing. docs/NAV.md (revision 2, "The drawing loads") says why:
@@ -12,8 +12,8 @@
 //   - the shop's drawings, kept: they open as left, with a notice if this build has pages they lack;
 //   - a drawing of the visitor's own: it opens, as TopoForge always does, with a notice at the top of the
 //     legend and a button that opens the shop's in its place. Nothing of theirs is replaced unasked.
-//   - index.html?drawing=<project>: once TopoForge is up, the page for that project is chosen by
-//     pressing TopoForge's own page tab, if the drawing in front of you is the shop's.
+//   - index.html?drawing=<project>: when the app says it is ready (its topoforge:ready message), the page
+//     for that project is opened with its own TopoForge.showPage, if the drawing in front of you is the shop's.
 (function () {
   'use strict';
   var f = document.getElementById('topology');
@@ -56,34 +56,31 @@
   // "TopoForge full size" opens the shop's drawings unless a drawing worth keeping is kept here
   if (full && kept) full.setAttribute('href', f.getAttribute('data-resume'));
 
-  function choose(tries, loading) {
+  // The app tells this page when it is ready (topology forge 1.8, its "ready" switch, which this page's
+  // address for it asks for): the drawing open, its name and pages. Only a message from the frame itself,
+  // of this site's own origin, is heard.
+  var fitNext = false;
+  window.addEventListener('message', function (ev) {
+    var m = ev.data;
+    if (ev.origin !== window.location.origin || ev.source !== f.contentWindow || !m || m.type !== 'topoforge:ready' || !m.detail) return;
+    ready(m.detail);
+  });
+  function ready(d) {
+    var tf = f.contentWindow && f.contentWindow.TopoForge;
+    if (fitNext && d.name === ours && tf && !want) tf.fitView();   // the shop's drawings, fitted to the window once
+    fitNext = false;
     if (!want) return;
     var name = pages[want];
     if (!name) { say('There is no page in the drawing for "' + want + '".'); return; }
-    var w = f.contentWindow, d = f.contentDocument, doc = w && w.TopoForge && w.TopoForge.doc;
-    if (!doc || (loading && doc.name !== ours)) {
-      if (tries < 60) setTimeout(function () { choose(tries + 1, loading); }, 100);
-      else say('The drawing did not open in time; the page for ' + want + ' was not chosen.');
-      return;
-    }
-    if (doc.name !== ours) {
+    if (d.name !== ours) {
       say('This is your own drawing, kept in this browser, so the page for ' + want + ' is not opened over it. "Open the shop\'s drawings", at the top of the legend, opens it.');
       return;
     }
-    var i = doc.pages.findIndex(function (p) { return p.name === name; });
-    var tab = i >= 0 && d && d.querySelector('#pagetabs .ptab[data-pi="' + i + '"]');
-    if (tab) { tab.click(); say('Showing the page for ' + want + '.'); }
+    if (tf && tf.showPage(name)) say('Showing the page for ' + want + '.');
     else say('Your copy of the drawing has no page named "' + name + '" now.');
   }
-
-  // After the shop's drawings open, fit them to the window with TopoForge's own fitView, once.
-  function fit(tries) {
-    var w = f.contentWindow, doc = w && w.TopoForge && w.TopoForge.doc;
-    if (doc && doc.name === ours && w.TopoForge.fitView) { if (!want) w.TopoForge.fitView(); return; }
-    if (tries < 60) setTimeout(function () { fit(tries + 1); }, 100);
-  }
   function open(first) {
-    f.addEventListener('load', function once() { f.removeEventListener('load', once); if (first) fit(0); choose(0, first); });
+    fitNext = first;
     f.src = f.getAttribute(first ? 'data-first' : 'data-resume');
   }
   open(!kept);

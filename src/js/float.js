@@ -12,9 +12,8 @@
 //   - the legend (#legend) is made one of them here, and hides to its one-line credit by itself when
 //     focus goes into the drawing, so it never covers what has focus there.
 // Places are kept in this browser only (corwin.cloud.float.v1), read and written in try/catch; with
-// storage refused each palette starts in its default place. It asks the network for nothing. It reads
-// TopoForge's page (same site) only to learn where its shape palette and inspector are; it changes
-// nothing there.
+// storage refused each palette starts in its default place. It asks the network for nothing. It asks
+// the app only where its panels are, by its own read-only TopoForge.panels(); it changes nothing there.
 (function () {
   'use strict';
   var doc = document, KEY = 'corwin.cloud.float.v1', STEP = 16, BIG = 64, MINW = 220;
@@ -28,15 +27,17 @@
     list.forEach(function (f) { o[f.name] = f.state; });
     try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* refused: kept for this visit only */ }
   }
-  // Where TopoForge's own palettes are, read from its page (the left palette's right edge, the
-  // inspector's left edge), in the stage's coordinates. Falls back to TopoForge's own CSS widths.
+  // Where the app's own panels are (topology forge 1.8: TopoForge.panels(), read-only, in the frame's
+  // pixels, which are the stage's): the shape palette's right edge, and the left edge of whichever of its
+  // floating Properties and its overview box comes first. Falls back to its 1.7 widths before it is up.
   function tfEdges() {
     var left = 212, right = null;
     try {
-      var d = frame && frame.contentDocument, fr = frame.getBoundingClientRect();
-      var p = d && d.getElementById('palette'), s = d && d.getElementById('side');
-      if (p) { var pr = p.getBoundingClientRect(); if (pr.right > 0 && pr.width > 0) left = pr.right + 12; else left = 12; }
-      if (s) { var sr = s.getBoundingClientRect(); if (sr.left < fr.width && sr.width > 0) right = sr.left - 12; }
+      var tf = frame && frame.contentWindow && frame.contentWindow.TopoForge, p = tf && tf.panels && tf.panels();
+      if (p) {
+        left = p.shapes && p.shapes.shown && p.shapes.w > 0 ? p.shapes.x + p.shapes.w + 12 : 12;
+        [p.props, p.map].forEach(function (b) { if (b && b.shown && b.w > 0 && (right === null || b.x - 12 < right)) right = b.x - 12; });
+      }
     } catch (e) { /* not loaded yet: the fallbacks */ }
     return { left: left, right: right === null ? (area ? area.clientWidth - 282 : 900) : right };
   }
@@ -177,9 +178,11 @@
     all = loadAll();
     window.addEventListener('resize', relayout);
     if (narrowQ.addEventListener) narrowQ.addEventListener('change', relayout); else narrowQ.addListener(relayout);
-    if (frame) frame.addEventListener('load', function () {
-      // TopoForge's palettes are where they are once it has drawn: place what has not been moved
-      var n = 0; (function again() { list.forEach(function (f) { f.retarget(); }); if (++n < 20) setTimeout(again, 150); })();
+    // the app's panels are where they are once it says it is ready: place what has not been moved
+    if (frame) window.addEventListener('message', function (ev) {
+      var m = ev.data;
+      if (ev.origin !== window.location.origin || ev.source !== frame.contentWindow || !m || m.type !== 'topoforge:ready') return;
+      list.forEach(function (f) { f.retarget(); });
     });
   }
   window.CCFloat = { make: make, relayout: relayout, available: !!area, get: function (n) { return list.filter(function (f) { return f.name === n; })[0] || null; } };

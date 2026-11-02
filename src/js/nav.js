@@ -458,6 +458,11 @@
       (ls.length > 1 ? ' · window ' + (ls.indexOf(w) + 1) + ' of ' + ls.length : '') + (t.pins.length ? ' · ' + t.pins.length + ' pinned' : '');
     var id = hover[w] || t.wins[w].point, it = id && ITEMS[id];
     var seg = ml.querySelector('.ml-item');
+    if (!hover[w] && drawSel) {   // what is selected in the drawing, as the app says it: its tooltip
+      seg.textContent = 'Selected in the drawing: ' + drawSel.name + (drawSel.tooltip ? ': ' + drawSel.tooltip : '') + ' · ' + drawSel.kind +
+        ' · page ' + drawSel.page + (drawSel.count > 1 ? ' · and ' + (drawSel.count - 1) + ' more' : '');
+      return;
+    }
     seg.textContent = it ? it.name + ': ' + it.tip + ' · ' + [SEC_LABEL[it.section]].concat(labels(it, 'notation'), labels(it, 'pillar'), labels(it, 'says')).join(' · ') +
       (model.pi[it.id] ? ' · pinned' : '') : '';
   }
@@ -509,15 +514,22 @@
       say('The drawing open is your own, kept in this browser, so ' + it.name + '’s page is not opened over it. "Open the shop’s drawings", at the top of the legend, opens the shop’s.');
       return;
     }
-    var i = d.pages.findIndex(function (p) { return p.name === it.page; });
-    var b = i >= 0 && frame.contentDocument.querySelector('#pagetabs .ptab[data-pi="' + i + '"]');
-    if (b) { b.click(); say('Showing ' + it.page + ' in the drawing.'); watch(); }
+    if (w.TopoForge.showPage(it.page)) say('Showing ' + it.page + ' in the drawing.');
     else say('The drawing in front of you has no page named “' + it.page + '”.');
   }
-  var lastPage = null;
-  function watch() {
-    var w = tf(), name = null;
-    if (w) { var d = w.TopoForge.doc; name = d.pages[d.cur] ? d.pages[d.cur].name : null; }
+  // The app tells this page what is selected and which page is in view (topology forge 1.8, its
+  // "select" and "ready" switches, asked for in the frame's address): only messages from the frame,
+  // of this site's own origin. The selection fills each window's item line when nothing is pointed at.
+  var lastPage = null, drawSel = null, seenPage = null;
+  window.addEventListener('message', function (ev) {
+    var m = ev.data;
+    if (!frame || ev.origin !== window.location.origin || ev.source !== frame.contentWindow || !m || !m.detail) return;
+    if (m.type !== 'topoforge:select' && m.type !== 'topoforge:ready') return;
+    if (m.type === 'topoforge:select') drawSel = m.detail.count ? m.detail : null;
+    seenPage = m.detail.page;
+    if (ix) { watch(m.detail.page); leaves(tab().tree).forEach(function (w) { modeline(w); }); }
+  });
+  function watch(name) {
     if (name && name !== lastPage) {
       lastPage = name;
       var t = tab(), hit = ix.items.filter(function (it) { return it.page === name && it.section !== 'hosts' && it.section !== 'people' && it.section !== 'paths'; })[0];
@@ -685,10 +697,9 @@
       });
     }
     wire(); render();
+    if (seenPage) watch(seenPage);   // the app may have spoken before the index arrived
     say(T ? 'The navigator: press categories, or type words after Narrow (Alt+x). Help, Keys lists the rest.'
           : 'The navigator: press categories or type words (words match whole, plural or by their start; about-corwin’s matching was not staged).');
-    watch();
-    window.setInterval(watch, 700);
     host.setAttribute('data-ready', 'yes');
   }
   window.fetch('nav/index.json', { credentials: 'same-origin' })

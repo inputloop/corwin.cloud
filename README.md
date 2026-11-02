@@ -16,7 +16,7 @@ other host.
 
 ## topology is not in this repository
 
-topology (branch `corwin`) has been public since 2026-11-01 and carries Bryant Frankford's TopoForge. This repository still holds only the
+topology (branch `corwin`) has been public since 2026-11-01 and carries Bryant Frankford's topology forge (formerly TopoForge), where its work now goes on. This repository still holds only the
 shell: navigation, tabs, directory, packages, footer. At build time the build asks a local checkout
 of topology to stage its own `www` (`sh bin/stage-www.sh DEST`) into `public/topology/`. Without a
 checkout the home page says so in place of the app, and everything else still builds.
@@ -27,8 +27,8 @@ repository, not public yet)"; topology's own address is public now and stays. `T
 
 ## The drawings and the demos (2026-11-01)
 
-The home page is TopoForge itself, full width, opened on **the shop, drawn**: one TopoForge page per
-project the directory lists (the tabs along the bottom of the drawing), obsmage's workflows and
+The home page is topology forge (formerly TopoForge), by Bryant Frankford, itself, full width, opened on **the shop, drawn**: one TopoForge page per
+project the directory lists (the page tabs in the overview, at the drawing's bottom right), obsmage's workflows and
 scenes, and Bryant Frankford's five-page drawing of how Gitcha works. `drawings.py` makes them at
 build time from `catalog.py` and the `TOPOLOGY.md` files in topology's `examples/inputloop/`; they are
 TopoForge's own JSON, opened with its own `?load=`, so they can be saved, changed and opened in any

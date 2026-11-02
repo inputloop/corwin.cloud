@@ -132,7 +132,7 @@ test("Bryant's drawing of Gitcha is his, byte for byte, credited, and in the def
   if (!existsSync(f)) return;   // a build with no gitcha checkout leaves it out and says so
   const sha = createHash('sha256').update(readFileSync(f)).digest('hex');
   const story = join(ildir, 'gitcha', 'topoforge', 'how-gitcha-works-story.md');
-  const want = existsSync(story) ? /drawing-sha256=([0-9a-f]{64})/.exec(readFileSync(story, 'utf8'))[1] : 'a7adb644bc436bfea2ee2445a7872936fc9b5897d6f92e25079cc5dda51f0289';
+  const want = existsSync(story) ? /drawing-sha256=([0-9a-f]{64})/.exec(readFileSync(story, 'utf8'))[1] : '663e8a56a5874b0b7a083b89da7f5a753d68827ba95862043cf6e96cada1d3e0';
   assert.equal(sha, want);
   const n = JSON.parse(readFileSync(f, 'utf8')).pages.length;
   assert.equal(set.pages.filter((p) => p.name.startsWith('How Gitcha works (Bryant) ')).length, n);
@@ -252,6 +252,19 @@ test('nothing in the navigator animates: its stylesheet section has no transitio
   assert.ok(i > 0, 'no navigator section in site.css');
   const sec = css.slice(i);
   assert.ok(!/\b(transition|animation)\s*:/.test(sec), 'the navigator section animates something');
+});
+
+// ---- the app's own messages and calls (topology forge 1.8) ----------------------------------------
+test('the home page scripts ask the app, never reach into its page, and hear only its own frame', () => {
+  for (const f of ['stage.js', 'nav.js', 'float.js']) {
+    const s = rd('js/' + f);
+    for (const bad of ['contentDocument', '#pagetabs', '.ptab', "getElementById('palette')", "getElementById('side')"]) assert.ok(!s.includes(bad), f + ' reaches into the app\'s page: ' + bad);
+    const listeners = s.split("addEventListener('message'").length - 1;
+    const guarded = (s.match(/ev\.origin !== window\.location\.origin \|\| ev\.source !== (f|frame)\.contentWindow/g) || []).length;
+    assert.equal(guarded, listeners, f + ': ' + listeners + ' message listener(s), ' + guarded + ' checking the origin and that the message is from the frame');
+  }
+  assert.ok(rd('js/stage.js').includes('showPage('), 'stage.js does not open a page by the app\'s own showPage');
+  assert.ok(!/setInterval|setTimeout\(function \(\) \{ (choose|fit)/.test(rd('js/stage.js') + rd('js/nav.js').replace(/setTimeout/g, '')), 'a poll for the app is back');
 });
 
 // ---- the palettes (docs/NAV.md, revision 2) -------------------------------------------------------

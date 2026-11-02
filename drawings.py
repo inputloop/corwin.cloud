@@ -42,7 +42,7 @@ TF_SHAPES = set("router switch l3switch hub ap wrouter modem lb patch firewall i
                 "zone site vlan subnet dmz vpc rack rect rounded ellipse diamond triangle hexagon parallelogram "
                 "cylinder document note text".split())
 GROUPS = {"zone", "site", "vlan", "subnet", "dmz", "vpc", "rack"}
-GITCHA_SHA256 = "a7adb644bc436bfea2ee2445a7872936fc9b5897d6f92e25079cc5dda51f0289"  # from Bryant's story file
+GITCHA_SHA256 = "663e8a56a5874b0b7a083b89da7f5a753d68827ba95862043cf6e96cada1d3e0"  # from Bryant's story file
 GITCHA_PREFIX = "How Gitcha works (Bryant) "
 
 
@@ -290,7 +290,7 @@ def overview_page(recs):
              "path": (3 * GX + 60, ph + 200, 3, "Path: how work moves")}
     pg.node("title", "text", -GX - 60, -150, 1200, 110,
             "The shop, drawn: what inputloop makes, where it runs, how work moves and who answers for it.\n"
-            "Each project has its own page: the tabs along the bottom. Layers (right) switch views: people, projects, hosts, flows.\n"
+            "Each project has its own page, with its own tab among the page tabs. Layers (right) switch views: people, projects, hosts, flows.\n"
             "Everything here is a drawing you can move, change and keep; it stays in this browser until you save it yourself (File).", "words")
     you = pg.node("you", "user", pw // 2 - 55, ph + 40, 110, 110, "You\n(this browser)", "abstract",
                   data={"what": "What you draw here stays in this browser. Nothing is sent anywhere."})
