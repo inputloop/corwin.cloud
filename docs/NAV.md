@@ -11,6 +11,89 @@ Revisions 4 and earlier, below, stand where revision 5 does not replace them. Co
 this file. Revision 6 (2026-11-02, late morning), next, adds to revision 5 and replaces only what it
 names.
 
+## Revision 7: independent lines, map modes, cards (2026-11-02, afternoon)
+
+### What Corwin asked (his words, 12:48; c4 `q/2026-11-02-minimap-modes/PROMPT.md`)
+
+"The mini-map work is smooth as butter. [...] scroll-wheel over the mini-map should change the zoom level
+of the outer frame; modifier keys could change this to adjust preview scale instead (Alt) or to move the
+viewport (shift=E/W, Alt+Shift=N/S)"
+
+"modality (mini-map controls, reachable via menus): three state slider default in the middle; RIGHT:
+"highlight matches" mode (right most position, what we have now; the text that we currently put into
+mini-map on item hover could be in the echo/input area); LEFT: "preview shapes" mode (show a HUD of
+information about what we are hovering in one of the panels; like a packground transparent Index
+Card/Flash Card with a visualization, left-top corner titling, and fact clusters, plus a single consise
+statement of what we are looking at; background fade to draw attention without adding/adjusting
+background/texturing so it just looks like less background (don't try to add a Index Card lines or
+framing [...]) [...] the default orientation is setup already for the mini-map and can be adjusted by the
+user; don't change that as the mode setting is change; MIDDLE: highlight maches in the DRAWING (not the
+mini-map) and display the shape/item/character card (LEFT design) in the mini-map"
+
+"my idea didn't work out of scaling together all three of menu line, mode-line and input/echo/message
+area. Let's make them independant. If you think that's worth an option I'm fine with that. Addition
+options around changes [...] is most often TRT [...] A feature disabled that way is much, much easier to
+"bring back" than hunting though commit history"
+
+### Independent lines (the new default), grow-together kept as an option
+
+- **Independent** (default): the menu bar, each mode-line and the message area each take the lines their
+  own content needs (the menu bar is always one, revision 6; a mode-line wraps on its own; the message
+  area grows to at most four lines), and nothing else grows with them.
+- **Lines grow together** (Options, a checkbox; kept per browser in `corwin.cloud.free.v1`): revision 5's
+  rule, unchanged. Intention: his idea stays one press away, not in the history.
+
+### The map mode: a three-position slider, default in the middle
+
+| Position | Name | What pointing at something in a frame does |
+|---|---|---|
+| left | **Preview shapes** (cards) | the thing's card in the map |
+| middle (default) | **Both** | its matches highlighted in the drawing, and its card in the map |
+| right | **Highlight matches** (rings) | its matches ringed in the map (stage 2), its caption in the frame's echo area |
+
+- Where: a slider (`role=slider`, values 0 to 2, its value said in words) at the end of the frame's
+  tool-bar, in a group of its own; and Options, Map mode, as three radio items, so frames without a
+  tool-bar and keyboard users reach it from the menus. Why the tool-bar and not with the map's own
+  controls: the map and its door-handle controls are inside the app's frame, which this page does not
+  draw in; the tool-bar is where the things that preview are. Kept per browser.
+- The map's place, size and orientation are the reader's and are not touched when the mode changes.
+- Until the app can draw cards and highlight in the drawing (topology forge 1.10), cards are shown in the
+  plain box above the map; in the middle position the map's rings stand in for the drawing's highlight.
+
+### Cards, built from data
+
+A card for each thing that can be pointed at: a tool-bar category, a finder shape kind, a navigator item,
+a shape selected in the drawing. Each card: a **title** (top left), a **visualization** (the shape's icon,
+or the category's shape icons, or the item's glyph), **clusters of facts** (from `shapes()`, the drawing and
+`nav/index.json`: kind, category, default size, how many on this page and on others, section, page,
+notation, "is a", topic, shapes drawn for it), and **one statement**: the item's own one-line description
+from the catalog, or, for a category or kind, one sentence composed from its facts. No hand-written prose.
+The card's background fades the drawing behind it (less background, no card lines or frame).
+
+### QA plan for revision 7 (written before the build)
+
+`tests/free7-browser.cjs` (1280 and 1920, light and dark; 390 for the lines): lines independent by default
+(a long message grows only the message area) and together when chosen (all three equal), each kept across
+a reload; the slider starts in the middle, its arrows and Home/End move it, Options' radios set it, kept;
+in the right position the echo area says the caption (1.9 staged); in the left and middle the card shows a
+title, an icon, facts that equal the data (a category's count is its `shapes()` length; an item's notation
+is its index facets) and one statement (an item's is its catalog description); nothing animates; AA.
+Each promise has a planted fault, proven in shards. 1.10 (wheel, mapMode, `{card}`, highlight in the
+drawing) is wired and checked when it lands.
+
+Manifest: none owed.
+
+### Built and checked (2026-11-02, revision 7 stage 1, before topology forge 1.10)
+
+Built against topology, branch corwin, `25fae11` (1.9). `sh tests/run.sh`: ALL CHECKS PASSED (Python, node,
+browser 33, navigator 31, classic 34, free 46, revision 5 30, revision 6 26, revision 7 21). The card box sits
+just left of the map, above the legend, drawn over the frames while it shows (at 1280 it can cover frame 2's
+foot for as long as something is pointed at; in 1.10 the card moves into the map). Revision 5's suite now
+starts with the lines together and the rings position (its own settings); revision 6's with rings.
+Found: in the rings position the echo area takes every hover's caption, so a long message can be replaced by
+a hover under the pointer; that is the position's purpose, and the test now invokes its command without
+moving the pointer.
+
 ## Revision 6: frames that fit, a lettered title block, menus that never wrap (2026-11-02)
 
 ### What Corwin asked (his words, 10:38, with a screenshot at 1920x1080; c4 `q/2026-11-02-frames-legend-menus/PROMPT.md`)

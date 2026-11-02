@@ -44,7 +44,8 @@ const meets = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h &&
   const app = (p) => p.frame({ url: (u) => /topoforge\/index\.html/.test(u.pathname) });
   const waitDoc = (p) => p.waitForFunction((nm) => { const f = document.getElementById('topology'); const d = f && f.contentWindow && f.contentWindow.TopoForge && f.contentWindow.TopoForge.doc; return d && d.name === nm; }, drawing.doc, { timeout: 15000 });
   const ready = async (p) => { await waitDoc(p); await p.waitForSelector('#stage-grid[data-free="yes"]', { timeout: 10000 }); await p.waitForFunction(() => window.CCNav && document.querySelector('#ef-1 .ef-tile'), null, { timeout: 10000 }); await p.waitForTimeout(500); };
-  const fresh = async (p) => { await p.goto(base + '404.html'); await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); }); };
+  // stage 2's checks are the map's rings: since revision 7 that is the right position of the map mode (free7 checks the others)
+  const fresh = async (p) => { await p.goto(base + '404.html'); await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('corwin.cloud.free.v1', JSON.stringify({ mapMode: 'rings' })); }); };
   const keys = async (p, ...ks) => { for (const k of ks) await p.keyboard.press(k); await p.waitForTimeout(60); };
   const box = async (p, s) => { const b = await p.locator(s).boundingBox(); return b && { x: b.x, y: b.y, w: b.width, h: b.height }; };
   const nineteen = (p) => app(p).evaluate(() => /^1\.(9|[1-9]\d)|^[2-9]/.test(TopoForge.version));

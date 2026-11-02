@@ -43,6 +43,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free5-browser.cjs || fail=1
       step "revision 6: frame 2's place, height and corner, the lettered legend, menus that never wrap, 1.9 part A (playwright)"
       SITE_OUT=$out "$node" tests/free6-browser.cjs || fail=1
+      step "revision 7: independent lines (grow-together kept as an option), the map mode slider, cards from data, the echo caption (playwright)"
+      SITE_OUT=$out "$node" tests/free7-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -225,7 +227,7 @@ prove_red() {
     plant_b "a tile that does not narrow"         src/js/free.js 's#return !s.tiles.length || s.tiles.indexOf(c.id) >= 0;#return true;#' $F
     plant_b "Enter on a shape places nothing"     src/js/free.js "s#placeShape(row.getAttribute('data-shape'), true); return;#return;#" $F
     plant_b "a mode-line element with no command" src/js/free.js "s#text: function () { return PAGE ? 'p:' + PAGE : ''; }, act: 'pages',#text: function () { return PAGE ? 'p:' + PAGE : ''; }, act: null,#" $F
-    plant_b "the selection not in %select"        src/js/free.js "s#else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null;#else if (m.type === 'topoforge:select') { SEL = null;#" $F
+    plant_b "the selection not in %select"        src/js/free.js "s#^      SEL = m.detail.count ? m.detail : null; PAGE#      SEL = null; PAGE#" $F
     plant_b "the input stays when focus leaves"   src/js/free.js "s#f.form.addEventListener('focusout'#f.form.addEventListener('focusoutx'#" $F
     plant_b "ESC x is not M-x"                    src/js/free.js "s#'ESC': { 'x': 'execute-extended-command' }#'ESC': {}#" $F
     plant_b "C-x 5 2 undefined"                   src/js/free.js "s#, '5': 'C-x 5',#,#" $F
@@ -276,8 +278,19 @@ prove_red() {
     # stage 2 (docs/NAV.md, revision 6): the map as the preview, frames re-checked when it moves
     plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true })#view: true, map: false, preview: false })#' $S
     plant_b "a navigator item previews its id only" src/js/free.js 's#^    if (!sl || !t || !t.doc) return out;#    return out;#' $S
-    plant_b "a finder shape previews its category" src/js/free.js 's#target: { kind: sh.id } } : null;#target: { category: sh.category } } : null;#' $S
+    plant_b "a finder shape previews its category" src/js/free.js 's#^        target: { kind: sh.id } };#        target: { category: sh.category } };#' $S
     plant_b "no re-check when the map moves"      src/js/free.js "s#if (ev.key === 'topoforge.ui.v1') mapCheck();#if (false) mapCheck();#" $S
+    # revision 7 (docs/NAV.md): independent lines, the map mode, cards from data
+    V=tests/free7-browser.cjs
+    plant_b "the lines not independent by default" src/js/free.js 's#var together = !!fstate().linesTogether;#var together = true;#' $V
+    plant_b "growing together not kept"           src/js/free.js "s#fkeep('linesTogether', v);#void 0;#" $V
+    plant_b "the map mode not in the middle"      src/js/free.js "s#return MAPMODES.indexOf(m) >= 0 ? m : 'both';#return MAPMODES.indexOf(m) >= 0 ? m : 'rings';#" $V
+    plant_b "the map mode not kept"               src/js/free.js "s#MAPMODE = m; fkeep('mapMode', m);#MAPMODE = m;#" $V
+    plant_b "the slider's keys dead"              src/js/free.js 's#^      if (n === null) return;#      return;#' $V
+    plant_b "no caption in the echo area"         src/js/free.js 's#if (d \&\& res \&\& res.caption) {#if (false) {#' $V
+    plant_b "a card's count not from the data"    src/js/free.js "s#\['Shapes', String(c.shapes.length)\]#['Shapes', String(c.shapes.length + 1)]#" $V
+    plant_b "an item's statement not its own"     src/js/free.js 's#statement: it.tip || (#statement: (#' $V
+    plant_b "the selection has no card"           src/js/free.js "s#if (MAPMODE !== 'rings' \&\& SEL \&\& !narrowQ.matches) showCard(selCard());#if (false) showCard(selCard());#" $V
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

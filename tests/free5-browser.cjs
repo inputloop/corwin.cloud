@@ -41,7 +41,8 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
   const app = (p) => p.frame({ url: (u) => /topoforge\/index\.html/.test(u.pathname) });
   const waitDoc = (p) => p.waitForFunction((nm) => { const f = document.getElementById('topology'); const d = f && f.contentWindow && f.contentWindow.TopoForge && f.contentWindow.TopoForge.doc; return d && d.name === nm; }, drawing.doc, { timeout: 15000 });
   const ready = async (p) => { await waitDoc(p); await p.waitForSelector('#stage-grid[data-free="yes"]', { timeout: 10000 }); await p.waitForSelector('#ef-1 .ef-tile', { state: 'attached', timeout: 10000 }); await p.waitForFunction(() => window.CCNav, null, { timeout: 10000 }); await p.waitForTimeout(300); };
-  const fresh = async (p) => { await p.goto(base + '404.html'); await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); }); };
+  // revision 5's lines grow together and its map preview is rings; since revision 7 both are settings (free7-browser.cjs checks the rest)
+  const fresh = async (p) => { await p.goto(base + '404.html'); await p.evaluate(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('corwin.cloud.free.v1', JSON.stringify({ linesTogether: true, mapMode: 'rings' })); }); };
   const msg = (p, f = 1) => p.textContent(`#ef-${f} .ef-msg`);
   const keys = async (p, ...ks) => { for (const k of ks) await p.keyboard.press(k); await p.waitForTimeout(60); };
   const box = async (p, s) => { const b = await p.locator(s).boundingBox(); return b && { x: Math.round(b.x * 2) / 2, y: Math.round(b.y * 2) / 2, w: Math.round(b.width * 2) / 2, h: Math.round(b.height * 2) / 2 }; };
@@ -92,10 +93,10 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
       assert.ok(await p.isVisible('#ef-hud'), 'no preview box on hover');
       const hud = await p.textContent('#ef-hud');
       assert.ok(/Security: 3 shapes/.test(hud) && /Firewall/.test(hud) && /stand-in/.test(hud), 'the preview box does not say the category and that it is a stand-in: ' + hud);
-      const hc = await p.evaluate(() => { const t = document.querySelector('#ef-hud .ef-hud-b'), cs = getComputedStyle(t); return [cs.color, getComputedStyle(t.parentElement).backgroundColor]; });
+      const hc = await p.evaluate(() => { const t = document.querySelector('#ef-hud .ef-card-s'), cs = getComputedStyle(t); return [cs.color, getComputedStyle(document.body).backgroundColor]; });
       assert.ok(contrast(hc[0], hc[1]) >= 4.5, 'the preview box is below AA');
       const hb = await box(p, '#ef-hud'), mapb = await app(p).evaluate(() => TopoForge.panels().map);
-      assert.ok(hb.y + hb.h <= mapb.y + 1, 'the preview box is not above the overview map');
+      assert.ok(hb.x + hb.w <= mapb.x + 1, 'the preview box is not beside the overview map (on its left)');
       await app(p).evaluate((v) => { TopoForge.version = v; }, vv);
     }
     await p.mouse.move(w / 2, 5); await p.waitForTimeout(500);
@@ -150,7 +151,8 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
       L = await lines(p, 1);
       assert.ok(L.n === 1 && L.menu === 1 && L.msg === 1 && L.ml.every((x) => x === 1), 'widened, the three lines did not come back to one: ' + JSON.stringify(L));
       // a long message alone makes the menu bar and the mode-lines grow with it
-      await p.click('#ef-1 .ef-mb[data-menu="Help"]'); await p.click('#ef-1 .ef-pop [data-act="describe-mode"]'); await p.waitForTimeout(100);
+      await p.mouse.move(w / 2, 5); await p.waitForTimeout(450);   // no pointer over a frame: in rings mode a hover writes its caption in the echo area
+      await p.evaluate(() => { document.querySelector('#ef-1 .ef-mb[data-menu="Help"]').click(); document.querySelector('#ef-1 .ef-pop [data-act="describe-mode"]').click(); }); await p.waitForTimeout(100);
       L = await lines(p, 1);
       assert.ok(L.n >= 2 && L.menu === L.n && L.msg === L.n && L.ml.every((x) => x === L.n), 'a wrapping message did not grow the three lines together: ' + JSON.stringify(L));
       await p.evaluate(() => { document.querySelector('#ef-1 .ef-msg').textContent = 'short'; });

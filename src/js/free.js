@@ -29,7 +29,10 @@
   var IX = null, CATS = [], SHAPE = {}, ICON = {}, CMDS = [], SEL = null, READY = null, PAGE = '';
   var frames = [], cur = null, small = {}, nextFrame = 1, MOTION = html.classList.contains('motion-on');
   var NAVAT = null, MAXLINES = 4, LH = 24, CELL = 30;   // where *navigator* is shown; lines and tool cells, in pixels
-  var VIEW = null, HERE_AT = null;   // topology forge 1.9: the view, and where *Here* floats (beside the selection)
+  var VIEW = null, HERE_AT = null;
+  // the map mode (revision 7): cards (left), both (middle, the default), rings (right); kept per browser
+  var MAPMODES = ['cards', 'both', 'rings'], MAPWORDS = { cards: 'Preview shapes: the card of what is pointed at', both: 'Both: matches highlighted, and the card', rings: 'Highlight matches: rings in the map, its caption in the echo area' };
+  var MAPMODE = (function () { var m = fstate().mapMode; return MAPMODES.indexOf(m) >= 0 ? m : 'both'; })();   // topology forge 1.9: the view, and where *Here* floats (beside the selection)
   // the menu bar's priority+ overflow (revision 6): the last of these go into » first; Site never does
   var DROP = ['Layout', 'Arrange', 'Help', 'Options', 'View', 'Edit', 'File', 'Navigator'];
   // the layout switch's box, in the stage's pixels: no frame's top row sits under it (js/float.js moves it below)
@@ -123,7 +126,11 @@
     var m = ev.data;
     if (ev.origin !== window.location.origin || ev.source !== app.contentWindow || !m || !m.detail) return;
     if (m.type === 'topoforge:ready') { READY = m.detail; PAGE = m.detail.page || ''; takeShapes(); refreshCmds(); hooks19(); }
-    else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; frames.forEach(function (f) { f.renderTools(); f.layoutTools(); }); }
+    else if (m.type === 'topoforge:select') {
+      SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; frames.forEach(function (f) { f.renderTools(); f.layoutTools(); });
+      // the selection's card (revision 7), in the left and middle map modes
+      if (MAPMODE !== 'rings' && SEL && !narrowQ.matches) showCard(selCard()); else if (!SEL && hud.getAttribute('data-card') === 'selection') hud.hidden = true;
+    }
     else if (m.type === 'topoforge:context' && nine()) { var cd = m.detail; SEL = SEL && SEL.id === cd.id ? SEL : { id: cd.id, ref: cd.ref, name: cd.name, tooltip: cd.tooltip, kind: cd.kind, page: cd.page, count: 1 }; here(cd.rect); }
     else if (m.type === 'topoforge:view' && nine()) { VIEW = m.detail; viewSoon(); return; }
     else if (m.type === 'topoforge:pages' && nine()) { if (small.pages && !small.pages.root.hidden) small.pages.fill(); }
@@ -312,7 +319,8 @@
     'fold': 'Show or hide the tool-bar and finder', 'move-left': 'Move left', 'move-right': 'Move right', 'move-up': 'Move up', 'move-down': 'Move down',
     'move-reset': 'Back to where it started', 'switch-to-buffer': 'Switch to buffer', 'execute-extended-command': 'M-x: run a command',
     'menu-bar-open': 'Open the menu bar', 'enlarge-frame': 'Wider', 'shrink-frame': 'Narrower', 'toolbar': 'Tool-bar in this frame',
-    'taller': 'Taller', 'shorter': 'Shorter', 'mode-menu': 'The mode’s menu',
+    'taller': 'Taller', 'shorter': 'Shorter', 'mode-menu': 'The mode’s menu', 'lines-together': 'Lines grow together (menu bar, mode-lines, message area)',
+    'map-cards': 'Preview shapes (cards)', 'map-both': 'Both (highlight and card)', 'map-rings': 'Highlight matches (rings)',
     'show-navigator': 'Show *navigator* in this window', 'show-finder': 'Show *finder* in this window', 'nav-narrow': 'The navigator’s Narrow line' };
   function core(name, f) {
     f = f || cur;
@@ -333,6 +341,8 @@
       'shrink-frame': function () { f.fl.set({ w: f.fl.state.w - 16 }, true); f.say('The frame is ' + f.fl.state.w + ' pixels wide, kept in this browser (C-x {).'); },
       'taller': function () { f.say('The frame is ' + f.fl.taller(16) + ' pixels tall, kept in this browser (C-x ^).'); },
       'shorter': function () { f.say('The frame is ' + f.fl.taller(-16) + ' pixels tall, kept in this browser.'); },
+      'lines-together': function () { var v = !fstate().linesTogether; fkeep('linesTogether', v); frames.forEach(function (x) { x.lines(); }); f.say(v ? 'The menu bar, the mode-lines and the message area grow together.' : 'The menu bar, the mode-lines and the message area each take the lines they need.'); },
+      'map-cards': function () { setMapMode('cards'); }, 'map-both': function () { setMapMode('both'); }, 'map-rings': function () { setMapMode('rings'); },
       'mode-menu': function () { var b = f.wins.querySelector('.ef-win.selected .ml-mode'); if (b) b.click(); },
       'toolbar': function () { f.st.toolbar = !f.st.toolbar; f.render(); f.say(f.st.toolbar ? 'The tool-bar is shown in this frame.' : 'The tool-bar is off in this frame (Options, Tool-bar in this frame brings it back).'); },
       'show-navigator': function () { f.show('navigator'); }, 'show-finder': function () { f.show('finder'); },
@@ -643,6 +653,7 @@
     if (nav()) win.push(w.buf === 'navigator' ? coreT('show-finder', 'finder') : coreT('show-navigator', 'nav'));
     if (f.leaves().length > 1) win.push(coreT('delete-other-windows', 'one'));
     gs.push({ id: 'win', label: 'Windows and frames', tools: win });
+    gs.push({ id: 'map', label: 'Map mode', slider: true, tools: [{}] });
     gs.forEach(function (g) { g.tools = g.tools.filter(Boolean); });
     return gs.filter(function (g) { return g.tools.length; });
   };
@@ -654,6 +665,7 @@
     f.toolbar.setAttribute('aria-label', 'Tool bar: shape categories, then the drawing’s and the frame’s commands. Arrow keys move along it.');
     f.toolGroups().forEach(function (g) {
       var box = mk('div', { cls: 'ef-tg', role: 'group', 'aria-label': g.label, 'data-group': g.id });
+      if (g.slider) { box.appendChild(mapSlider()); f.toolbar.appendChild(box); return; }
       g.tools.forEach(function (t) {
         var b;
         if (t.cat) b = mk('button', { type: 'button', cls: 'ef-tool ef-tile', 'data-cat': t.cat.id, 'aria-pressed': String(t.pressed), 'aria-label': t.name, 'data-tip': t.label, tabindex: first ? '0' : '-1' }, [icon(t.cat.shapes[0].id)]);
@@ -665,6 +677,39 @@
       f.toolbar.appendChild(box);
     });
   };
+  // the map mode slider (revision 7): three positions, cards (left), both (middle), rings (right)
+  function mapSlider() {
+    var i = MAPMODES.indexOf(MAPMODE);
+    var sl = mk('div', { cls: 'ef-slider', role: 'slider', tabindex: '0', 'aria-label': 'Map mode', 'aria-valuemin': '0', 'aria-valuemax': '2', 'aria-valuenow': String(i),
+      'aria-valuetext': MAPWORDS[MAPMODE], 'data-tip': 'Map mode: ' + MAPWORDS[MAPMODE] + '   ←/→', 'data-pos': String(i) },
+      [mk('span', { cls: 'ef-sl-track', 'aria-hidden': 'true' }, [mk('span', { cls: 'ef-sl-n' }), mk('span', { cls: 'ef-sl-n' }), mk('span', { cls: 'ef-sl-n' })]), mk('span', { cls: 'ef-sl-thumb', 'aria-hidden': 'true' })]);
+    sl.addEventListener('keydown', function (ev) {
+      var k = ev.key, j = MAPMODES.indexOf(MAPMODE), n = k === 'ArrowLeft' || k === 'ArrowDown' ? j - 1 : k === 'ArrowRight' || k === 'ArrowUp' ? j + 1 : k === 'Home' ? 0 : k === 'End' ? 2 : null;
+      if (n === null) return;
+      ev.preventDefault(); ev.stopPropagation();
+      setMapMode(MAPMODES[Math.max(0, Math.min(2, n))], true);
+    });
+    sl.addEventListener('click', function (ev) {
+      var r = sl.getBoundingClientRect();
+      setMapMode(MAPMODES[Math.max(0, Math.min(2, Math.floor((ev.clientX - r.left) / (r.width / 3))))], true);
+    });
+    return sl;
+  }
+  function setMapMode(m, fromSlider) {
+    if (MAPMODES.indexOf(m) < 0) return;
+    MAPMODE = m; fkeep('mapMode', m);
+    var j = MAPMODES.indexOf(m);
+    each(doc.querySelectorAll('.ef-slider'), function (sl) {
+      sl.setAttribute('aria-valuenow', String(j)); sl.setAttribute('aria-valuetext', MAPWORDS[m]); sl.setAttribute('data-pos', String(j));
+      sl.setAttribute('data-tip', 'Map mode: ' + MAPWORDS[m] + '   ←/→');
+    });
+    if (tip.shown && tip.owner && tip.owner.classList.contains('ef-slider')) showTip(tip.owner);
+    var t9 = nine('preview'); if (t9) { try { t9.preview(null); } catch (e) { /* the app's */ } }
+    hud.hidden = true;
+    if (m !== 'rings' && selCard()) showCard(selCard());
+    say('Map mode: ' + MAPWORDS[m] + '.');
+    void fromSlider;
+  }
   // even rows: a group that cannot fit on one row gets the column count that makes its rows as even as
   // they can be (eight tools in room for six: two rows of four); a group that starts a row drops its hairline
   Frame.prototype.layoutTools = function () {
@@ -694,6 +739,11 @@
   Frame.prototype.lines = function () {
     var f = this, r = f.root;
     if (!r.isConnected || r.hidden || !r.offsetWidth) return;
+    // revision 7: independent by default (each part its own lines); Options, Lines grow together brings back
+    // revision 5's rule
+    var together = !!fstate().linesTogether;
+    r.setAttribute('data-lines-mode', together ? 'together' : 'independent');
+    if (!together) { r.style.setProperty('--ef-lines', '1'); r.setAttribute('data-lines', '1'); return; }
     r.classList.add('ef-measure');
     var parts = [f.menubar, f.form.hidden ? f.msg : f.form].concat(Array.prototype.slice.call(f.wins.querySelectorAll('.ef-ml')));
     var n = Math.min(MAXLINES, parts.reduce(function (m, el) { return Math.max(m, linesOf(el)); }, 1));
@@ -789,6 +839,8 @@
       mine('customize'); head('Page layout');
       out.push({ label: 'Free', act: 'ui-free', radio: true, checked: true }); out.push({ label: 'Classic (menus at the top)', act: 'ui-classic', radio: true, checked: false });
       head(''); mine('legend', !window.CCFloat.legendOff); mine('toggle-motion', MOTION); mine('fold', this.st.open); mine('toolbar', this.st.toolbar);
+      mine('lines-together', !!fstate().linesTogether);
+      head('Map mode'); MAPMODES.forEach(function (m) { out.push({ label: NAMES['map-' + m], act: 'map-' + m, radio: true, checked: MAPMODE === m }); });
       head('Buffers'); mine('show-finder'); mine('show-navigator');
       head('Palettes'); mine('properties'); mine('pages'); mine('here');
       if (!this.fl.narrow()) {
@@ -939,20 +991,22 @@
     root.addEventListener('input', function (ev) { if (ev.target.closest && ev.target.closest('.navframe')) f.modelinesOnly(); });
     // tooltips and the preview: pointing at or focusing a tool, a shape or a navigator item
     function point(ev) {
-      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-shape, a.ef-it, .navframe a.it');
+      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-shape, a.ef-it, .navframe a.it');
       if (!el) return;
+      if (el.classList.contains('ef-slider')) { showTip(el); return; }
       if (el.classList.contains('ef-tool')) showTip(el, ev.type === 'focusin');
       preview(el);
     }
     root.addEventListener('mouseover', point);
     root.addEventListener('focusin', point);
     root.addEventListener('mouseout', function (ev) {
-      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-shape, a.ef-it, .navframe a.it');
+      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-shape, a.ef-it, .navframe a.it');
       if (!el || (ev.relatedTarget && (el.contains(ev.relatedTarget) || tip.el.contains(ev.relatedTarget)))) return;
-      if (el.classList.contains('ef-tool') && doc.activeElement !== el) hideTip();
+      if ((el.classList.contains('ef-tool') || el.classList.contains('ef-slider')) && doc.activeElement !== el) hideTip();
+      if (el.classList.contains('ef-slider')) return;
       preview(null);
     });
-    root.addEventListener('focusout', function (ev) { var el = ev.target.closest && ev.target.closest('.ef-tool'); if (el) hideTip(); });
+    root.addEventListener('focusout', function (ev) { var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider'); if (el) hideTip(); });
     // a long press on an element that has one (the selection: the frame by the shape)
     root.addEventListener('pointerdown', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-long]');
@@ -1133,26 +1187,81 @@
 
   // ---- the preview: what a press would do, in a small box above the app's overview map; topology forge
   // 1.9's preview() shows it on the map itself, and then the box stands down ---------------------------
-  var hud = mk('aside', { cls: 'ef-hud', id: 'ef-hud', 'aria-label': 'Preview of what is pointed at', hidden: true }, [mk('p', { cls: 'ef-hud-h' }), mk('p', { cls: 'ef-hud-b' }),
-    mk('p', { cls: 'ef-hud-n', text: 'A stand-in until the overview map can show it (topology forge 1.9).' })]);
+  // the card box (revision 7): until the map can draw cards (topology forge 1.10) the card shows here, just
+  // above the map; with 1.8 it is the whole preview
+  var hud = mk('aside', { cls: 'ef-hud', id: 'ef-hud', 'aria-label': 'Card: what is pointed at', hidden: true });
   grid.appendChild(hud);
   var hudT = null;
+  // ---- cards, built from data (docs/NAV.md, revision 7) ----------------------------------------------
+  function onPages(test) {
+    var t = tf(), here = 0, other = 0;
+    try { t.doc.pages.forEach(function (pg, i) { pg.nodes.forEach(function (n) { if (test(n)) { if (i === t.doc.cur) here++; else other++; } }); }); } catch (e) { return null; }
+    return { here: here, other: other };
+  }
+  function facetLabels(facet, ids) {
+    var vals = (IX && IX.facets && IX.facets[facet]) || [];
+    return (ids || []).map(function (id) { var v = vals.filter(function (x) { return x.id === id; })[0]; return v ? v.label : id; });
+  }
+  function catOf(id) { return CATS.filter(function (x) { return x.id === id; })[0] || null; }
   function describe(el) {
-    var id;
+    var id, cnt;
     if ((id = el.getAttribute('data-cat'))) {
-      var c = CATS.filter(function (x) { return x.id === id; })[0];
-      return c ? { h: c.label + ': ' + c.shapes.length + ' shapes', b: c.shapes.map(function (x) { return x.label; }).join(', '), target: { category: c.id } } : null;
+      var c = catOf(id);
+      if (!c) return null;
+      var kinds = c.shapes.map(function (x) { return x.id; });
+      cnt = onPages(function (n) { return kinds.indexOf(n.type) >= 0; });
+      return { kind: 'category', title: c.label, viz: c.shapes.slice(0, 8).map(function (x) { return icon(x.id); }),
+        facts: [['Shapes', String(c.shapes.length)], ['On this page', cnt ? String(cnt.here) : '?'], ['On other pages', cnt ? String(cnt.other) : '?']],
+        statement: c.label + ': ' + c.shapes.length + ' shapes in the palette (' + c.shapes.map(function (x) { return x.label; }).join(', ') + ').',
+        target: { category: c.id } };
     }
     if ((id = el.getAttribute('data-shape'))) {
       var sh = SHAPE[id];
-      return sh ? { h: sh.label, b: 'A shape in ' + ((CATS.filter(function (x) { return x.id === sh.category; })[0] || {}).label || 'the palette') + '. Enter: in the middle of the view; a click arms it; or drag it.', target: { kind: sh.id } } : null;
+      if (!sh) return null;
+      var cc = catOf(sh.category);
+      cnt = onPages(function (n) { return n.type === sh.id; });
+      return { kind: 'kind', title: sh.label, viz: [icon(sh.id)],
+        facts: [['Category', cc ? cc.label : sh.category], ['Size', sh.w + ' by ' + sh.h], ['On this page', cnt ? String(cnt.here) : '?'], ['On other pages', cnt ? String(cnt.other) : '?']],
+        statement: sh.label + ', a shape in ' + (cc ? cc.label : 'the palette') + ', ' + sh.w + ' by ' + sh.h + ' pixels when placed.',
+        target: { kind: sh.id } };
     }
     if ((id = el.getAttribute('data-item') || (el.closest('.navframe') && el.getAttribute('data-id')))) {
       var it = (IX && IX.items.filter(function (x) { return x.id === id; })[0]) || (nav() && nav().item(id));
-      return it ? { h: it.name, b: (it.tip || it.description || '') + (it.page ? (it.tip ? ' ' : '') + 'Its page in the drawing: ' + it.page + '.' : ''), target: refsFor(it), caption: it.name } : null;
+      if (!it) return null;
+      var refs = refsFor(it), sec = facetLabels('show', [it.section])[0], fx = it.facets || {};
+      var facts = [['Section', sec]];
+      if (it.page) facts.push(['Page', it.page]);
+      [['notation', 'Notation'], ['pillar', 'Is a'], ['says', 'Topic']].forEach(function (f) { if ((fx[f[0]] || []).length) facts.push([f[1], facetLabels(f[0], fx[f[0]]).join(', ')]); });
+      facts.push(['Shapes drawn for it', String(refs.length - 1)]);
+      return { kind: 'item', title: it.name, viz: [mk('span', { cls: 'g g-' + (it.glyph || 'rounded'), 'aria-hidden': 'true' })], facts: facts,
+        statement: it.tip || (it.name + ', in ' + sec + '.'), target: refs, caption: it.name };
     }
-    if (el.classList.contains('ef-tool')) return { h: el.getAttribute('data-tip') || '', b: el.getAttribute('aria-pressed') ? '' : 'A press runs it.', target: null };
+    if (el.classList.contains('ef-tool')) return { kind: 'tool', title: el.getAttribute('data-tip') || '', viz: [], facts: [], statement: el.getAttribute('aria-pressed') ? '' : 'A press runs it.', target: null };
     return null;
+  }
+  // a shape selected in the drawing: what the app's select message says of it
+  function selCard() {
+    if (!SEL) return null;
+    return { kind: 'selection', title: SEL.name, viz: SHAPE[SEL.kind] ? [icon(SEL.kind)] : [],
+      facts: [['Kind', SHAPE[SEL.kind] ? SHAPE[SEL.kind].label : SEL.kind], ['Page', SEL.page]].concat(SEL.ref ? [['Reference', SEL.ref]] : []).concat(SEL.count > 1 ? [['Selected', String(SEL.count)]] : []),
+      statement: SEL.tooltip || (SEL.name + ', selected in the drawing.'), target: null };
+  }
+  function showCard(d, note) {
+    hud.textContent = '';
+    hud.appendChild(mk('p', { cls: 'ef-card-t', text: d.title }));
+    if (d.viz && d.viz.length) hud.appendChild(mk('div', { cls: 'ef-card-v', 'aria-hidden': 'true' }, d.viz));
+    if (d.facts && d.facts.length) hud.appendChild(mk('dl', { cls: 'ef-card-f' }, d.facts.map(function (f) { return mk('div', {}, [mk('dt', { text: f[0] }), mk('dd', { text: f[1] })]); })));
+    if (d.statement) hud.appendChild(mk('p', { cls: 'ef-card-s', text: d.statement }));
+    if (note) hud.appendChild(mk('p', { cls: 'ef-hud-n', text: note }));
+    hud.setAttribute('data-card', d.kind);
+    var tt = tf(), p = null;
+    try { p = tt && tt.panels && tt.panels().map; } catch (e) { p = null; }
+    var W = grid.clientWidth, H = grid.clientHeight;
+    // beside the map, on its left, in the open drawing and above the legend (frame 2 sits over the map)
+    var lg = doc.getElementById('legend'), lgh = lg && !lg.hidden && lg.offsetHeight ? lg.offsetHeight + 10 : 12;
+    hud.style.setProperty('--hr', Math.round(p && p.shown ? Math.max(8, W - p.x + 10) : 12) + 'px');
+    hud.style.setProperty('--hb', Math.round(Math.max(lgh, p && p.shown ? H - p.y - p.h : 12)) + 'px');
+    hud.hidden = false;
   }
   // what the drawing draws for an item: the shapes whose tf_ref is the item's (drawings.py names them
   // <page>-<slug>, shop-t-<slug>, <page>-near-<slug>, <slug>-zone ...), read from the open drawing
@@ -1170,22 +1279,30 @@
     } catch (e) { /* the drawing is the app's; without it, the id alone */ }
     return out;
   }
-  // the preview: topology forge 1.9's map rings what is pointed at (preview()); with 1.8, or before the app
-  // is up, the plain box above the map says it in words
+  // the preview, by the map mode (revision 7): rings (right) rings the matches in the map and says the
+  // caption in the frame's echo area; both (middle) and cards (left) show the card, in the map once the app
+  // can draw it (1.10), in the box above it until then; both also rings the matches, standing in for the
+  // drawing's highlight. With 1.8 the card in the box is the whole preview.
+  function frameOf(el) { var r = el && el.closest && el.closest('.ef'); return frames.filter(function (f) { return f.root === r; })[0] || cur; }
   function preview(el) {
     clearTimeout(hudT);
-    var d = el && describe(el), t9 = nine('preview');
-    if (t9) { try { t9.preview(d && d.target ? d.target : null, d && d.caption ? d.caption : undefined); } catch (e) { /* the app's own business */ } hud.hidden = true; return; }
-    if (!d) { hudT = setTimeout(function () { hud.hidden = true; }, 400); return; }
-    hud.querySelector('.ef-hud-h').textContent = d.h;
-    hud.querySelector('.ef-hud-b').textContent = d.b;
-    var tt = tf(), p = null;
-    try { p = tt && tt.panels && tt.panels().map; } catch (e) { p = null; }
-    var W = grid.clientWidth, H = grid.clientHeight;
-    hud.style.setProperty('--hr', Math.round(p && p.shown ? Math.max(8, W - p.x - p.w) : 12) + 'px');
-    hud.style.setProperty('--hb', Math.round(p && p.shown ? Math.max(8, H - p.y + 8) : 12) + 'px');
-    hud.hidden = false;
+    var d = el && describe(el), t9 = nine('preview'), mode = MAPMODE;
+    if (t9) {
+      var res = null;
+      try { res = t9.preview(d && d.target && mode !== 'cards' ? d.target : null, d && d.caption ? d.caption : undefined); } catch (e) { res = null; }
+      if (mode === 'rings') {
+        hud.hidden = true;
+        if (d && res && res.caption) { var f = frameOf(el); if (f) f.say(res.caption + (res.count !== undefined ? '  (' + res.count + ' here' + (res.other ? ', ' + res.other + ' on other pages' : '') + ')' : '')); }
+        return;
+      }
+      if (!d || d.kind === 'tool') { hideCardSoon(); return; }
+      showCard(d, 'A stand-in until the map can show the card (topology forge 1.10).');
+      return;
+    }
+    if (!d) { hideCardSoon(); return; }
+    showCard(d, 'A stand-in until the overview map can show it (topology forge 1.9).');
   }
+  function hideCardSoon() { hudT = setTimeout(function () { var c = MAPMODE !== 'rings' && selCard(); if (c) showCard(c); else hud.hidden = true; }, 400); }
 
   // ---- frames: C-x 5 2 and friends ------------------------------------------------------------------
   function makeFrame() {
@@ -1381,6 +1498,7 @@
     .then(function (d) { IX = d; IX.items.forEach(function (it) { it.words = it.words || tok(it.name); }); frames.forEach(function (f) { f.render(); }); }, function () { say('The finder’s index did not load: the shapes and M-x still work.'); });
   // the tests' handle: the template and the table, read-only
   window.CCFree = { template: MODE_LINE, elements: Object.keys(ELEMENTS), frames: function () { return frames.length; },
-    navAt: function () { return NAVAT ? { frame: NAVAT.f.n, win: NAVAT.w } : null; }, nineteen: function () { return !!nine(); } };
+    navAt: function () { return NAVAT ? { frame: NAVAT.f.n, win: NAVAT.w } : null; }, nineteen: function () { return !!nine(); },
+    mapMode: function () { return MAPMODE; } };
 })();
 // @license-end

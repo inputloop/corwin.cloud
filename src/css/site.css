@@ -708,3 +708,26 @@ html[data-ui="free"] .ef .navframe .tb[aria-pressed="true"] { background: var(--
 .lg-v { font-family: var(--letter-value); font-size: 12px; letter-spacing: 0.02em; }
 .lg-c code { font-family: var(--letter-value); }
 .js .lg-line .lg-more { font-family: var(--letter-value); }
+
+/* ---- revision 7 (docs/NAV.md): the map mode slider, cards ----------------------------------------- */
+/* the slider: three notches, the thumb on one; its group takes three cells */
+.ef-tg[data-group="map"] { grid-template-columns: 84px; }
+.ef-slider { position: relative; width: 84px; height: 28px; cursor: pointer; touch-action: manipulation; }
+.ef-slider:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ef-sl-track { position: absolute; left: 10px; right: 10px; top: 13px; height: 2px; background: var(--border); display: flex; justify-content: space-between; align-items: center; }
+.ef-sl-n { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
+.ef-sl-thumb { position: absolute; top: 7px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--control); background: radial-gradient(circle at 38% 30%, var(--canvas) 0, var(--canvas-dim) 60%, var(--control) 140%); left: calc(10px - 7px); }
+.ef-slider[data-pos="1"] .ef-sl-thumb { left: calc(50% - 7px); }
+.ef-slider[data-pos="2"] .ef-sl-thumb { left: calc(100% - 10px - 7px); }
+.ef-slider:hover .ef-sl-thumb { border-color: var(--link); }
+/* the card: title top left, the visualization, clusters of facts, one statement; the drawing behind it
+   fades (less background), no card lines and no frame */
+.ef-hud { border: 0; background: color-mix(in srgb, var(--canvas) 90%, transparent); width: 18rem; padding: 6px 8px; z-index: 8; }
+.ef-card-t { font-weight: 700; margin: 0 0 4px !important; }
+.ef-card-v { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; }
+.ef-card-v .ef-icon { width: 22px; height: 22px; }
+.ef-card-f { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0 8px; margin: 0 0 4px; }
+.ef-card-f div { display: contents; }
+.ef-card-f dt { color: var(--text-dim); }
+.ef-card-f dd { margin: 0; overflow-wrap: anywhere; }
+.ef-card-s { margin: 0 !important; }
