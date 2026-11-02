@@ -18,7 +18,7 @@ The `commit-msg` hook enforces this: copy it from a sibling inputloop checkout i
 ## Where work lands
 
 Work lands on `main` once the checks are green, and the agent pushes it (the pre-push hook runs the
-checks again). Nothing here makes anything more public, rewrites history or force-pushes.
+checks again). Nothing here makes anything more public.
 
 ## Whose site this is, and what is routine here
 
@@ -32,6 +32,8 @@ For an agent working here at his request, these are routine work:
 - installing, checking or removing this site's own scheduled jobs through the checked-in schedule
   scripts, which manage only their own marked entries;
 - changing corwin.cloud's DNS records at Porkbun through c4's `dn1or` (plan first, then apply).
+- working to ensure the healh of gw33, the site, and ghostwheel
+- syncing persona back and forth from cannon stores to ghostwheel host
 
 Still out of bounds: anything that would name or link publicly link a private repository.
 
@@ -39,8 +41,10 @@ Still out of bounds: anything that would name or link publicly link a private re
 
 - Link only public repositories (`PUBLIC_URLS` in `catalog.py`). A private project is named with
   "not public yet" and never given an address.
-- topology (branch `corwin`) is public since 2026-11-01 and contains Bryant Frankford's TopoForge: still never copy its `www/` or any of its
-  sources here. The build stages it from a local checkout into `public/`, which is not committed.
+- topology (branch `corwin`) is public; it contains Bryant Frankford's work for Corwin called
+  "TopoForge"; that repository and project are obselete and changes/work there should be merged
+  forward to the `topology` project in the "corwin" branch; keep the corwin branch current and
+  build from it
 - No secrets, no machine paths, no device ids (the obsmage tab's diagram uses invented names), no
   hostnames beyond the public ghostwheel names.
 - No inline script, no `style=""`, nothing loaded from another host. Every script keeps its LibreJS
