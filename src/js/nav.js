@@ -406,6 +406,8 @@
     }
     SECS.forEach(function (sid) {
       if (model.pg[sid] || !secShown(t, sid)) return;
+      // a section the filter has emptied is not shown (a pinned section stays, in the pinned area)
+      if (!ix.items.some(function (it) { return it.section === sid && model.pass[it.id]; })) return;
       body.appendChild(mk('section', { cls: 'sec' }, [secHead(t, sid, w, model, false), secList(t, sid, w, model)]));
     });
     var first = body.querySelector('a.it.is-point') || body.querySelector('a.it');

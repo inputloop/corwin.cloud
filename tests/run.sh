@@ -141,6 +141,7 @@ prove_red() {
     plant_b "the context light says nothing"  src/js/nav.js "s#say(t.base.length ? 'Context: ' + describe(t.base) + '.'#say(t.base.length ? ''#"
     plant_b "the width not kept"              src/js/nav.js 's#^    applyWidth(); save();$#    applyWidth();#'
     plant_b "the browser ignores the facets"  src/js/nav.js 's#      if (p.length \&\& !p.some(#      if (false \&\& !p.some(#'
+    plant_b "an emptied section still shown"   src/js/nav.js "s#if (!ix.items.some(function (it) { return it.section === sid \&\& model.pass\[it.id\]; })) return;##"
     plant_b "a fifth window allowed"          src/js/nav.js "s#MAXWIN = 4,#MAXWIN = 5,#"
     plant_b "an item does not open its page"  src/js/nav.js 's#if (b) { b.click();#if (b) {#'
     plant_b "the echo gives no reasons"       src/js/nav.js 's#say(reasons(ITEMS\[#say((ITEMS[#'

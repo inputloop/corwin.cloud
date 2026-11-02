@@ -69,6 +69,17 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
       ok('an item opens its page in the drawing, and the title bar names the page');
     }
 
+    // a filter that empties a section hides it (Corwin, 2026-11-01 19:04)
+    const secs = () => page.$$eval('.win .sec', (s) => s.map((x) => [x.querySelector('[data-fold]').getAttribute('data-fold'), x.querySelectorAll('a.it').length]));
+    const before = await secs();
+    await page.fill('#nav-q', 'gitcha'); await page.waitForTimeout(150);
+    const after = await secs();
+    assert.ok(after.length > 0 && after.length < before.length, `typing hid no section (${before.length} before, ${after.length} after)`);
+    assert.deepEqual(after.filter((x) => x[1] === 0), [], 'a section the filter emptied is still shown');
+    await page.fill('#nav-q', ''); await page.waitForTimeout(150);
+    assert.equal((await secs()).length, before.length, 'clearing the prompt did not bring the sections back');
+    ok(`a prompt hides the sections it empties (${before.length} to ${after.length} for "gitcha"), and clearing it brings them back`);
+
     // the example from his words
     await page.click('.tb[data-facet="show"][data-val="projects"]');
     await page.click('.tb[data-facet="notation"][data-val="bpmn"]');
