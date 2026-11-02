@@ -276,7 +276,7 @@ prove_red() {
     plant_b "no first fit between the frames"     src/js/free.js 's#if (!t || fitted || !READY#if (true || !t || fitted || !READY#' $S
     plant_b "no CUA cut"                          src/js/free.js "s#if (seq.length === 1 \&\& (str === 'C-x' || str === 'C-c') \&\& SEL) {#if (false) {#" $S
     # stage 2 (docs/NAV.md, revision 6): the map as the preview, frames re-checked when it moves
-    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true })#view: true, map: false, preview: false })#' $S
+    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true, mapwheel: true })#view: true, map: false, preview: false, mapwheel: true })#' $S
     plant_b "a navigator item previews its id only" src/js/free.js 's#^    if (!sl || !t || !t.doc) return out;#    return out;#' $S
     plant_b "a finder shape previews its category" src/js/free.js 's#^        target: { kind: sh.id } };#        target: { category: sh.category } };#' $S
     plant_b "no re-check when the map moves"      src/js/free.js "s#if (ev.key === 'topoforge.ui.v1') mapCheck();#if (false) mapCheck();#" $S
@@ -284,13 +284,25 @@ prove_red() {
     V=tests/free7-browser.cjs
     plant_b "the lines not independent by default" src/js/free.js 's#var together = !!fstate().linesTogether;#var together = true;#' $V
     plant_b "growing together not kept"           src/js/free.js "s#fkeep('linesTogether', v);#void 0;#" $V
-    plant_b "the map mode not in the middle"      src/js/free.js "s#return MAPMODES.indexOf(m) >= 0 ? m : 'both';#return MAPMODES.indexOf(m) >= 0 ? m : 'rings';#" $V
+    plant   "the map mode not in the middle"      src/js/free.js "s#return MAPMODES.indexOf(m) >= 0 ? m : 'both';#return MAPMODES.indexOf(m) >= 0 ? m : 'rings';#"
     plant_b "the map mode not kept"               src/js/free.js "s#MAPMODE = m; fkeep('mapMode', m);#MAPMODE = m;#" $V
     plant_b "the slider's keys dead"              src/js/free.js 's#^      if (n === null) return;#      return;#' $V
-    plant_b "no caption in the echo area"         src/js/free.js 's#if (d \&\& res \&\& res.caption) {#if (false) {#' $V
+    plant_b "no caption in the echo area"         src/js/free.js "s#else if (m.type === 'topoforge:preview' \&\& ten()) { echoPreview(m.detail); return; }#else if (false) { return; }#" $V
     plant_b "a card's count not from the data"    src/js/free.js "s#\['Shapes', String(c.shapes.length)\]#['Shapes', String(c.shapes.length + 1)]#" $V
     plant_b "an item's statement not its own"     src/js/free.js 's#statement: it.tip || (#statement: (#' $V
-    plant_b "the selection has no card"           src/js/free.js "s#if (MAPMODE !== 'rings' \&\& SEL \&\& !narrowQ.matches) showCard(selCard());#if (false) showCard(selCard());#" $V
+    plant_b "the selection has no card"           src/js/free.js "s#if (MAPMODE !== 'rings' \&\& SEL \&\& !narrowQ.matches) showSel();#if (false) showSel();#" $V
+    # revision 7, stage 2: topology forge 1.10 (the map's modes, its card, its wheel)
+    plant_b "mapwheel not turned on"              src/js/free.js 's#map: true, preview: true, mapwheel: true#map: true, preview: true#' $V
+    plant_b "the slider does not drive the app"   src/js/free.js "s#if (t10 \&\& from !== 'app' \&\& from !== 'ready') {#if (false) {#" $V
+    plant_b "the app's Mode menu moves no slider" src/js/free.js "s#{ setMapMode(m.detail.mode, 'app'); return; }#{ return; }#" $V
+    plant_b "mapMode forced on every load"        src/js/free.js 's#if (!st.mapModeApp \&\& MAPMODES#if (MAPMODES#' $V
+    plant_b "the page does not follow the app"    src/js/free.js "s#if (am.mode !== MAPMODE) setMapMode(am.mode, 'ready');#void 0;#" $V
+    plant_b "the card not sent to the map"        src/js/free.js "s#if (mode !== 'rings') o.card = cardFor(d);#void 0;#" $V
+    plant_b "the stand-in box kept with 1.10"     src/js/free.js "s#if (mode !== 'rings') o.card = cardFor(d);#if (mode !== 'rings') { o.card = cardFor(d); showCard(d); }#" $V
+    plant_b "the stand-in box lost with 1.9"      src/js/free.js "s#vge(t.version, '1.10') \&\&#vge(t.version, '1.9') \&\&#" $V
+    plant_b "a cleared selection keeps its card"  src/js/free.js "s#else if (!SEL \&\& ten('preview')) showSel(); ##" $V
+    plant_b "a kind's card not its own picture"   src/js/free.js "s#d.kind === 'kind' \&\& d.target ? { shape: d.target.kind }#false ? 0#" $V
+    plant_b "the map's preview lingers in rings"  src/js/free.js "s#if (mode === 'rings') { try { t10.preview(null); }#if (false) { try { t10.preview(null); }#" tests/free6-browser.cjs
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

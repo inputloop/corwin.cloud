@@ -309,16 +309,26 @@ test('free.js reads one file from this site, nav/index.json, keeps nothing in st
 });
 test('free.js asks the app only through its documented calls', { skip: !freeSrc }, () => {
   // every name given tf() (the app's window.TopoForge), and every call made on it
-  const names = [...new Set((freeSrc.match(/\b(\w+) = tf\(\)/g) || []).map((m) => m.split(' ')[0]))];
+  // (also the names given nine() and ten(), which are tf() gated on the version)
+  const names = [...new Set((freeSrc.match(/\b(\w+) = (?:tf\(\)|nine\(|ten\()/g) || []).map((m) => m.split(' ')[0]))];
   assert.ok(names.length >= 1);
   const calls = new Set();
   for (const n of names) for (const m of freeSrc.matchAll(new RegExp('\\b' + n + '\\.(\\w+)\\(', 'g'))) calls.add(m[1]);
   // EMBED v1 as 1.8 documents it, plus endKeys() (documented as added in 1.9; free.js calls it only on a
   // topoforge:key message, which only 1.9 sends, and only when the version says 1.9)
   // and 1.9's (EMBED v1, "Added in 1.9"), each reached only when TopoForge.version says 1.9 (free.js nine())
-  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview'];
+  // and 1.10's mapMode() ("Added in 1.10"), reached only when the version says 1.10 (free.js ten())
+  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode'];
   for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
   for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
+});
+// revision 7: the map mode starts in the middle. With topology forge 1.10 the app's own default (both) is
+// the one source of truth and the page follows it at ready, so a browser cannot see the page's fallback;
+// the fallback (1.9 and 1.8, and before ready) is checked here, in the source
+test('the page\'s own map mode, when nothing is kept, is the middle (both)', { skip: !freeSrc }, () => {
+  const m = /var MAPMODES = \['cards', 'both', 'rings'\]/.test(freeSrc) && /return MAPMODES\.indexOf\(m\) >= 0 \? m : '(\w+)';/.exec(freeSrc);
+  assert.ok(m, 'no map mode fallback found in free.js');
+  assert.equal(m[1], 'both', 'the page\'s map mode fallback is ' + m[1] + ', not the middle');
 });
 test('the Emacs frame\'s keys start with Ctrl, Alt, Escape (Emacs\'s ESC prefix) or F10: no letter alone runs anything', { skip: !freeSrc }, () => {
   const k = freeSrc.slice(freeSrc.indexOf('function keys(f, ev)'), freeSrc.indexOf("// Alt+x anywhere on the page"));

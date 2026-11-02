@@ -211,7 +211,10 @@ const meets = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h &&
       const sw2 = await app(p).evaluate(() => TopoForge.embed());
       assert.ok(sw2.map && sw2.preview, 'free did not turn on the map and preview switches: ' + JSON.stringify(sw2));
       assert.ok(await app(p).evaluate(() => !!document.querySelector('#mmwrap .mm-grip')), 'the map has no frame of its own (no door-handle controls)');
-      const cap = () => app(p).evaluate(() => { const c = document.querySelector('#minimap .mm-cap'); return c && !c.hidden ? c.textContent : ''; });
+      // 1.9 writes the caption in the map; 1.10 sends it to the page (topoforge:preview) for its echo area
+      const t10 = await app(p).evaluate(() => typeof TopoForge.mapMode === 'function');
+      if (t10) await p.evaluate(() => { window.__pv6 = []; window.addEventListener('message', (e) => { if (e.data && e.data.type === 'topoforge:preview') window.__pv6.push(e.data.detail.caption); }); });
+      const cap = () => t10 ? p.evaluate(() => (window.__pv6 || []).slice(-1)[0] || '') : app(p).evaluate(() => { const c = document.querySelector('#minimap .mm-cap'); return c && !c.hidden ? c.textContent : ''; });
       const rings = () => app(p).evaluate(() => document.querySelectorAll('#mmPrev rect').length);
       await p.hover('#ef-1 .ef-tile[data-cat="sec"]'); await p.waitForTimeout(100);
       assert.match(await cap(), /Security/, 'pointing at a tool-bar tile does not caption the map');

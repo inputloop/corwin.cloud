@@ -94,6 +94,57 @@ Found: in the rings position the echo area takes every hover's caption, so a lon
 a hover under the pointer; that is the position's purpose, and the test now invokes its command without
 moving the pointer.
 
+### Stage 2: topology forge 1.10 wired (topology, branch corwin, `e524fe8`, read-only)
+
+1.10 gives the map its three modes (`mapMode`), a card in the map (`preview(what, { caption, card })`), the
+matches lit in the drawing (the middle mode), the map's own scale (`mapScale`, from its Mode menu) and the
+wheel over the map (the switch `mapwheel`). What this page does with each, and why:
+
+| Control or call | What the page does | Intention |
+|---|---|---|
+| embed words | `map`, `preview` and now `mapwheel` turned on with the rest of 1.9's | the wheel over the map is Corwin's first bullet; the app keeps it a switch, the page asks for it |
+| the slider, Options › Map mode | a move calls `TopoForge.mapMode(mode)`; the page keeps its copy too (for 1.9 and 1.8) | one control on the page, one mode in the app |
+| the app's own Mode menu (in the map's handles) | `topoforge:mapmode` moves the slider and the radio, and says "(from the map's Mode menu)" in the echo area | either control is the same setting; neither drifts from the other |
+| page load | at ready the page reads `mapMode()` and follows it; it never calls `mapMode()` at load, except once in a browser's life: a choice made on this page before the app had modes (stage 1) is carried to the app, then `mapModeApp` is kept and the app's store is the one source of truth | the visitor's last choice wins, wherever it was made (on this page, in the app's menu, or in the app on its own page) |
+| cards (left), both (middle) | the data-built card (title, up to 8 facts, one statement) goes to `preview(target, { caption, card })`; art is the app's own: a kind's or a selected shape's picture (`{ shape }`), else `'matches'` | the card is in the map, as he asked ("display the ... card in the mini-map"); the drawing's highlight in the middle is the app's |
+| the stand-in box | retired when `TopoForge.version` is 1.10 or later; still the card for 1.9 and 1.8 | an older app still shows something useful |
+| rings (right) | the echo area says `topoforge:preview`'s caption with its counts, "(4 here, 2 on other pages)"; the map no longer writes it (`mapCaption` stays off) | "the text that we currently put into mini-map on item hover could be in the echo/input area" |
+| the selection | its card is sent as the preview of its own id; cleared with the selection | a selected shape has a card in the map as a pointed-at one does |
+
+Two choices are the app's, written here so nobody "fixes" them on this side:
+
+- **The wheel zooms about the middle of the view, not the pointer.** Over the map the pointer is in the
+  map, not in the drawing, so the app zooms the drawing in place; to zoom elsewhere, click the map there
+  first. His bullet said "change the zoom level of the outer frame", which this is.
+- **`mapwheel` is a switch, not a default.** It changes what the wheel does over the map, so the app keeps
+  it off unless a page asks; this page asks. Alt+wheel (the map's own scale) can be taken by some desktops
+  first; the Mode menu's Closer and Farther do the same.
+
+QA plan (written before the build), in `tests/free7-browser.cjs`, at 1920 and 1280, light and dark: the
+slider in the middle means the app is in both; Home and Options' radios set the app's mode; the app's
+Mode menu (clicked in the app) moves the slider and checks the radio; after a change made only in the
+app's store, a reload shows the app's mode (the page's older one does not win); in the middle a
+category's card is in the map (its count from `shapes()`, one statement naming its shapes, the page's card
+as the app took it), the stand-in box hidden, the drawing's lit shapes as many as the matches; a kind's
+card has the shape's own picture; an item's statement is its catalog description and its notation its
+facets; the selection's card comes and goes with it; in the left position the card shows and nothing is
+lit; with the version told as 1.9 the stand-in box is the card again; in the right position the echo
+area is exactly the caption with its counts, the map rings as many as the matches and writes no caption,
+and no card is sent; the wheel over the map zooms the drawing; the card in the map never meets frame 2
+(the overlap at 1280 in stage 1). `tests/free6-browser.cjs` reads the caption from `topoforge:preview`
+under 1.10. Each promise has a planted fault, proven in shards.
+
+Built and checked (2026-11-02, revision 7 stage 2), against topology `e524fe8` (1.10) from a read-only
+archive: `sh tests/run.sh` browser 33, navigator 31, classic 34, free 46, revision 5 30, revision 6 26,
+revision 7 37; node 30 (one new: the page's own fallback mode is the middle). Found while building:
+- With 1.10 the page's own default can no longer be seen in a browser (the app's default wins at ready, by
+  design), so the plant "the map mode not in the middle" now turns the node check red, not the browser's.
+- Clearing the selection left its card in the map (the box had been hidden by a check on its own
+  attribute); the select message now sends `preview(null)` with 1.10.
+- In rings the preview now clears the moment the pointer leaves (as 1.9 did); in the left and middle the
+  card stays 400 ms, then the selection's card or nothing.
+- The documented-calls check now also reads the names given `nine()` and `ten()`, and allows `mapMode`.
+
 ## Revision 6: frames that fit, a lettered title block, menus that never wrap (2026-11-02)
 
 ### What Corwin asked (his words, 10:38, with a screenshot at 1920x1080; c4 `q/2026-11-02-frames-legend-menus/PROMPT.md`)

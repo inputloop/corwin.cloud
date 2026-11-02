@@ -66,6 +66,8 @@
     return true;
   }
   function nine(call) { var t = tf(); return t && vge(t.version, '1.9') && (!call || typeof t[call] === 'function') ? t : null; }
+  // and 1.10's (the map's modes, its card): the slider drives the app's mapMode, the card goes into the map
+  function ten(call) { var t = tf(); return t && vge(t.version, '1.10') && typeof t.mapMode === 'function' && (!call || typeof t[call] === 'function') ? t : null; }
   function nav() { return window.CCNav || null; }
   function say(t) { if (cur) cur.say(t); }
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -129,12 +131,16 @@
     else if (m.type === 'topoforge:select') {
       SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; frames.forEach(function (f) { f.renderTools(); f.layoutTools(); });
       // the selection's card (revision 7), in the left and middle map modes
-      if (MAPMODE !== 'rings' && SEL && !narrowQ.matches) showCard(selCard()); else if (!SEL && hud.getAttribute('data-card') === 'selection') hud.hidden = true;
+      if (MAPMODE !== 'rings' && SEL && !narrowQ.matches) showSel(); else if (!SEL && ten('preview')) showSel(); else if (!SEL && hud.getAttribute('data-card') === 'selection') hud.hidden = true;
     }
     else if (m.type === 'topoforge:context' && nine()) { var cd = m.detail; SEL = SEL && SEL.id === cd.id ? SEL : { id: cd.id, ref: cd.ref, name: cd.name, tooltip: cd.tooltip, kind: cd.kind, page: cd.page, count: 1 }; here(cd.rect); }
     else if (m.type === 'topoforge:view' && nine()) { VIEW = m.detail; viewSoon(); return; }
     else if (m.type === 'topoforge:pages' && nine()) { if (small.pages && !small.pages.root.hidden) small.pages.fill(); }
     else if (m.type === 'topoforge:key' && nine()) { keyFromApp(m.detail); return; }
+    // 1.10: the app's own Mode menu (in the map's handles) moved the mode; the slider and the radios follow
+    else if (m.type === 'topoforge:mapmode' && ten()) { setMapMode(m.detail.mode, 'app'); return; }
+    // 1.10: each preview's result; in rings mode its caption, with the counts, goes to the echo area
+    else if (m.type === 'topoforge:preview' && ten()) { echoPreview(m.detail); return; }
     else return;
     frames.forEach(function (f) { f.modelines(); });
     if (small.pages && !small.pages.root.hidden) small.pages.fill();
@@ -146,10 +152,24 @@
     var t = nine('embed');
     if (!t) return;
     // 1.9 B: the map in its own frame (moved and resized by its own door-handle controls) and the preview in it
-    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true }); } catch (e) { /* an older 1.9 without the words */ }
+    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true, mapwheel: true }); } catch (e) { /* an older 1.9 without the words */ }
+    modeAtReady();
     mapCheck();
     try { VIEW = t.view || null; } catch (e) { VIEW = null; }
     firstFit();
+  }
+  // one source of truth for the map mode (revision 7, stage 2): with 1.10 it is the app's, kept in its own
+  // storage and moved by its Mode menu as well as by this page's slider. At ready the page reads it and
+  // follows; it calls mapMode() only once in a browser's life, to carry over a choice the visitor made on
+  // this page before the app had modes (kept here as mapMode, with no mapModeApp yet). Never on every load.
+  function modeAtReady() {
+    var t = ten(), st = fstate(), am = null;
+    if (!t) return;
+    try { am = t.mapMode(); } catch (e) { am = null; }
+    if (!am || MAPMODES.indexOf(am.mode) < 0) return;
+    if (!st.mapModeApp && MAPMODES.indexOf(st.mapMode) >= 0 && st.mapMode !== am.mode) { try { t.mapMode(st.mapMode); } catch (e) { /* the app's */ } fkeep('mapModeApp', true); return; }
+    fkeep('mapModeApp', true);
+    if (am.mode !== MAPMODE) setMapMode(am.mode, 'ready');
   }
   // the frames and the map do not overlap (stage 2): the app keeps the map's place in its own storage
   // (topoforge.ui.v1, key minimap), so a move or resize there reaches this page as a storage event; then a
@@ -695,9 +715,12 @@
     });
     return sl;
   }
-  function setMapMode(m, fromSlider) {
+  function setMapMode(m, from) {
     if (MAPMODES.indexOf(m) < 0) return;
+    if (from && from !== true && m === MAPMODE) return;   // the echo of this page's own change
     MAPMODE = m; fkeep('mapMode', m);
+    var t10 = ten();
+    if (t10 && from !== 'app' && from !== 'ready') { try { t10.mapMode(m); } catch (e) { /* the app's */ } }
     var j = MAPMODES.indexOf(m);
     each(doc.querySelectorAll('.ef-slider'), function (sl) {
       sl.setAttribute('aria-valuenow', String(j)); sl.setAttribute('aria-valuetext', MAPWORDS[m]); sl.setAttribute('data-pos', String(j));
@@ -706,9 +729,8 @@
     if (tip.shown && tip.owner && tip.owner.classList.contains('ef-slider')) showTip(tip.owner);
     var t9 = nine('preview'); if (t9) { try { t9.preview(null); } catch (e) { /* the app's */ } }
     hud.hidden = true;
-    if (m !== 'rings' && selCard()) showCard(selCard());
-    say('Map mode: ' + MAPWORDS[m] + '.');
-    void fromSlider;
+    if (m !== 'rings') showSel();
+    if (from !== 'ready') say('Map mode: ' + MAPWORDS[m] + (from === 'app' ? ' (from the map’s Mode menu).' : '.'));
   }
   // even rows: a group that cannot fit on one row gets the column count that makes its rows as even as
   // they can be (eight tools in room for six: two rows of four); a group that starts a row drops its hairline
@@ -1284,9 +1306,31 @@
   // can draw it (1.10), in the box above it until then; both also rings the matches, standing in for the
   // drawing's highlight. With 1.8 the card in the box is the whole preview.
   function frameOf(el) { var r = el && el.closest && el.closest('.ef'); return frames.filter(function (f) { return f.root === r; })[0] || cur; }
+  // the card as 1.10 takes it: words only (set as text by the app), up to 8 facts, and art that is only ever
+  // the app's own picture: a shape's for a kind or a selected shape, else a drawing of the matches
+  function cardFor(d) {
+    var art = d.kind === 'kind' && d.target ? { shape: d.target.kind } : d.kind === 'selection' && SEL && SHAPE[SEL.kind] ? { shape: SEL.kind } : 'matches';
+    return { title: d.title, facts: (d.facts || []).slice(0, 8), statement: d.statement || '', art: art };
+  }
+  var PVF = null;   // the frame whose pointer made the last preview: its echo area gets the caption
+  function echoPreview(r) {
+    if (!r || r.mode !== 'rings' || !r.caption || !PVF) return;
+    PVF.say(r.caption + (r.count !== undefined ? '  (' + r.count + ' here' + (r.other ? ', ' + r.other + ' on other pages' : '') + ')' : ''));
+  }
   function preview(el) {
     clearTimeout(hudT);
-    var d = el && describe(el), t9 = nine('preview'), mode = MAPMODE;
+    var d = el && describe(el), t9 = nine('preview'), t10 = ten('preview'), mode = MAPMODE;
+    if (t10) {
+      // 1.10: the card is in the map (left and middle); the middle also lights the matches in the drawing;
+      // the stand-in box is retired. Rings: the app's topoforge:preview brings the caption (echoPreview)
+      hud.hidden = true;
+      if (!d || d.kind === 'tool' || !d.target) { if (mode === 'rings') { try { t10.preview(null); } catch (e) { /* the app's */ } } else hideCardSoon(); return; }
+      PVF = frameOf(el);
+      var o = { caption: d.caption };
+      if (mode !== 'rings') o.card = cardFor(d);
+      try { t10.preview(d.target, o); } catch (e) { /* the app's */ }
+      return;
+    }
     if (t9) {
       var res = null;
       try { res = t9.preview(d && d.target && mode !== 'cards' ? d.target : null, d && d.caption ? d.caption : undefined); } catch (e) { res = null; }
@@ -1302,7 +1346,13 @@
     if (!d) { hideCardSoon(); return; }
     showCard(d, 'A stand-in until the overview map can show it (topology forge 1.9).');
   }
-  function hideCardSoon() { hudT = setTimeout(function () { var c = MAPMODE !== 'rings' && selCard(); if (c) showCard(c); else hud.hidden = true; }, 400); }
+  // the selection's card: in the map with 1.10 (its shape, as the preview of its own id), else in the box
+  function showSel() {
+    var c = MAPMODE !== 'rings' && selCard(), t10 = ten('preview');
+    if (t10) { try { if (c) t10.preview([SEL.id], { card: cardFor(c) }); else t10.preview(null); } catch (e) { /* the app's */ } return; }
+    if (c) showCard(c); else hud.hidden = true;
+  }
+  function hideCardSoon() { hudT = setTimeout(showSel, 400); }
 
   // ---- frames: C-x 5 2 and friends ------------------------------------------------------------------
   function makeFrame() {
