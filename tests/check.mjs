@@ -254,6 +254,22 @@ test('nothing in the navigator animates: its stylesheet section has no transitio
   assert.ok(!/\b(transition|animation)\s*:/.test(sec), 'the navigator section animates something');
 });
 
+// ---- fresh after every install (Corwin's browser kept an old page under max-age=86400, 2026-11-01) ----
+test('every file the site serves revalidates: no-cache with an ETag, in every location that sets headers', () => {
+  for (const f of ['nginx-corwin.cloud.conf', 'corwin.cloud.interim.conf']) {
+    const conf = readFileSync(join(root, 'deploy', f), 'utf8').replace(/#.*$/gm, '');
+    for (const m of conf.matchAll(/max-age=(\d+)/g)) assert.ok(+m[1] <= 300, f + ': max-age=' + m[1] + ' keeps an old page after an install');
+    const site = conf.slice(conf.lastIndexOf('server {'));
+    assert.match(site, /^\s*etag on;/m, f + ': no etag on');
+    const top = site.split(/\n\s*location /)[0];
+    assert.match(top, /add_header Cache-Control "no-cache" always;/, f + ': the server does not say no-cache');
+    for (const loc of site.split(/\n\s*location /).slice(1)) {
+      const body = loc.slice(0, loc.indexOf('\n    }'));
+      if (/add_header/.test(body)) assert.match(body, /add_header Cache-Control "no-cache" always;/, f + ': location ' + body.split('{')[0].trim() + ' sets headers but not Cache-Control (nginx does not inherit it there)');
+    }
+  }
+});
+
 // ---- the app's own messages and calls (topology forge 1.8) ----------------------------------------
 test('the home page scripts ask the app, never reach into its page, and hear only its own frame', () => {
   for (const f of ['stage.js', 'nav.js', 'float.js']) {

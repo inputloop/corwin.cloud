@@ -134,6 +134,8 @@ prove_red() {
   plant "the legend's licence altered"       build.py     's#">GPL-3.0-or-later</a> or #">GPL-2.0-only</a> or #'
   plant "the legend's hidden row drops him"  build.py     "s#<p class=\"lg-short\">' + TF_NAME + ' by %s · code#<p class=\"lg-short\">' + TF_NAME + '%.0s by Bryant · code#"
   # topology forge 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
+  plant "scripts cached for a day again"    deploy/nginx-corwin.cloud.conf 's#^        add_header Cache-Control "no-cache" always;\(.*\)$#        add_header Cache-Control "public, max-age=86400";#'
+  plant "topology not revalidated"          deploy/corwin.cloud.interim.conf '/corwin-cloud-topology-csp.conf;/{n;d;}'
   plant "the frame asks for no selection"   build.py     's#^TF_EMBED = "frameless,props,pages,select,ready"#TF_EMBED = "frameless,props,pages,ready"#'
   plant "Full size asks for switches"       build.py     's#% (e(first, quote=True), e(index\["file"\], quote=True))),#% (e(first + "\&embed=all", quote=True), e(index["file"], quote=True))),#'
   plant "the legend says only TopoForge"    build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "TopoForge"#'
