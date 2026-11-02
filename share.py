@@ -82,7 +82,10 @@ def stage(out, adir):
     with open(os.path.join(out, "js", "customize.js"), "w", encoding="utf-8") as f:
         f.write(js)
     res["taxonomy"] = stage_taxonomy(out, src)
-    res["markup"] = m.group(1)
+    # about-corwin's page is a template now: {{TONE_ROWS}} in the Customize block (2026-11-01). Its own
+    # build fills a placeholder with nothing when the tone pads are off; they are not on this site, so
+    # every placeholder is filled the same way (it had leaked onto the page as text).
+    res["markup"] = re.sub(r"\{\{[A-Z_]+\}\}", "", m.group(1))
     res["ci"] = ci_strip(adir, res)
     res["staged"] = True
     return res

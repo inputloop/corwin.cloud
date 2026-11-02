@@ -63,7 +63,18 @@ page links `jslicense.html`. The policy for `/demo/*/app/` is written to `genera
   says its last revision and stamp in words; with no feed the line stays hidden. The site policy's
   `connect-src` is `'self'` for this.
 
-## The navigator (2026-11-01)
+## Two page layouts: free and classic (2026-11-01, night)
+
+The home page comes in two layouts, chosen in Customize (or `?ui=free`, `?ui=classic`) and kept in
+the browser. **Free**, the default: the drawing fills the window, and one floating Emacs frame
+(`src/js/free.js`) carries the only menus (the site's pages and the drawing app's own commands), a
+tool-bar of shape categories, a finder for shapes and everything drawn (with splits, and C-x 5 2 for a
+second frame), a mode-line built from a template of elements, and a message line that becomes an
+M-x prompt; the credits float as a watermark. **Classic**: the site's menu at the top, the drawing app
+with its own bars, the navigator below as an option, and the footer. `src/js/ui.js` sets the layout
+before the page is drawn. `docs/NAV.md`, revision 4, says what and why.
+
+## The navigator (2026-11-01; classic's finder since revision 4)
 
 Beside the drawing, on the left, an Emacs frame lists everything the drawing draws (projects,
 processes, hosts, people, paths, pages, demos) in layered categories: a tool bar of categories you
@@ -105,7 +116,10 @@ labels and the `jslicense.html` row; no machine paths or vendor strings; the dep
 strict. `tests/browser.cjs` drives the built site in Chromium at 1280 and 390 pixels, under the
 deploy policies, with scripts on and off; it runs when the `playwright` package is installed. `tests/nav-browser.cjs` does the same for the
 navigator (splits, pins, drag, buffers, the context light, the width, storage refused, scripts off),
-and `--prove-red` plants a fault for each of those promises and runs it in the browser too.
+`tests/home-browser.cjs` drives the home page in classic, and `tests/free-browser.cjs` the free layout
+and the switch (the frame's tool-bar, finder, mode-line, message line, frames, small frames and
+watermark, light and dark, at both widths); `--prove-red` plants a fault for each of those promises
+and runs it in the browser too.
 Node 18 or later for the node checks.
 
 ## Change the words

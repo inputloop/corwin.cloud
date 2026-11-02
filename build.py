@@ -31,7 +31,7 @@ import navindex as NV
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("site.js", "stage.js", "badges.js", "float.js", "nav.js")
+JS_FILES = ("ui.js", "site.js", "stage.js", "badges.js", "float.js", "nav.js", "free.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
@@ -122,6 +122,7 @@ Built by build.py from catalog.py and src/. Edit those, not this file.
 <meta name="color-scheme" content="light dark">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="css/site.css">
+<script src="js/ui.js"></script>
 <script src="js/site.js" defer></script>
 <script src="js/badges.js" defer></script>
 %s%s</head>
@@ -181,7 +182,7 @@ def foot(buf):
   </form>
   <nav aria-label="Everywhere on this site"><ul class="goto" id="goto">%s</ul></nav>
   <p id="echo" class="echo" role="status">End of buffer. <span class="js-only-inline">Press Alt+x anywhere to come here.</span></p>
-  <p class="colophon">%s. %s Words and diagrams CC-BY-SA-4.0; code GPL-3.0-or-later OR LGPL-3.0-or-later. By %s. <a href="jslicense.html" rel="jslicense">JavaScript licences</a>.</p>
+  <p class="colophon">%s. %s By %s. <a href="jslicense.html" rel="jslicense">JavaScript licences</a>.</p>
 </footer>
 </body>
 </html>
@@ -256,7 +257,7 @@ def render_tabs():
     panels = "\n".join(render_panel(x) for x in C.APPS)
     return ('<section class="tabs" id="projects" aria-labelledby="projects-h">'
             '<h2 id="projects-h" class="tabs-h">The projects</h2>'
-            '<p class="hint">The projects in words: one tab each, with the design in full. Every project in the directory also has a page in the drawing above. <span class="js-only-inline">Arrow keys move between tabs; Home and End jump to the first and last.</span></p>'
+            '<p class="hint">One tab per project. <span class="js-only-inline">Arrow keys move between tabs.</span></p>'
             '<div class="tablist" role="tablist" aria-label="Projects">%s</div>\n%s</section>' % ("".join(tabs), panels))
 
 
@@ -278,20 +279,21 @@ def topology_area(have, index, navx=None):
     if navx:
         pages.update(navx["keys"])
     first = "topology/topoforge/index.html?load=/" + index["file"]
-    # the app's own switches (topology forge 1.8, spec/EMBED-v1.md): no frame, Properties floating from the
-    # right, the page tabs in the overview map, and the selection and ready messages, same origin only.
+    # the app's own switches (topology forge 1.8, spec/EMBED-v1.md), one set per page layout (docs/NAV.md,
+    # revision 4): free asks for bare (every bar and panel hidden) and the messages; classic for the
+    # messages only, so the app keeps its own chrome. js/stage.js appends the set for the layout in force.
     # "Full size" (the legend) opens the app on its own, with none of them.
     frame = ('<iframe id="topology" class="topology" title="topology forge (formerly TopoForge), opened on the shop\'s drawings" data-first="%s" '
-             'data-resume="%s" data-doc="%s" data-pages="%s"></iframe>'
-             % (e(first + "&embed=" + TF_EMBED, quote=True), e("topology/topoforge/index.html?embed=" + TF_EMBED, quote=True),
-                e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True)))
+             'data-resume="%s" data-embed-free="%s" data-embed-classic="%s" data-doc="%s" data-pages="%s"></iframe>'
+             % (e(first + "&embed=", quote=True), e("topology/topoforge/index.html?embed=", quote=True),
+                TF_EMBED_FREE, TF_EMBED_CLASSIC, e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True)))
     body = '<div class="stage-grid" id="stage-grid">%s<div class="stage-drawing">%s</div>%s</div>' % (
         NV.render(navx) if navx else "", frame, legend(index, first))
     return ('<section class="stage" id="top" aria-labelledby="stage-h">'
-            '<h1 id="stage-h" class="stage-h">The shop, drawn <span class="muted">one page per project: the page tabs are in the overview, at the drawing\'s bottom right</span></h1>'
+            '<h1 id="stage-h" class="stage-h">The shop, drawn</h1>'
             + body.replace("%", "%%") +
-            '<noscript><p class="stage-off">topology forge (formerly TopoForge) needs JavaScript. Without it: <a href="directory.html">the directory</a>, '
-            '<a href="#projects">the projects in words</a> below, and <a href="%s" download>the drawings as a file</a> to open in your own copy.</p></noscript>'
+            '<noscript><p class="stage-off">The drawing app needs JavaScript. Without it: <a href="directory.html">the directory</a>, '
+            '<a href="#projects">the projects in words</a> below, and <a href="%s" download>the drawings as a file</a>.</p></noscript>'
             + processes_note(index) +
             '</section>') % (e(index["file"], quote=True),)
 
@@ -300,7 +302,8 @@ def topology_area(have, index, navx=None):
 # content/personae/bryant.txt), and its licence as TopoForge's own README.org ("Licences") states it.
 BRYANT_URL = "https://github.com/takushieternal"
 TF_NAME = "topology forge (formerly TopoForge)"   # the app's name since 2026-11-01 (Corwin); Bryant made it
-TF_EMBED = "frameless,props,pages,select,ready"
+TF_EMBED_FREE = "bare,select,ready"
+TF_EMBED_CLASSIC = "select,ready"
 TF_SRC_APP = C.ORG + "/topology/tree/corwin/www/topoforge"
 TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"
 TF_LICENCE = ("Code: GPL-3.0-or-later or LGPL-3.0-or-later, your choice. "
@@ -323,7 +326,7 @@ def legend(index, first):
     block under the drawing; js/float.js floats it over the canvas and lets it move and hide."""
     rev, day = site_revision()
     gh = '<a href="%s">Bryant Frankford</a>' % BRYANT_URL
-    short = ('<p class="lg-short">' + TF_NAME + ' by %s · code GPL-3.0-or-later or LGPL-3.0-or-later · prose CC-BY-SA-4.0</p>' % gh)
+    short = ('<p class="lg-short">' + TF_NAME + ' by %s · code GPL-3.0-or-later or LGPL-3.0-or-later · prose CC-BY-SA-4.0 · <a href="%s">source</a></p>' % (gh, TF_SRC_PROJECT))
     cells = [
         ("lg-app", "Drawing app", TF_NAME + ', made by %s for Corwin Brust, with Corwin and contributors. Bryant is listed first on it.' % gh),
         ("lg-lic", "Its licence", 'Code: <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0-or-later</a> or '
@@ -331,11 +334,11 @@ def legend(index, first):
          'Prose: <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC-BY-SA-4.0</a>. As its README.org says.'),
         ("lg-src", "Its source", 'topology, branch corwin: <a href="%s">www/topoforge/</a>, the app served here; '
          '<a href="%s">topoforge/</a>, its README, AUTHORS and licences.' % (TF_SRC_APP, TF_SRC_PROJECT)),
-        ("lg-you", "Your drawing", 'Stays in this browser until you save it (File, Export). '
-         '<a href="%s" id="stage-full">The app full size</a> · <a href="%s" download>the shop\'s drawings as a file</a> · '
-         '<a href="topology/">topology\'s own front door</a>. '
-         '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button> '
-         '<span id="stage-msg" role="status"></span>' % (e(first, quote=True), e(index["file"], quote=True))),
+        ("lg-you", "Your drawing", '<span class="lg-keep">Stays in this browser until you save it (File, Export). </span>'
+         '<a href="%s" id="stage-full">The app full size</a> · <a href="%s" download id="stage-file">the shop\'s drawings as a file</a> · '
+         '<a href="topology/" id="stage-door">topology\'s own front door</a> · '
+         '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button>'
+         % (e(first, quote=True), e(index["file"], quote=True))),
         ("lg-sheet", "Sheet", 'The shop, drawn: a page per project. corwin.cloud <code>%s</code>, %s.' % (e(rev), day)),
     ]
     grid = "".join('<div class="lg-cell %s"><dt>%s</dt><dd>%s</dd></div>' % (c, e(h), d) for c, h, d in cells)
@@ -344,7 +347,7 @@ def legend(index, first):
     notice = ('<p class="stage-notice" id="stage-notice" hidden><span id="stage-notice-t"></span> '
               '<button type="button" class="linkish" id="stage-notice-b">Open the shop\'s drawings</button></p>')
     return ('<aside class="legend" id="legend" aria-labelledby="legend-h"><h2 id="legend-h" class="lg-h">Legend</h2>%s%s'
-            '<dl class="lg-grid">%s</dl></aside>' % (notice, short, grid))
+            '<dl class="lg-grid">%s</dl><p class="lg-msg" id="stage-msg" role="status"></p></aside>' % (notice, short, grid))
 
 
 def processes_note(index):
@@ -357,10 +360,9 @@ def processes_note(index):
     items = []
     for pid, v in procs.items():
         files = " · ".join(a(f, names.get(n, n), "") .replace("<a ", '<a download ', 1) for n, f in v["files"].items())
-        items.append('<li>%s: %s; as a file to open in your own copy of topology forge (File, Open): %s</li>'
+        items.append('<li>%s: %s; as a file (File, Open): %s</li>'
                      % (e(v["name"].replace("Process: ", "")), a("index.html?drawing=process-%s#top" % pid, "its page in the drawing (BPMN)"), files))
-    return ('<div class="processes"><p class="stage-note">Processes, drawn as data: each step says what it is (event, task, gateway, data) '
-            'and the notation decides the shape. Pick the notation you read:</p><ul class="stage-note">%s</ul></div>' % "".join(items))
+    return ('<div class="processes"><h2 class="stage-note proc-h">Processes</h2><ul class="stage-note">%s</ul></div>' % "".join(items))
 
 
 NAV_SCRIPTS = '<script src="js/taxonomy.js" defer></script>\n'
@@ -370,7 +372,7 @@ def page_index(have, index, navx=None):
     return (head("corwin.cloud: the shop, drawn",
                  "topology forge (formerly TopoForge), opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
                  '<script src="js/stage.js" defer></script>\n<script src="js/float.js" defer></script>\n'
-                 + ((NAV_SCRIPTS if SHARED.get("taxonomy") else "") + '<script src="js/nav.js" defer></script>\n' if navx else ""))
+                 + ((NAV_SCRIPTS if SHARED.get("taxonomy") else "") + '<script src="js/nav.js" defer></script>\n<script src="js/free.js" defer></script>\n' if navx else ""))
             + nav("home") + '<main id="main">\n' + topology_area(have, index, navx) + ('<div class="wrap shared-wrap">%s</div>' % ci_strip() if ci_strip() else "") + render_tabs() + "</main>\n" + foot("corwin.cloud"))
 
 

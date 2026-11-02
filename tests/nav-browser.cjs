@@ -54,7 +54,7 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
 
     // clear storage from a page with no TopoForge on it: TopoForge saves its working copy as a page unloads
     await page.goto(base + '404.html'); await page.evaluate(() => localStorage.clear());
-    await page.goto(base + 'index.html'); await ready();
+    await page.goto(base + 'index.html?ui=classic'); await ready();
     assert.equal(await page.isHidden('.nf-tabs'), true, 'the tab bar shows with one buffer');
     assert.equal(await page.$$eval('#nav [role="tab"]', (x) => x.length), 0, 'a hidden tab exists with one buffer (the page\'s own tabs would be confused with it)');
     assert.equal(await page.$$eval('.win', (x) => x.length), 1);
@@ -212,7 +212,8 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
     await ctx.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('refused'); } }); });
     const p = await ctx.newPage(); const errs = [];
     p.on('pageerror', (e) => errs.push(e.message));
-    await p.goto(base + 'index.html'); await p.waitForSelector('#nav[data-ready="yes"]', { timeout: 10000 });
+    await p.goto(base + 'index.html?ui=classic'); await p.waitForSelector('#nav[data-ready="yes"]', { timeout: 10000 });
+    if (!(await p.isVisible('#nav-q'))) await p.click('.nf-hide');   // classic starts it hidden to its grip row
     await p.click('.tb[data-facet="show"][data-val="processes"]');
     assert.deepEqual(await p.$$eval('.win .sec a.it', (as) => as.map((a) => a.getAttribute('data-id'))), expectIds({ show: ['processes'] }));
     assert.deepEqual(errs, [], 'errors with storage refused: ' + errs.join(' | '));
@@ -223,7 +224,7 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
   {
     const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 800 } });
     const p = await ctx.newPage();
-    await p.goto(base + 'index.html');
+    await p.goto(base + 'index.html?ui=classic');
     assert.equal(await p.$$eval('#nav a[data-item]', (as) => as.filter((a) => a.offsetParent).length), index.items.length);
     await ctx.close();
     ok(`with scripts off the nav is a plain list of ${index.items.length} links`);

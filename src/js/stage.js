@@ -12,6 +12,7 @@
 //   - the shop's drawings, kept: they open as left, with a notice if this build has pages they lack;
 //   - a drawing of the visitor's own: it opens, as TopoForge always does, with a notice at the top of the
 //     legend and a button that opens the shop's in its place. Nothing of theirs is replaced unasked.
+//   - the app is asked for the switches of the page layout in force (data-embed-free or -classic);
 //   - index.html?drawing=<project>: when the app says it is ready (its topoforge:ready message), the page
 //     for that project is opened with its own TopoForge.showPage, if the drawing in front of you is the shop's.
 (function () {
@@ -81,7 +82,9 @@
   }
   function open(first) {
     fitNext = first;
-    f.src = f.getAttribute(first ? 'data-first' : 'data-resume');
+    // the app's switches for the page layout in force (js/ui.js; docs/NAV.md, revision 4)
+    var ui = document.documentElement.getAttribute('data-ui') === 'classic' ? 'classic' : 'free';
+    f.src = f.getAttribute(first ? 'data-first' : 'data-resume') + (f.getAttribute('data-embed-' + ui) || '');
   }
   open(!kept);
   if (kind === 'empty') say('The drawing kept in this browser was empty, so the shop\'s drawings are open.');

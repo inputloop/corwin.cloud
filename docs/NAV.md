@@ -4,8 +4,284 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 # The left nav: an Emacs frame beside topology forge (formerly TopoForge)
 
-Status: revision 3, built 2026-11-01 late evening on the app's own switches (revision 2 and the
-first design, below, stand where revision 3 does not replace them). Correct it by editing this file.
+Status: revision 4, 2026-11-01 night: two settings, **free** (the default) and **classic**. Revision 3
+and the earlier designs, below, stand where revision 4 does not replace them; in classic the navigator
+of revisions 1 to 3 is still the finder. Correct it by editing this file.
+
+## Revision 4: free and classic (2026-11-01, night)
+
+### What Corwin asked (his words, 21:41, with a screenshot of an old cached page)
+
+"I suggest a multi (for now two) stage setting, classic and free. In classic we have the classic
+business/office flavored UI that we started from today. It has it's menu back at the top where it
+belongs but it can keep the emacs esque footer line and loose all of the self congratulatory
+extemporizing from the current. When in the (default) "free" position there are no borders. All of
+the pallets look like little Emacs frames. We use an Emacs toolbar modality for the shape picker. Our
+clever gadget that we used as a fancy link finder becomes a shape/item finder, this can be a single
+modal pallet supporting split frame [...] The vision of free is that it's just this empty page with
+our background... no title bar, page framing, footer. The bottom legend/attributions block floats
+free in space behaving like a watermark; it can be disabled. An emacs frame floats left. It has menus.
+They are the only menus [...] think about the mode-line the way Emacs thinks about the mode line: as
+a string of elements which may be templatized and may be interactable [...] Look for ways to make
+Emacs appear to be floating into the middle of our specially free-drawing drawing canvas to help us
+reach editor/access related functions conveniently." (The whole prompt is in c4,
+`q/2026-11-01-free-and-classic/PROMPT.md`.)
+
+### The switch
+
+- Two values, `free` (default) and `classic`, kept per browser under `corwin.cloud.ui.v1` (read and
+  written in try/catch; with storage refused the page is free, or what the address says, for the
+  visit). The address wins and is kept: `?ui=free` or `?ui=classic`.
+- `js/ui.js` is a small script loaded in the head without `defer`, so the setting is on `<html
+  data-ui="...">` before the page is drawn (no flash of the other setting). It adds one row to
+  Customize, "Page layout: Free / Classic" (Customize's own markup is staged from about-corwin
+  unchanged; the row is added at run time, after its last setting). The free frame's Options menu
+  carries the same switch. Choosing the other value saves it and reloads the page, because the drawing
+  app is asked for different switches in each (below).
+- Only the home page differs. Every other page is the same in both.
+- A link to a project's tab (`index.html#tab-...`, from the directory's cards and the Go to: prompt)
+  needs the long page, which free does not show, so such a visit opens classic, and nothing is kept.
+- With scripts off there is no setting: the top bar, a short heading, the plain list of links (the
+  navigator without scripts), the legend as a block and the projects in words.
+
+### Classic
+
+- The site's top bar is back at the top (Home, Directory, Demos, Packages, About, and Customize at the
+  right). The heading is two words: "The shop, drawn".
+- topology forge with its own chrome: the frame asks only for `embed=select,ready` (the selection and
+  ready messages; no switch that changes how it looks).
+- The navigator (revisions 1 to 3, `js/nav.js`) is the finder, a palette that starts hidden to its
+  one grip row, floating over the canvas right of the app's shapes; "show" opens it.
+- Under the drawing, one row: "topology forge (formerly TopoForge) by Bryant Frankford · code
+  GPL-3.0-or-later or LGPL-3.0-or-later · prose CC-BY-SA-4.0 · source", and one row of links (the app
+  full size, the drawings as a file, start again) with the one-line status. The five-cell legend is not
+  shown in classic.
+- The page's mode-line and minibuffer (Go to:) stay at the foot.
+- Gone, in both settings, from what is built: the heading's explanation of where the page tabs are,
+  the paragraph introducing the processes (each process is now one line), the long hint above the
+  project tabs, and the colophon's second licence sentence (it said the licence twice).
+
+### Free (the default)
+
+The page is our background and nothing else: no top bar, no heading in sight (it stays for screen
+readers), no page frame, no footer, no page scroll. The drawing fills the window, asked for with
+`embed=bare,select,ready` (and `load=` on a first visit), so every bar and panel of the app is hidden
+and the page offers what they offered through the app's calls (`commands()`, `run(id)`, `shapes()`,
+`place(id, ...)`, `showPage`, `embed({...})`). Over it: **one Emacs frame**, the legend as a
+**watermark**, and the app's own overview map (bottom right).
+
+#### The Emacs frame, top to bottom
+
+| Part | Emacs name | What it holds |
+|---|---|---|
+| Grip | (the window manager's) | `⠿` at the start of the menu bar: drag it, or focus it and use the arrow keys (16 pixels, 64 with Shift); Options, Move does it with one press (WCAG 2.5.7) |
+| Menu bar | menu-bar | **Site** (Home, Directory, Demos, Packages, About, JavaScript licences, the app full size, the drawings as a file, start again), **File**, **Edit**, **Arrange**, **Layout**, **View** (the app's `commands()`, each menu as the app groups it, its headings as separators, its keys shown, disabled ones disabled), **Options** (Customize..., Page layout: free or classic, Legend watermark on or off, Motion, Properties, Pages, Move, Show or hide the tool-bar and finder), **Help** (Keys, Credits and licence, About this frame, and the app's own Help items). They are the only menus on the page. F10 opens the first; Left and Right move between menus, Up and Down within one, Enter runs, Escape closes. File also carries Emacs's own frame and window items: New frame (C-x 5 2), Delete frame (C-x 5 0), Split window below (C-x 2), Split window right (C-x 3), One window (C-x 1), Delete window (C-x 0), Other window (C-x o). |
+| Tool-bar | tool-bar | One **tile** per shape category, from `shapes()`: the first shape's own icon above the category's name, as Emacs draws a tool-bar with `tool-bar-style` set to `both`. A tile is a toggle (`aria-pressed`): up, it is a raised bevel; pressed, it is sunk in. Pressed tiles narrow the finder's shapes to those categories; none pressed shows every category. Deliberately unlike the navigator's flat bracketed category buttons. |
+| Finder | windows | One to four **windows** (splits), each with its own scroll, point and folded sections and its **own mode-line**. Each window lists **Shapes** (by category, as the tool-bar narrows them) and then what the drawing draws, from the navigator's index (projects, processes, hosts, people, paths, pages, demos). The minibuffer's words narrow all of them (about-corwin's `taxonomy.js` matching, as the navigator). |
+| Mode-line | mode-line | Built from a template (below), one per window; the selected window's is the active face. |
+| Message area | echo area / minibuffer | One line. Messages land here. Click it, press Alt+x, or Escape then x (Emacs's ESC prefix), and it becomes the **one-line input**: `M-x ` and a text box with completion over the app's `commands()`, this frame's commands, the shapes and the finder's items (a list over the line, the W3C combobox pattern: Up and Down move, Tab completes, Enter runs, Escape quits). Typing also narrows the finder. When focus leaves it, it is the message line again. |
+
+#### Choosing a shape (the tool-bar and the finder)
+
+- **Enter** on a shape in the finder, or choosing it in M-x: `place(id, 'center')`, the shape is
+  dropped in the middle of the view (WCAG 2.5.7: no drag needed).
+- **A click** on a shape: `place(id)` arms it, as the app's own palette does; the next press on the
+  drawing drops it there, and Enter in the frame while one is armed drops it in the middle.
+- **Dragging** a shape onto the drawing: HTML drag and drop with the type `text/x-topoforge` set to
+  the shape's id, as the app's own palette does; the drawing takes the drop.
+- An item that has a page in the drawing opens it with `showPage` (not over a drawing of the
+  visitor's own, as before); a demo or a link opens its address.
+
+#### Splits and frames: the keys
+
+With focus in a frame, never single keys, never Ctrl+N, T or W: C-x 2 (split below), C-x 3 (split
+right), C-x 0 (delete window), C-x 1 (one window), C-x o (other window), **C-x 5 2** (a second
+floating frame, with its own tool-bar, finder and mode-line), C-x 5 0 (delete this frame; the first
+one stays), C-x 5 o (other frame), C-c . (the frame by the shape, below), Alt+x or ESC x (M-x), F10
+(the menu bar), C-g or Escape (quit). At most four windows per frame and four frames (four is the
+house's GRAIN number: picked, not measured). On a narrow screen there is one frame; C-x 5 2 says so.
+
+#### The mode-line: a template of elements
+
+Emacs builds a mode-line from `mode-line-format`, a list of elements: strings, `%`-constructs and
+`(:eval ...)` forms, each of which may carry `help-echo` (said on hover) and a `local-map` (what a
+click does). Here the same: **the template is a string**; text outside `%` is printed as it is;
+`%name` is an element from the table; `%%` is a percent sign. The default template:
+
+    %buffer  %page  %select  %zoom  %filter  %split  %lighters
+
+Each element is `{ name, scope, text(ctx), help(ctx), act }`: `text` what it prints (empty prints
+nothing, and the two spaces before it are dropped), `help` what pointing at it or focusing it says in
+the message area, `act` the command a click (or Enter) runs. `scope` says whose command it is:
+**core** (the frame's own), **mode** (the finder's, or the app's through `run(id)`), or **context**
+(it depends on what is selected or shown). An interactive element is a button with a name for screen
+readers; the selection's element also answers a long press (half a second). The table:
+
+| Element | Scope | Prints | A click runs |
+|---|---|---|---|
+| `%buffer` | core | the buffer's name, `*finder*` | switch-to-buffer: M-x opens with the buffer names (`*finder*`, `*Pages*`, `*Properties*`, `*Credits*`, `*Here*`) |
+| `%page` | context | `p:` and the page of the drawing in view | the Pages box |
+| `%select` | context | what is selected in the drawing (the app's select message): its name, `+N` for more; nothing when nothing is | C-c .: the frame by the shape (also a long press) |
+| `%zoom` | mode | `−` `zoom` `+`, three buttons | the app's View, Zoom out / Fit to window / Zoom in, by `run(id)`; the mouse wheel over it zooms too |
+| `%filter` | mode | the pressed tiles and the words, or `all` | clears them |
+| `%split` | core | `W1/2`: this window of how many (only when split) | C-x o |
+| `%lighters` | core | `(Finder Motion GPL)`, Emacs's minor-mode lighters | `Finder`: describe the mode in the message area; `Motion`: turns motion on or off (about-corwin's Customize presses it for "Reduce motion": it is the page's `#motion` button); `GPL`: Credits and licence |
+
+The template and the table live in `js/free.js` (`MODE_LINE`, `ELEMENTS`); a test reads every element
+in the browser and presses each interactive one.
+
+#### Every other palette is a small Emacs frame
+
+A small frame is a box with one buffer and its own mode-line at the foot; its buffer name is its grip
+(drag it, or arrow keys) and it has a `[x]` to close (C-g or Escape too). Built:
+
+- **`*Pages*`** (Options, Pages; or a click on `%page`): every page of the drawing, the current one
+  marked; Enter or a click opens it with `showPage`.
+- **`*Properties*`** (Options, Properties): what the app's select message says of the selection (name,
+  its tooltip, kind, page, id, reference, how many), read-only, with `[Open the app's own Properties]`
+  (`embed({ props: true, 'hide-props': false })`, the app's floating inspector, where editing
+  happens) and `[Hide it]`.
+- **`*Credits*`** (Help, Credits and licence; or `GPL` on the mode-line): the legend's cells.
+- **`*Here*`, Emacs floating into the canvas** (C-c ., a click or long press on `%select`): first the
+  app's View, Zoom to selection runs (as C-l recentres in Emacs), which puts the selected shape in the
+  middle of the view; then a small frame opens just right of the middle, beside it. It holds the
+  selection's name and tooltip; the app's commands that apply to it now (Edit text, Duplicate, Delete,
+  Bring to front, Send to back, Zoom to selection; disabled ones not offered); and the access settings
+  carried over from about-corwin: text size smaller or larger, colour theme (follow system, light,
+  dark, high contrast), reduce motion, and Customize... (these press Customize's own controls, so
+  Customize stays the one place they are kept).
+
+Written down, not built (each needs something the app does not yet offer; see the requests below):
+the `*Here*` frame placed exactly at the shape without zooming (needs the shape's place on screen);
+opened by a long press or a right click on the shape itself (needs the app to tell the page); a
+`*Properties*` frame that edits (needs a way to set a shape's fields); a zoom number in `%zoom`
+(needs the view); Alt+x, C-c . and F10 pressed while focus is inside the drawing (keys pressed there
+go to the app).
+
+#### The legend, as a watermark
+
+On a wide screen the legend floats at the bottom of the canvas, left of the overview map, with no box:
+the canvas colour at 90 % behind its text (so its words keep AA contrast over a drawing) and hairlines
+only between its cells. It keeps its grip, its arrow keys and `hide` (to its one row), and gains
+`off` (Options, Legend watermark). Off, the legal notices stay visible and reachable three ways:
+`GPL` on every mode-line (a lighter, always shown), Help, Credits and licence (the `*Credits*` frame
+with every cell), and the one-row credit, which the `*Credits*` frame heads. That is how GPLv3
+section 5(d) ("each must display Appropriate Legal Notices") stays met with the watermark off (a
+reading of its words, not legal advice). It is kept under `corwin.cloud.free.v1`.
+
+#### Narrow screens (47.5rem or less), free
+
+Nothing floats. The drawing fills the window above the frame; the frame sits at the foot, full width,
+as Emacs in a terminal: its menu bar, the mode-line and the message line, with the tool-bar and
+finder folded (the `+` at the end of the menu bar unfolds them; M-x works folded). The legend is its
+one row.
+
+### Accessibility
+
+Keyboard routes for everything (above); every button, tile, element and frame has a name; the message
+line is a polite status; nothing animates (no transition anywhere in a frame; reduced motion and
+about-corwin's "Reduce motion" both turn the site's motion off); text in the frames follows
+Customize's text size; AA contrast in both themes from egad's tokens (checked in the browser by
+computing the ratios). Dragging is never the only way: shapes by Enter, frames by arrow keys and
+Options, Move. Customize's settings are about-corwin's, staged unchanged; the `{{TONE_ROWS}}`
+placeholder its page now carries is filled with nothing, as about-corwin's own build does when the
+tone pads are off (it had leaked onto the live page as text).
+
+### Decisions, each with what would prove it wrong
+
+- [HIS] Free is the default. Falsifier: he says a first visit should be classic.
+- [MINE] Classic keeps the navigator as the finder, hidden to its grip row: it is the finder he asked
+  for in the afternoon, and free's finder is new. Falsifier: he says classic is the morning page with
+  no navigator at all; then nav.js leaves classic too (one line in `nav.js`).
+- [PLATFORM] Changing the setting reloads the page (the app's switches are read from its address).
+  `embed({...})` could change most of them live, but `load=` and the first fit cannot be redone
+  cleanly. Falsifier: a reload loses something a visitor did (it does not: the app keeps its working
+  copy, and stage.js reopens it).
+- [MINE] The by-shape frame zooms to the selection before it opens. Falsifier: he finds the jump
+  unwelcome; then it opens at the middle without zooming.
+- [DOMAIN] The watermark can be turned off, but `GPL` on the mode-line cannot. Falsifier: none here.
+
+### Asked of the app (requests into topology, branch corwin, for Bryant's agreement; nothing changed in `www/topoforge`)
+
+1. **The view**: `TopoForge.view` (`k`, `x`, `y`) and a `topoforge:view` message when it changes, so
+   `%zoom` can print the zoom and the page can place things on the drawing.
+2. **Where the selection is**: a `rect` (in the app's pixels) in the select message, so `*Here*` can
+   float beside the shape without zooming to it.
+3. **Disarming**: `place(null)` gives up an armed shape, so Escape in the frame can, as Escape in the
+   drawing does.
+4. **Keys for the parent**: an embed word `keys` that forwards Alt+x, F10, C-x and C-c prefixes pressed
+   in the drawing to the parent page (the same origin rule as the select message).
+5. **Long press and right click**: a `topoforge:context` message (the shape and the point), so a long
+   press on a shape opens `*Here*`.
+6. **Setting a shape's fields**: `TopoForge.setProps(id, patch)` (one undo step), so `*Properties*`
+   can edit as a small Emacs frame and the app's inspector need not be called up.
+7. **Pages changed**: a `topoforge:pages` message when a page is added, renamed or removed, so
+   `*Pages*` follows without a reload.
+
+### Built and checked (2026-11-01, night)
+
+Observed, with `sh tests/run.sh` (ALL CHECKS PASSED: Python 40, node 29, browser 33, navigator 31,
+home in classic 34, free 46) and `sh tests/run.sh --prove-red` (PROVE-RED OK: 145 planted faults,
+each red; the first run found two checks too weak to turn red, the jslicense row and the GPL
+lighter, and both checks were tightened). Screenshots, light and dark, 1280 and 390, both layouts:
+`tests/free-browser.cjs` with `SHOTS=dir`.
+
+Known and left (a warning, not a fault): in free, the app fits the drawing to the whole window, so
+on a first visit the frame covers the drawing's left edge until it is moved or folded (`−` at the
+end of its menu bar). Placing the fit beside the frame needs the view (request 1 below).
+
+### QA plan for revision 4 (written before the build)
+
+Where each runs: Python in `tests/check_site.py`; node in `tests/check.mjs`; the browser in
+`tests/free-browser.cjs` (new: free and the switch, 1280 and 390, light and dark), `tests/home-browser.cjs`
+and `tests/nav-browser.cjs` (now run in classic). Each promise gets a planted fault in
+`tests/run.sh --prove-red`.
+
+TOWER
+- Free shows no chrome but the one frame and the watermark: the top bar, heading, page mode-line,
+  minibuffer, colophon and the projects are not visible; nothing visible lies outside the frame, the
+  legend and the drawing; the app's top bar, palette, inspector and page tabs are hidden (its body
+  carries `tf-hide-*`); the page does not scroll. (browser; plant: the top bar shown in free)
+- Classic has the top menu and no long prose: the top bar is visible; outside the project panels no
+  visible block of text runs past 160 characters; the app is asked for `select,ready` only and keeps
+  its own top bar. (browser, Python; plants: a long paragraph back; the top bar hidden in classic)
+- The switch persists: `?ui=classic` is kept across a plain reload; the Customize row and Options both
+  switch; with storage refused the page still opens free. (browser; plant: the setting not saved)
+- A tool-bar tile toggles a category: pressing a tile sets `aria-pressed` and the finder lists only
+  that category's shapes; pressing it again lists all. (browser; plant: the tile not filtering)
+- Choosing a shape places it: Enter on a shape adds one shape to the page; a click arms it
+  (`TopoForge.placing`); rows are draggable with `text/x-topoforge`. (browser; plant: Enter not placing)
+- The mode-line elements are interactive: every element of the template renders from the table;
+  every interactive one is a named button that does something (the message area or the page changes);
+  the selection appears in `%select` and clears. (browser; plant: an element with no action)
+- The message area becomes the input and back: a click, Alt+x and ESC x each turn it into the input;
+  completion offers app commands and shapes; Enter runs one; focus leaving returns the message line.
+  (browser; plant: blur not restoring)
+- C-x 5 2 makes a second frame with its own mode-line; C-x 5 0 removes it; C-x 2 and C-x 3 split
+  with a mode-line per window. (browser; plant: C-x 5 2 undefined)
+- The small frames: Pages lists the pages and opens one; Properties shows the selection; `*Here*`
+  opens by C-c . with the access settings. (browser)
+LADDER
+- Every menu is a keyboard menu (F10, arrows, Enter, Escape); every tile, element and button has a name;
+  frame text has AA contrast in light and dark; no transition on any frame; frame text follows
+  Customize's size. (browser; plant: a transition on the frame)
+SIGNAGE
+- With the watermark off, `GPL` is on the mode-line and Help, Credits and licence shows Bryant with his
+  link and the licence words. (browser; plant: the lighter dropped)
+ROOF
+- No inline script or style (ui.js and free.js are files); LibreJS labels and jslicense rows for both;
+  no console errors and no request to another host in either setting; no `{{` placeholder on any page.
+  (Python, node, browser; plants: ui.js missing from jslicense; free.js asks another host; the
+  placeholder left in)
+- Icons from `shapes()` enter the page without `style` attributes or scripts. (browser)
+PEERING: the app, unchanged, through its documented calls and messages only; no script reaches into
+its page (the existing check, now over free.js too).
+REMOTES: about-corwin's Customize used as staged; the row and the placeholder are handled at our end.
+DOME
+- Storage refused: free still opens and the frame works. No sideways scroll at 1280 and 390, light and
+  dark, in both settings. Scripts off: the plain list of links. (browser)
+
+Manifest: none owed.
 
 ## Revision 3: the page asks the app (2026-11-01, late evening)
 

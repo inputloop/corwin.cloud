@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // nav.js: the navigator beside the drawing, drawn as an Emacs frame (docs/NAV.md says what and why).
+// Classic only (revision 4): it starts hidden to its grip row; in free, js/free.js is the finder.
 // Without this file the navigator is a plain list of links. With it:
 //   - a palette that floats over the drawing (js/float.js: drag its grip, arrow keys, or the Window
 //     menu; dock it left or right; hide it to a strip), with a menu bar that also carries the site's
@@ -21,6 +22,8 @@
   var doc = document, host = doc.getElementById('nav'), grid = doc.getElementById('stage-grid');
   var frame = doc.getElementById('topology');
   if (!host || !grid || !window.fetch || !window.JSON) return;
+  // free (docs/NAV.md, revision 4): the one Emacs frame (js/free.js) is the finder; this navigator is classic's
+  if (doc.documentElement.getAttribute('data-ui') !== 'classic') return;
   var KEY = 'corwin.cloud.nav.v1', MAXWIN = 4;
   var T = window.Taxonomy && window.Taxonomy.tokenize && window.Taxonomy.similarity ? window.Taxonomy : null;
   var FACET_NAMES = { show: 'Show', notation: 'Notation', pillar: 'Is a', says: 'Topic' };
@@ -685,7 +688,7 @@
     build();
     if (window.CCFloat && window.CCFloat.available) {
       fl = window.CCFloat.make({
-        name: 'nav', label: 'The navigator', el: host, grip: els.grip, edge: els.handle, docks: true, width: 320, hiddenNarrow: true,
+        name: 'nav', label: 'The navigator', el: host, grip: els.grip, edge: els.handle, docks: true, width: 320, hiddenNarrow: true, hidden: true,
         say: say,
         // starting on the left, over the canvas beside TopoForge's shapes; down to the legend's top
         place: function (edges, W, H) {

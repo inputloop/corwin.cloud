@@ -208,7 +208,8 @@ class SiteChecks(unittest.TestCase):
             t = read("js/" + f)
             self.assertIn("@license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&dn=gpl-3.0.txt GPL-3.0-or-later", t.splitlines()[0], f + " lacks its first-line label")
             self.assertIn("// @license-end", t, f)
-            self.assertIn("js/" + f, table, f + " is not in jslicense.html")
+            rows = table[table.index('id="jslicense-labels1"'):]   # the table itself, not the page's own script tags
+            self.assertIn('href="js/%s"' % f, rows, f + " is not in jslicense.html")
         for rel in ["index.html", "directory.html", "packages.html"]:
             self.assertIn('rel="jslicense"', read(rel))
         # the demos: every script file in a staged app has a row, and every staged page points at the table
@@ -269,26 +270,59 @@ class SiteChecks(unittest.TestCase):
             self.assertIn("placeholder", h)
 
     def test_the_frame_asks_for_the_apps_switches_and_full_size_for_none(self):
-        """topology forge 1.8's switches (topology's topoforge/spec/EMBED-v1.md): the home page frames it
-        frameless, with Properties floating, the page tabs in the overview, and the selection and ready
-        messages; "Full size" opens it on its own, with no switch."""
+        """topology forge 1.8's switches (topology's topoforge/spec/EMBED-v1.md), one set per page layout
+        (docs/NAV.md, revision 4): free asks for bare (every bar and panel hidden) with the selection and
+        ready messages; classic for the messages only, so the app keeps its own chrome. js/stage.js adds
+        the set to the address; "Full size" opens the app on its own, with no switch."""
         h = read("index.html")
         if not os.path.isdir(os.path.join(OUT, "topology")):
             return
-        want = "embed=frameless,props,pages,select,ready"
         m = re.search(r'<iframe id="topology"[^>]*>', h)
         self.assertTrue(m)
+        attr = lambda a: re.search(a + r'="([^"]*)"', m.group(0)).group(1).replace("&amp;", "&")
+        self.assertEqual(attr("data-embed-free"), "bare,select,ready", "free does not ask for bare and the messages")
+        self.assertEqual(attr("data-embed-classic"), "select,ready", "classic asks for more than the messages")
         for a in ("data-first", "data-resume"):
-            v = re.search(a + r'="([^"]*)"', m.group(0)).group(1)
-            self.assertIn(want, v.replace("&amp;", "&"), a + " does not ask for every switch")
+            self.assertTrue(attr(a).endswith("embed="), a + " is not ready for stage.js to add the switches")
+        st = read("js/stage.js")
+        self.assertIn("f.getAttribute('data-embed-' + ui)", st, "stage.js does not add the layout's switches")
         full = re.search(r'<a href="([^"]*)" id="stage-full">', h).group(1)
         self.assertNotIn("embed=", full, '"Full size" asks for switches: it should show the app as it is on its own')
         spec = os.path.join(TOPO, "topoforge", "spec", "EMBED-v1.md")
         if os.path.isfile(spec):   # every word asked for is one the app's spec defines
             with open(spec, encoding="utf-8") as f:
                 s = f.read()
-            for w in want.split("=")[1].split(","):
-                self.assertIn("| `%s` |" % w, s, "the app's spec has no switch " + w)
+            for w in ("bare,select,ready," + "select,ready").split(","):
+                self.assertIn("`%s`" % w, s, "the app's spec has no switch " + w)
+
+    def test_the_layout_is_set_before_the_page_is_drawn(self):
+        """docs/NAV.md, revision 4: js/ui.js runs in the head without defer, on every page, before the
+        stylesheet's rules can draw the wrong layout; it keeps one key, inside try."""
+        for rel in PAGES:
+            h = read(rel)
+            if "<head>" not in h:
+                continue
+            head = h.split("</head>")[0]
+            self.assertRegex(head, r'<script src="(/|(\.\./)*)js/ui\.js"></script>', rel + " does not load ui.js in the head without defer")
+        u = read("js/ui.js")
+        self.assertIn("KEY = 'corwin.cloud.ui.v1'", u)
+        for ln in u.splitlines():
+            if "localStorage" in ln:
+                self.assertRegex(ln, r"try \{.*localStorage\.(get|set)Item\(KEY", "ui.js touches storage outside try: " + ln.strip())
+        self.assertIn("'free'", u.split("var ui =")[1].split(";")[0], "free is not the default")
+
+    def test_no_long_explanatory_text_is_built_on_the_home_page(self):
+        """Corwin, 2026-11-01 21:41: classic "can keep the emacs esque footer line and loose all of the self
+        congratulatory extemporizing". The heading is two words; no paragraph outside the project
+        panels, the legend's cells and the colophon runs past 160 characters."""
+        h = read("index.html")
+        self.assertRegex(h, r'<h1 id="stage-h" class="stage-h">The shop, drawn</h1>')
+        body = re.sub(r'<section class="panel".*?</section>\n', "", h, flags=re.S)
+        body = re.sub(r'<aside class="legend".*?</aside>', "", body, flags=re.S)
+        body = re.sub(r'<div class="side shared-ci">.*?</div>\s*</div>', "", body, flags=re.S)
+        for m in re.finditer(r"<(p|li|h1|h2)\b(?![^>]*class=\"colophon\")[^>]*>(.*?)</\1>", body, re.S):
+            text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", m.group(2))).strip()
+            self.assertLessEqual(len(text), 160, "long text on the home page: " + text[:80])
 
     def test_the_app_is_named_topology_forge_with_bryant_first(self):
         """Corwin, 2026-11-01: the app is "topology forge (formerly TopoForge)" in our text; Bryant first."""
@@ -465,8 +499,12 @@ class NextPassChecks(unittest.TestCase):
             self.assertEqual(a.read(), b.read(), "js/customize.js is not about-corwin's, byte for byte")
         src = open(os.path.join(ABOUT, "src", "index.html"), encoding="utf-8").read()
         block = re.search(r'\n(<div class="custom" id="custom">\n.*?\n</div>)\n', src, re.S).group(1)
+        # its page is a template since 2026-11-01: a placeholder is filled with nothing, as about-corwin's
+        # own build does with the tone pads off; nothing else differs, and no placeholder reaches a page
+        block = re.sub(r"\{\{[A-Z_]+\}\}", "", block)
         for rel in PAGES:
             self.assertIn(block, read(rel), rel + " lacks about-corwin's Customize block")
+            self.assertNotRegex(read(rel), r"\{\{[A-Z_]+\}\}", rel + " shows a template placeholder as text")
             self.assertIn("css/shared.css", read(rel), rel)
         css = read("css/shared.css")
         for title in ("reading settings (Customize)", "Customize: the floating control"):

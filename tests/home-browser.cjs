@@ -1,7 +1,7 @@
 // @license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&dn=gpl-3.0.txt GPL-3.0-or-later
 // SPDX-FileCopyrightText: 2026 INPUTLOOP
 // SPDX-License-Identifier: GPL-3.0-or-later
-// The home page, revision 2 of docs/NAV.md, in a browser (needs the playwright package):
+// The home page in classic (docs/NAV.md, revisions 2 to 4), in a browser (needs the playwright package):
 //   SITE_OUT=dir [SHOTS=dir] node tests/home-browser.cjs
 // The drawing loads for a returning visitor; the palettes float, move, dock, hide and keep their
 // place; every menu item answers; the minibuffer wears the frame's face; the legend credits Bryant
@@ -53,18 +53,18 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     await p.goto(base + '404.html');
     const kept = await p.evaluate((k) => JSON.parse(localStorage.getItem(k) || 'null'), AUTOSAVE);
     assert.ok(kept && kept.name === 'Sample office network' && kept.pages[0].name === 'Page-1', 'TopoForge on its own did not keep its sample (the case to reproduce)');
-    await p.goto(base + 'index.html'); await waitDoc(p, drawing.doc); await ready(p);
+    await p.goto(base + 'index.html?ui=classic'); await waitDoc(p, drawing.doc); await ready(p);
     assert.match(await p.textContent('#stage-msg'), /TopoForge's own sample/);
     assert.equal(await p.isHidden('#stage-notice'), true);
     ok('a returning visitor whose browser kept TopoForge\'s own sample (Page-1) sees the shop\'s drawings, and is told why');
     // an empty drawing (TopoForge's File, New)
     await plant(p, JSON.stringify({ format: 'topoforge', version: 1, name: 'Untitled topology', pages: [{ name: 'Page-1', nodes: [], links: [] }], cur: 0 }));
-    await p.goto(base + 'index.html'); await waitDoc(p, drawing.doc);
+    await p.goto(base + 'index.html?ui=classic'); await waitDoc(p, drawing.doc);
     assert.match(await p.textContent('#stage-msg'), /was empty/);
     ok('an empty kept drawing does not stop the shop\'s drawings opening');
     // a drawing of the visitor's own: kept, with a notice and a way to the shop's
     await plant(p, JSON.stringify({ name: 'mine', pages: [{ name: 'P', nodes: [{ id: 'a', type: 'server', x: 0, y: 0, w: 80, h: 60, text: 'my box' }], links: [] }], cur: 0 }));
-    await p.goto(base + 'index.html'); await waitDoc(p, 'mine'); await ready(p);
+    await p.goto(base + 'index.html?ui=classic'); await waitDoc(p, 'mine'); await ready(p);
     assert.equal(await p.isVisible('#stage-notice'), true, 'no notice over a drawing of the visitor\'s own');
     assert.match(await p.textContent('#stage-notice'), /your own drawing, kept in this browser: .mine./);
     assert.ok(!/load=/.test(await p.getAttribute('#stage-full', 'href')), '"TopoForge full size" would open the shop\'s drawings over the visitor\'s own');
@@ -74,11 +74,11 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     // an older copy of the shop's drawings
     const old = JSON.parse(JSON.stringify(shopJson)); old.pages = old.pages.slice(0, -2);
     await plant(p, JSON.stringify(old));
-    await p.goto(base + 'index.html'); await waitDoc(p, drawing.doc); await ready(p);
+    await p.goto(base + 'index.html?ui=classic'); await waitDoc(p, drawing.doc); await ready(p);
     assert.match(await p.textContent('#stage-notice'), /older than this site: 2 pages are missing/);
     ok('an older copy of the shop\'s drawings says so, with a way to the current one');
     // nothing kept: "TopoForge full size" carries ?load=
-    await plant(p, null); await p.goto(base + 'index.html'); await waitDoc(p, drawing.doc);
+    await plant(p, null); await p.goto(base + 'index.html?ui=classic'); await waitDoc(p, drawing.doc);
     assert.match(await p.getAttribute('#stage-full', 'href'), /\?load=/);
     ok('"TopoForge full size" opens the shop\'s drawings when nothing of the visitor\'s is kept (it no longer plants the sample)');
     await plant(p, null);
@@ -96,11 +96,12 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     const box = (s) => p.locator(s).boundingBox();
     const echo = () => p.textContent('#nav-echo');
     await plant(p, null);
-    await p.goto(base + 'index.html'); await waitDoc(p, drawing.doc); await ready(p); await p.waitForTimeout(600);
+    await p.goto(base + 'index.html?ui=classic'); await waitDoc(p, drawing.doc); await ready(p); await p.waitForTimeout(600);
     if (shots) { fs.mkdirSync(shots, { recursive: true }); await p.screenshot({ path: path.join(shots, `home-${scheme}-${w}.png`) }); }
 
-    // the frameless page: the top bar folded into the Site menu on a wide screen
-    assert.equal(await p.isVisible('header.top'), !wide, `the top bar is ${wide ? 'shown' : 'hidden'} at ${tag}`);
+    // classic (revision 4): the site's top bar is back at the top at every width
+    assert.equal(await p.isVisible('header.top'), true, `the top bar is hidden in classic at ${tag}`);
+    assert.equal(await p.evaluate(() => document.documentElement.getAttribute('data-ui')), 'classic');
     if (!(await p.isVisible('#nav-q'))) await p.click('.nf-hide');
     await p.click('.menu-b[data-menu="Site"]');
     const site = await p.$$eval('#nf-pop a.mi', (as) => as.map((a) => a.getAttribute('href')));
@@ -199,52 +200,36 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       ok(`on a narrow screen nothing floats: the navigator sits above the drawing, with no dock buttons, at ${tag}`);
     }
 
-    // the app's switches, as the frame asks for them, and its selection in the navigator's mode-line
+    // classic asks the app for its messages only: it keeps its own chrome; its selection in the navigator's mode-line
     if (wide && scheme === 'light') {
       const fr = p.frame({ url: (u) => /topoforge\/index\.html/.test(u.pathname) });
       const cls = await fr.evaluate(() => document.body.className);
-      for (const c of ['tf-frameless', 'tf-fl-props', 'tf-pages']) assert.ok(cls.includes(c), 'the app was not asked for ' + c + ' (' + cls + ')');
-      assert.ok(!cls.includes('tf-fl-shapes'), 'the shapes float: this page keeps them as a column');
+      for (const c of ['tf-frameless', 'tf-fl-props', 'tf-pages', 'tf-hide-menus', 'tf-hide-shapes', 'tf-hide-props', 'tf-hide-pages']) assert.ok(!cls.includes(c), 'classic asked the app for ' + c + ' (' + cls + ')');
+      assert.ok(await fr.isVisible('#pagetabs'), 'the app\'s own page tabs are not shown in classic');
       const id = await fr.evaluate(() => { const n = TopoForge.doc.pages[TopoForge.doc.cur].nodes.find((x) => x.data && x.data.what); TopoForge.select([n.id]); return { text: n.text.split('\n')[0], what: n.data.what }; });
       await p.waitForFunction((t) => [...document.querySelectorAll('#nav .ml-item')].some((s) => s.textContent.includes('Selected in the drawing: ' + t)), id.text, { timeout: 5000 });
       const line = await p.textContent('#nav .ml-item');
       assert.ok(line.includes(id.what), 'the mode-line does not carry the shape\'s tooltip: ' + line);
       await fr.evaluate(() => TopoForge.select([])); await p.waitForTimeout(200);
       assert.ok(!(await p.textContent('#nav .ml-item')).includes('Selected in the drawing'), 'the selection stays in the mode-line after it is cleared');
-      ok('the app opens frameless, Properties floating, page tabs in the overview; what is selected in it shows in the mode-line with its tooltip, and clears');
+      ok('classic: the app keeps its own chrome; what is selected in it shows in the navigator\'s mode-line with its tooltip, and clears');
     }
 
-    // the legend
-    const bryant = p.locator('#legend .lg-app a[href="https://github.com/takushieternal"]');
-    assert.equal(await bryant.count(), 1, 'the legend does not link Bryant'); assert.ok(await bryant.isVisible());
-    const lic = await p.textContent('#legend .lg-lic');
-    for (const s of ['GPL-3.0-or-later', 'LGPL-3.0-or-later', 'your choice', 'CC-BY-SA-4.0']) assert.ok(lic.includes(s), 'the licence cell lacks ' + s);
-    for (const href of ['https://github.com/inputloop/topology/tree/corwin/www/topoforge', 'https://github.com/inputloop/topology/tree/corwin/topoforge'])
-      assert.equal(await p.locator(`#legend .lg-src a[href="${href}"]`).count(), 1, 'the source cell lacks ' + href);
-    const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-cell dd'), dt = document.querySelector('#legend .lg-cell dt'); return [getComputedStyle(c).color, getComputedStyle(dt).color, getComputedStyle(c.parentElement).backgroundColor]; });
-    assert.ok(contrast(lgc[0], lgc[2]) >= 4.5 && contrast(lgc[1], lgc[2]) >= 4.5, 'the legend\'s text is below AA');
-    const cells = await p.$$eval('#legend .lg-cell', (cs) => cs.map((c) => [c.className, c.getBoundingClientRect().width * c.getBoundingClientRect().height]));
-    const area = (k) => cells.filter((c) => k.some((x) => c[0].includes(x))).reduce((a, c) => a + c[1], 0);
-    assert.ok(area(['lg-app', 'lg-lic', 'lg-src']) >= area(['lg-sheet']), 'TopoForge\'s cells take less room than ours');
-    ok(`the legend names Bryant with his link, TopoForge's licence and its source, in more room than ours, AA, at ${tag}`);
-    await p.click('.lg-hide');
-    assert.equal(await p.isVisible('#legend .lg-grid'), false);
-    assert.ok(await p.locator('#legend .lg-short a[href="https://github.com/takushieternal"]').isVisible(), 'hidden, the legend no longer credits Bryant');
+    // the legend, in classic: its one row under the drawing (the five cells are free's watermark and *Credits*)
+    const row = p.locator('#legend .lg-short a[href="https://github.com/takushieternal"]');
+    assert.ok(await row.isVisible(), 'classic does not credit Bryant under the drawing');
     assert.match(await p.textContent('#legend .lg-short'), /GPL-3\.0-or-later or LGPL-3\.0-or-later · prose CC-BY-SA-4\.0/);
-    await p.click('.lg-hide');
-    ok(`hidden to one row, the legend still credits Bryant with his link and the licence, at ${tag}`);
-    if (wide && scheme === 'dark') {
-      const g = await box('.lg-grip'), l0 = await box('#legend');
-      await p.focus('.lg-grip'); await p.keyboard.press('ArrowUp');
-      assert.ok(Math.abs((await box('#legend')).y - l0.y + 16) <= 1, 'ArrowUp on the legend\'s grip did not move it');
-      await p.mouse.move(g.x + 20, g.y + 5); await p.mouse.down(); await p.mouse.move(g.x - 30, g.y - 45, { steps: 5 }); await p.mouse.up();
-      const l1 = await box('#legend');
-      await p.reload(); await waitDoc(p, drawing.doc); await ready(p);
-      const l2 = await box('#legend'); assert.ok(Math.abs(l2.x - l1.x) <= 1 && Math.abs(l2.y - l1.y) <= 1, 'the legend\'s place was not kept');
-      await p.click('#topology', { position: { x: 600, y: 300 } }); await p.waitForTimeout(150);
-      assert.equal(await p.isVisible('#legend .lg-grid'), false, 'focus went into the drawing and the legend still covers it');
-      ok('the legend moves by its grip and the arrow keys, keeps its place, and hides to its row when focus goes into the drawing');
-    }
+    assert.equal(await p.isVisible('#legend .lg-app'), false, 'classic shows the five-cell legend');
+    assert.ok(await p.isVisible('#stage-full') && await p.isVisible('#stage-fresh'), 'classic hides the app full size or Start again');
+    const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-short'); let el = c, bg; while (el) { bg = getComputedStyle(el).backgroundColor; if (!/rgba\(0, 0, 0, 0\)|transparent/.test(bg)) break; el = el.parentElement; } return [getComputedStyle(c).color, bg || 'rgb(255, 255, 255)']; });
+    assert.ok(contrast(lgc[0], lgc[1]) >= 4.5, 'the credit row is below AA');
+    ok(`classic credits Bryant with his link and the licence in one row, AA, with the app full size and Start again, at ${tag}`);
+    // no long prose outside the project panels (Corwin: "loose all of the self congratulatory extemporizing");
+    // the colophon is the site's credit and licence words, which stay
+    const long = await p.evaluate(() => [...document.querySelectorAll('body *')].filter((el) => el.offsetParent && !el.closest('[role="tabpanel"], #nav, #custom-panel, .shared-ci, .colophon')
+      && [...el.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim()) && el.innerText.replace(/\s+/g, ' ').trim().length > 160).map((el) => el.tagName + ': ' + el.textContent.trim().slice(0, 70)));
+    assert.deepEqual(long, [], 'long prose in classic: ' + long.join(' | '));
+    ok(`classic has no block of prose longer than 160 characters outside the project panels, at ${tag}`);
     assert.ok((await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 0, 'the page scrolls sideways at ' + tag);
     assert.deepEqual(offsite, [], 'requests to other hosts: ' + offsite.join(' | '));
     assert.deepEqual(errors, [], 'console errors: ' + errors.join(' | '));
@@ -256,7 +241,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
   // ---- 3. scripts off, and storage refused ----------------------------------------------------------
   {
     const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 1280, height: 900 } }); const p = await ctx.newPage();
-    await p.goto(base + 'index.html');
+    await p.goto(base + 'index.html?ui=classic');
     assert.equal(await p.isVisible('header.top'), true);
     assert.ok(await p.locator('#legend .lg-app a[href="https://github.com/takushieternal"]').isVisible());
     assert.ok(await p.locator('#nav a[data-item]').first().isVisible());
@@ -267,14 +252,14 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     await ctx.addInitScript(() => { Object.defineProperty(window, 'localStorage', { get() { throw new Error('refused'); } }); });
     const p = await ctx.newPage(); const errs = []; p.on('pageerror', (e) => errs.push(e.message));
-    await p.goto(base + 'index.html'); await ready(p);
+    await p.goto(base + 'index.html?ui=classic'); await ready(p);
     const b0 = await p.locator('#nav').boundingBox();
     await p.focus('#nav-grip'); await p.keyboard.press('ArrowDown');
     assert.ok(Math.abs((await p.locator('#nav').boundingBox()).y - b0.y - 16) <= 1, 'with storage refused the navigator does not move');
-    assert.ok(await p.evaluate(() => document.getElementById('legend').classList.contains('fl-float')));
+    assert.ok(await p.locator('#legend .lg-short').isVisible());
     assert.deepEqual(errs, [], 'errors with storage refused: ' + errs.join(' | '));
     await ctx.close();
-    ok('with storage refused the navigator and the legend still float and move');
+    ok('with storage refused (classic from the address) the navigator still floats and moves, and the credit row shows');
   }
   await browser.close(); server.close();
   console.log('home browser checks passed: ' + n);

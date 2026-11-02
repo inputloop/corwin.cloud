@@ -272,11 +272,11 @@ test('every file the site serves revalidates: no-cache with an ETag, in every lo
 
 // ---- the app's own messages and calls (topology forge 1.8) ----------------------------------------
 test('the home page scripts ask the app, never reach into its page, and hear only its own frame', () => {
-  for (const f of ['stage.js', 'nav.js', 'float.js']) {
+  for (const f of ['stage.js', 'nav.js', 'float.js', 'free.js']) {
     const s = rd('js/' + f);
     for (const bad of ['contentDocument', '#pagetabs', '.ptab', "getElementById('palette')", "getElementById('side')"]) assert.ok(!s.includes(bad), f + ' reaches into the app\'s page: ' + bad);
     const listeners = s.split("addEventListener('message'").length - 1;
-    const guarded = (s.match(/ev\.origin !== window\.location\.origin \|\| ev\.source !== (f|frame)\.contentWindow/g) || []).length;
+    const guarded = (s.match(/ev\.origin !== window\.location\.origin \|\| ev\.source !== (f|frame|app)\.contentWindow/g) || []).length;
     assert.equal(guarded, listeners, f + ': ' + listeners + ' message listener(s), ' + guarded + ' checking the origin and that the message is from the frame');
   }
   assert.ok(rd('js/stage.js').includes('showPage('), 'stage.js does not open a page by the app\'s own showPage');
@@ -290,9 +290,48 @@ test('float.js asks the network for nothing, keeps storage inside try under its 
   assert.ok(!/\bfetch\(|XMLHttpRequest|sendBeacon|WebSocket|EventSource|https?:\/\//.test(body), 'float.js reaches the network');
   const lines = floatSrc.split('\n').filter((l) => /localStorage/.test(l));
   assert.ok(lines.length >= 2);
-  for (const l of lines) assert.match(l, /try \{.*localStorage\.(get|set)Item\(KEY/, 'storage outside try: ' + l.trim());
+  for (const l of lines) assert.match(l, /try \{.*localStorage\.(get|set)Item\(F?KEY/, 'storage outside try: ' + l.trim());
   assert.match(floatSrc, /KEY = 'corwin\.cloud\.float\.v1'/);
+  assert.match(floatSrc, /FKEY = 'corwin\.cloud\.free\.v1'/);
   const tf = floatSrc.split('\n').filter((l) => /contentDocument|\bd\.|\bp\.|\bs\./.test(l) && /contentDocument|getElementById\('(palette|side)'\)/.test(l));
   for (const l of tf) assert.ok(!/(appendChild|setAttribute|classList|innerHTML|textContent\s*=|style\.)/.test(l), 'float.js changes TopoForge: ' + l.trim());
 });
 
+
+// ---- free and classic (docs/NAV.md, revision 4) ----------------------------------------------------
+const freeSrc = existsSync(join(out, 'js', 'free.js')) ? rd('js/free.js') : null;
+test('free.js reads one file from this site, nav/index.json, keeps nothing in storage, and names no other host', { skip: !freeSrc }, () => {
+  const body = freeSrc.split('\n').slice(1).join('\n');
+  const fetches = body.match(/\bfetch\(([^,)]*)/g) || [];
+  assert.deepEqual(fetches, ["fetch('nav/index.json'"], 'free.js fetches: ' + fetches.join(', '));
+  assert.ok(!/XMLHttpRequest|sendBeacon|WebSocket|EventSource|https?:\/\/(?!www\.w3\.org\/2000\/svg)/.test(body), 'free.js reaches another host');
+  assert.ok(!/localStorage|sessionStorage|indexedDB|document\.cookie/.test(body), 'free.js keeps something in this browser itself (places are float.js\'s)');
+});
+test('free.js asks the app only through its documented calls', { skip: !freeSrc }, () => {
+  // every name given tf() (the app's window.TopoForge), and every call made on it
+  const names = [...new Set((freeSrc.match(/\b(\w+) = tf\(\)/g) || []).map((m) => m.split(' ')[0]))];
+  assert.ok(names.length >= 1);
+  const calls = new Set();
+  for (const n of names) for (const m of freeSrc.matchAll(new RegExp('\\b' + n + '\\.(\\w+)\\(', 'g'))) calls.add(m[1]);
+  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready'];
+  for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
+  for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
+});
+test('the Emacs frame\'s keys start with Ctrl, Alt, Escape (Emacs\'s ESC prefix) or F10: no letter alone runs anything', { skip: !freeSrc }, () => {
+  const k = freeSrc.slice(freeSrc.indexOf('function keys(f, ev)'), freeSrc.indexOf("// Alt+x anywhere on the page"));
+  assert.ok(k.length > 500);
+  assert.match(k, /if \(inField\) return;/);
+  assert.match(k, /ev\.ctrlKey && !ev\.altKey && !ev\.metaKey && \(k === 'x' \|\| k === 'X'\)\) \{ ev\.preventDefault\(\); prefix = 'C-x'/);
+  assert.ok(!/if \(k === '[a-z0-9.]'\)/.test(k), 'a single key starts something');
+});
+test('nothing in an Emacs frame moves by itself: its stylesheet section has no transition or animation', () => {
+  const css = rd('css/site.css'), sec = css.slice(css.indexOf('/* ---- page layouts: free and classic'));
+  assert.ok(sec.length > 1000, 'the free and classic section is missing');
+  assert.ok(!/transition|animation/.test(sec.replace(/\/\*[\s\S]*?\*\//g, '')), 'an Emacs frame animates');
+});
+test('ui.js keeps one key inside try, defaults to free, and asks the network for nothing', () => {
+  const u = rd('js/ui.js'), body = u.split('\n').slice(1).join('\n');
+  assert.ok(!/\bfetch\(|XMLHttpRequest|sendBeacon|https?:\/\//.test(body));
+  for (const l of u.split('\n').filter((x) => /localStorage/.test(x))) assert.match(l, /try \{.*localStorage\.(get|set)Item\(KEY/, 'storage outside try: ' + l.trim());
+  assert.match(u, /: 'free';/);
+});

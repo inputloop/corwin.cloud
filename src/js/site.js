@@ -110,6 +110,8 @@
     doc.addEventListener('keydown', function (ev) {
       // Alt+x, as M-x. No single-key shortcuts: a stray key never moves the page.
       if (ev.altKey && !ev.ctrlKey && !ev.metaKey && (ev.key === 'x' || ev.key === '≈' || ev.code === 'KeyX')) {
+        // the free home page has no footer prompt: its Emacs frame takes Alt+x (js/free.js)
+        if (html.getAttribute('data-ui') === 'free' && doc.body.getAttribute('data-page') === 'home') return;
         ev.preventDefault();
         input.scrollIntoView(); input.focus();
       }

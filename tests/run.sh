@@ -34,8 +34,10 @@ run_checks() {
       SITE_OUT=$out "$node" tests/browser.cjs || fail=1
       step "the navigator in the browser (playwright)"
       SITE_OUT=$out "$node" tests/nav-browser.cjs || fail=1
-      step "the home page, revision 2: the drawing loads, the palettes, the minibuffer, the legend (playwright)"
+      step "the home page in classic: the drawing loads, the navigator, the minibuffer, the credit row (playwright)"
       SITE_OUT=$out "$node" tests/home-browser.cjs || fail=1
+      step "the home page in free, and the switch: the Emacs frame, the tool-bar, the mode-line, the watermark (playwright)"
+      SITE_OUT=$out "$node" tests/free-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -125,7 +127,8 @@ prove_red() {
   plant "a nav category with no reason"      navindex.py  's#self.d\["why"\]\["%s:%s" % (facet, value)\] = why#self.d["why"]["%s:%s" % (facet, value)] = ""#'
   plant "taxonomy.js staged altered"         share.py     's#        f.write(t)$#        f.write(t + "//x\\n")#'
   plant "the nav has no plain list"          build.py     's#NV.render(navx) if navx else ""#""#'
-  plant "nav.js missing from jslicense"      build.py     's#"float.js", "nav.js")#"float.js")#'
+  plant "nav.js missing from jslicense"      build.py     's#"float.js", "nav.js", #"float.js", #'
+  plant "free.js missing from jslicense"     build.py     's#, "nav.js", "free.js")#, "nav.js")#'
   plant "float.js missing from jslicense"    build.py     's#"badges.js", "float.js"#"badges.js"#'
   plant "float.js reads storage outside try" src/js/float.js 's#^  function saveAll() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function saveAll() {#'
   plant "float.js asks another host"         src/js/float.js 's#^  var all = {}, list = \[\];#  var all = {}, list = []; fetch("https://x.example/");#'
@@ -136,7 +139,20 @@ prove_red() {
   # topology forge 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
   plant "scripts cached for a day again"    deploy/nginx-corwin.cloud.conf 's#^        add_header Cache-Control "no-cache" always;\(.*\)$#        add_header Cache-Control "public, max-age=86400";#'
   plant "topology not revalidated"          deploy/corwin.cloud.interim.conf '/corwin-cloud-topology-csp.conf;/{n;d;}'
-  plant "the frame asks for no selection"   build.py     's#^TF_EMBED = "frameless,props,pages,select,ready"#TF_EMBED = "frameless,props,pages,ready"#'
+  plant "the frame asks for no selection"   build.py     's#^TF_EMBED_FREE = "bare,select,ready"#TF_EMBED_FREE = "bare,ready"#'
+  plant "classic asks the app to hide its chrome" build.py 's#^TF_EMBED_CLASSIC = "select,ready"#TF_EMBED_CLASSIC = "bare,select,ready"#'
+  # revision 4 (docs/NAV.md): free and classic
+  plant "long explanatory text back"        build.py     's#<p class="hint">One tab per project. #<p class="hint">The projects in words: one tab each, with the design in full. Every project in the directory also has a page in the drawing above, and this sentence runs on and on. #'
+  plant "ui.js missing from jslicense"      build.py     's#^JS_FILES = ("ui.js", #JS_FILES = (#'
+  plant "ui.js deferred (the wrong layout flashes)" build.py 's#<script src="js/ui.js"></script>#<script src="js/ui.js" defer></script>#'
+  plant "ui.js keeps storage outside try"   src/js/ui.js 's#^  var asked = null;#  var asked = null; window.localStorage.getItem(KEY);#'
+  plant "a template placeholder left in"    share.py     's#res\["markup"\] = re.sub(r"\\{\\{\[A-Z_\]+\\}\\}", "", m.group(1))#res["markup"] = m.group(1)#'
+  plant "free.js asks another host"         src/js/free.js "s#window.fetch('nav/index.json'#window.fetch('https://x.example/nav/index.json'#"
+  plant "free.js keeps something itself"    src/js/free.js 's#^  var frames = \[\], cur = null#  try { localStorage.setItem("x", "1"); } catch (e) {} var frames = [], cur = null#'
+  plant "free.js reaches into the app"      src/js/free.js 's#var w = app.contentWindow; return#var w = app.contentWindow; void app.contentDocument; return#'
+  plant "free.js calls an undocumented app call" src/js/free.js 's#t.place(id, .center.);#t.addShapeCenter(id);#'
+  plant "an Emacs frame animates"           src/css/site.css 's#^\.ef-msg { margin: 0;#.ef-msg { transition: color 1s; margin: 0;#'
+  plant "a single key starts a frame command" src/js/free.js "s#if (ev.ctrlKey \&\& !ev.altKey \&\& !ev.metaKey \&\& (k === 'x' || k === 'X')) { ev.preventDefault(); prefix = 'C-x'#if ((k === 'x' || k === 'X')) { ev.preventDefault(); prefix = 'C-x'#"
   plant "Full size asks for switches"       build.py     's#% (e(first, quote=True), e(index\["file"\], quote=True))),#% (e(first + "\&embed=all", quote=True), e(index["file"], quote=True))),#'
   plant "the legend says only TopoForge"    build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "TopoForge"#'
   plant "the name misspelled"               build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "topograph""y forge (formerly TopoForge)"#'
@@ -181,7 +197,28 @@ prove_red() {
     plant_b "the minibuffer input boxed again"    src/css/site.css 's#background: transparent; border: 0; border-radius: 0; padding: 0; margin: 0; min-height: 24px; caret#background: transparent; border: 1px solid; border-radius: 0; padding: 0; margin: 0; min-height: 24px; caret#' $H
     plant_b "the echo area in another face"       src/css/site.css 's#height: 60px; overflow: auto; font: inherit;#max-height: 6.5em; overflow: auto; font: 14px/22px var(--sans);#' $H
     plant_b "the selection not in the mode-line" src/js/nav.js "s#drawSel = m.detail.count ? m.detail : null;#drawSel = null;#" $H
-    plant_b "the legend covers focus"             src/js/float.js 's#L.temp = true; L.apply();#L.apply();#' $H
+    F=tests/free-browser.cjs
+    plant_b "the legend covers focus"             src/js/float.js 's#L.temp = true; L.apply();#L.apply();#' $F
+    plant_b "the top bar shown in free"           src/css/site.css 's#^html\[data-ui="free"\] body\[data-page="home"\] header.top,$##' $F
+    plant_b "the top bar hidden in classic"       src/css/site.css 's#^html\[data-ui="free"\] body\[data-page="home"\] .custom .custom-btn { display: none; }#& body[data-page="home"] header.top { display: none; }#' $H
+    plant_b "long prose shown in classic"         src/css/site.css 's#^html\[data-ui="classic"\] .legend .lg-you dt, html\[data-ui="classic"\] .legend .lg-keep { display: none; }#html[data-ui="classic"] .legend .lg-you dt { display: none; } .lg-you dd::after { content: " This drawing app is the finest thing anyone has ever made, and we are proud to say so at length, every time, here."; }#' $H
+    plant_b "the switch not kept"                 src/js/ui.js 's#^  if (asked === ui) keep(ui);##' $F
+    plant_b "a link to a tab stays free"          src/js/ui.js "s#: deep ? 'classic' :#: false ? 'classic' :#" $F
+    plant_b "a tile that does not narrow"         src/js/free.js 's#return !s.tiles.length || s.tiles.indexOf(c.id) >= 0;#return true;#' $F
+    plant_b "Enter on a shape places nothing"     src/js/free.js "s#placeShape(row.getAttribute('data-shape'), true); return;#return;#" $F
+    plant_b "a mode-line element with no command" src/js/free.js "s#text: function () { return PAGE ? 'p:' + PAGE : ''; }, act: 'pages',#text: function () { return PAGE ? 'p:' + PAGE : ''; }, act: null,#" $F
+    plant_b "the selection not in %select"        src/js/free.js "s#else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null;#else if (m.type === 'topoforge:select') { SEL = null;#" $F
+    plant_b "the input stays when focus leaves"   src/js/free.js "s#f.form.addEventListener('focusout'#f.form.addEventListener('focusoutx'#" $F
+    plant_b "ESC x is not M-x"                    src/js/free.js "s#'ESC': { 'x': 'execute-extended-command' }#'ESC': {}#" $F
+    plant_b "C-x 5 2 undefined"                   src/js/free.js "s#, '5': 'C-x 5' }#}#" $F
+    plant_b "a split without its mode-line (free)" src/js/free.js "s#}, \[body, ml\]);#}, [body]);#" $F
+    plant_b "an app command left out of the menus" src/js/free.js "s#refreshCmds().filter(function (c) { return c.menu.toLowerCase() === menu.toLowerCase(); })#refreshCmds().filter(function (c) { return c.menu.toLowerCase() === menu.toLowerCase() \&\& c.label !== 'Grid'; })#" $F
+    plant_b "GPL dropped from the mode-line"      src/js/free.js "s#\['GPL', 'credits', #['', 'credits', #" $F
+    plant_b "the watermark's off not kept"        src/js/float.js 's#setOff(!!freeState().legendOff, true);#setOff(false, true);#' $F
+    plant_b "the frame's text ignores Customize"  src/css/site.css 's#font: calc(13px \* var(--read-scale, 1))/1.5 var(--mono); }#font: 13px/1.5 var(--mono); }#' $F
+    plant_b "*Here* without the access settings"  src/js/free.js "s#mk('span', { cls: 'ef-gl', text: 'Colours: ' })#mk('span', { cls: 'ef-gl', text: 'Paint: ' })#" $F
+    plant_b "the free page scrolls sideways at 390" src/css/site.css 's#^  .ef { flex: none; border-width: 1px 0 0; }#  .ef { flex: none; border-width: 1px 0 0; min-width: 480px; }#' $F
+    plant_b "the frame's text below AA"           src/css/site.css 's#^\.ef-count { font-weight: 400; color: var(--text-dim);#.ef-count { font-weight: 400; color: var(--canvas-active);#' $F
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

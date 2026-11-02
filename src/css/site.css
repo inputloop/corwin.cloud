@@ -379,18 +379,16 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
 .stage-notice[hidden] { display: none; }
 /* frameless, on a wide screen with scripts: the drawing full-bleed, the palettes over it */
 @media (min-width: 47.51rem) {
-  html.js body[data-page="home"] header.top { display: none; }
-  html.js body[data-page="home"] .custom .custom-btn { display: none; }
-  html.js .stage-h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; }
-  html.js .stage-grid { display: block; position: relative; height: calc(100vh - 29px); min-height: 30rem; border-bottom: 0; }
-  html.js .stage-grid.dock-left { display: grid; grid-template-columns: var(--dock-w, 320px) minmax(0, 1fr); }
-  html.js .stage-grid.dock-right { display: grid; grid-template-columns: minmax(0, 1fr) var(--dock-w, 320px); }
+  html.js .stage-grid { display: flex; flex-direction: column; position: relative; height: calc(100vh - 8.5rem); min-height: 30rem; border-bottom: 0; }
+  html.js .stage-grid > .stage-drawing { flex: 1 1 auto; min-height: 0; }
+  html.js .stage-grid.dock-left { display: grid; grid-template-columns: var(--dock-w, 320px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  html.js .stage-grid.dock-right { display: grid; grid-template-columns: minmax(0, 1fr) var(--dock-w, 320px); grid-template-rows: minmax(0, 1fr) auto; }
+  html.js .stage-grid.dock-left > .legend, html.js .stage-grid.dock-right > .legend { grid-column: 1 / -1; }
   html.js .stage-grid.dock-left.dock-hidden { grid-template-columns: 2rem minmax(0, 1fr); }
   html.js .stage-grid.dock-right.dock-hidden { grid-template-columns: minmax(0, 1fr) 2rem; }
   html.js .stage-grid.dock-right > .navframe { grid-column: 2; grid-row: 1; }
   html.js .stage-grid.dock-right > .stage-drawing { grid-column: 1; grid-row: 1; }
   html.js .stage-drawing { height: 100%; }
-  html.js .stage-grid > .legend { grid-column: auto; }
   .navframe.fl-float { position: absolute; left: var(--fx, 212px); top: var(--fy, 54px); width: var(--fw, 320px); height: var(--fh, calc(100% - var(--fy, 54px) - 44px)); min-height: 12rem; z-index: 5; border: 1px solid var(--border); }
   .navframe.fl-float.fl-hidden { height: auto; min-height: 0; width: auto; max-width: var(--fw, 320px); }
   .navframe.fl-left, .navframe.fl-right { height: 100%; }
@@ -428,3 +426,162 @@ table.vendor code.hash { font-size: 12px; overflow-wrap: anywhere; word-break: b
   .g-hexagon, .g-triangle { background: CanvasText; }
 }
 @media print { .navframe { display: none !important; } }
+
+/* ---- page layouts: free and classic (docs/NAV.md, revision 4) --------------------------------------
+   js/ui.js sets <html data-ui="free|classic"> before the page is drawn. Classic: the top bar, a short
+   heading, the app with its own chrome, the legend as its one row, the footer. Free: our background,
+   the drawing filling the window, one Emacs frame, the legend as a watermark. Nothing here moves by
+   itself: no transition or animation on any frame. */
+.legend .lg-msg { margin: 0; padding: 0 var(--s2); min-height: 0; }
+.legend .lg-msg:empty { display: none; }
+.proc-h { font-size: 14px; line-height: 22px; margin: 0; font-weight: 700; }
+html[data-ui="classic"] .legend .lg-h, html[data-ui="classic"] .legend .lg-grid .lg-cell:not(.lg-you) { display: none; }
+html[data-ui="classic"] .legend .lg-grid { display: block; background: none; }
+html[data-ui="classic"] .legend .lg-you { padding: 2px var(--s2); }
+html[data-ui="classic"] .legend .lg-you dt, html[data-ui="classic"] .legend .lg-keep { display: none; }
+html[data-ui="classic"] .legend .lg-short { display: block; }
+html[data-ui="free"] body[data-page="home"] .custom .custom-btn { display: none; }
+
+/* free: the page is the drawing; everything else is out of sight (the heading stays for screen readers) */
+html[data-ui="free"] body[data-page="home"] { overflow: hidden; height: 100vh; }
+html[data-ui="free"] body[data-page="home"] header.top,
+html[data-ui="free"] body[data-page="home"] .modeline,
+html[data-ui="free"] body[data-page="home"] .minibuffer-wrap,
+html[data-ui="free"] body[data-page="home"] main > :not(.stage),
+html[data-ui="free"] body[data-page="home"] .stage > :not(.stage-grid):not(.stage-h),
+html[data-ui="free"] #nav { display: none !important; }
+html[data-ui="free"] .stage-h { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; padding: 0; border: 0; }
+html[data-ui="free"] .stage-grid { display: block; position: relative; height: 100vh; min-height: 0; border: 0; }
+html[data-ui="free"] .stage-grid > .stage-drawing { height: 100%; }
+html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0; border: 0; }
+
+/* the Emacs frame: one face, a monospace buffer; its parts in Emacs's order */
+.ef { position: relative; display: flex; flex-direction: column; min-width: 0; background: var(--canvas); color: var(--text); border: 1px solid var(--border);
+  font: calc(13px * var(--read-scale, 1))/1.5 var(--mono); }
+.ef[hidden] { display: none !important; }
+.ef button, .ef a.ef-it { font: inherit; color: var(--text); background: none; border: 1px solid transparent; border-radius: 0; padding: 0 4px; min-height: 24px; cursor: pointer; text-decoration: none; }
+.ef button:hover, .ef a.ef-it:hover { border-color: var(--border); }
+.ef button:focus-visible, .ef a:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ef-selected { border-color: var(--control); }
+.ef-menubar { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 0; font-size: 0.93em; padding: 1px 2px; background: var(--canvas-dim); border-bottom: 1px solid var(--border); flex: none; }
+.ef .ef-grip { cursor: move; touch-action: none; font-weight: 700; padding: 0 6px; }
+.ef .ef-mb[aria-expanded="true"] { background: var(--canvas-active); border-color: var(--border); }
+.ef .ef-fold { margin-left: auto; font-weight: 700; }
+.ef-pop { position: absolute; z-index: 9; left: var(--mx, 0); top: 28px; min-width: 16rem; max-width: min(28rem, 92vw); max-height: 60vh; overflow: auto;
+  display: flex; flex-direction: column; background: var(--canvas); border: 1px solid var(--control); padding: 2px 0; }
+.ef-pop[hidden] { display: none; }
+.ef-pop > * { flex: none; }
+.ef .ef-mi { display: flex; align-items: baseline; gap: 1ch; text-align: left; width: 100%; padding: 0 8px; color: var(--text); text-decoration: none; }
+.ef .ef-mi[aria-disabled="true"] { color: var(--text-dim); cursor: default; }
+.ef-mi .ef-ck { width: 1.2ch; flex: none; }
+.ef-mi .ef-ml-l { flex: 1 1 auto; }
+.ef .kb { color: var(--text-dim); white-space: nowrap; }
+.ef-sep { border-top: 1px solid var(--border); margin: 2px 0; padding: 0 8px; color: var(--text-dim); font-size: 0.85em; }
+.ef-sep:empty { padding: 0; }
+.ef-body { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; }
+
+/* the tool-bar: Emacs's tool-bar-style "both": an icon over its word, raised; pressed, sunk in */
+.ef-toolbar { display: flex; flex-wrap: wrap; gap: 3px; padding: 4px; background: var(--canvas-dim); border-bottom: 1px solid var(--border); flex: none; }
+.ef .ef-tile { display: inline-flex; flex-direction: column; align-items: center; justify-content: flex-start; width: 57px; min-height: 52px; padding: 3px 2px 2px;
+  font-size: 10px; line-height: 12px; background: var(--canvas); border: 1px solid var(--border);
+  box-shadow: inset 1px 1px 0 var(--canvas-dim), inset -1px -2px 0 var(--canvas-active); }
+.ef .ef-tile .ef-icon { width: 24px; height: 24px; margin-bottom: 2px; }
+.ef .ef-tile[aria-pressed="true"] { background: var(--canvas-active); border-color: var(--control);
+  box-shadow: inset 2px 2px 0 var(--border), inset -1px -1px 0 var(--canvas); padding: 4px 1px 1px 3px; font-weight: 700; }
+.ef-tl { overflow: hidden; text-overflow: ellipsis; max-width: 100%; white-space: nowrap; }
+.ef-wait, .ef-none { color: var(--text-dim); padding: 2px 4px; margin: 0; }
+
+/* the finder's windows, each with its own mode-line */
+.ef-wins { flex: 1 1 auto; display: flex; min-height: 8rem; min-width: 0; overflow: hidden; }
+.ef-tree { display: flex; flex: 1 1 0; min-width: 0; min-height: 0; }
+.ef-tree-v { flex-direction: column; } .ef-tree-h { flex-direction: row; }
+.ef-win { display: flex; flex-direction: column; flex: 1 1 0; min-width: 0; min-height: 0; overflow: hidden; }
+.ef-tree-h > .ef-win + .ef-win, .ef-tree-h > * + * { border-left: 1px solid var(--border); }
+.ef-wb { flex: 1 1 auto; min-height: 2rem; overflow: auto; padding: 0 2px 4px; }
+.ef-sec { margin: 4px 0 0; font: inherit; font-weight: 700; }
+.ef .ef-foldb { font-weight: 700; display: inline-flex; align-items: center; color: var(--text-alt); }
+.ef .ef-foldb[aria-expanded="false"]::after { content: " \2026"; }
+.ef-count { font-weight: 400; color: var(--text-dim); margin-left: 1ch; }
+.ef-rows { list-style: none; margin: 0; padding: 0; }
+.ef .ef-it { display: flex; align-items: center; gap: 6px; width: 100%; text-align: left; min-height: 24px; overflow: hidden; }
+.ef .ef-it .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ef .ef-it.is-point { background: var(--canvas-line); }
+.ef-it .ef-icon { width: 18px; height: 18px; flex: none; }
+.ef-noicon { display: inline-block; width: 18px; height: 18px; flex: none; }
+.ef-it .g { margin-right: 0; }
+
+/* the mode-line, per window: the active one in the active face */
+.ef-ml { display: flex; flex-wrap: wrap; align-items: center; white-space: pre; padding: 0 2px; background: var(--canvas-inactive); color: var(--text); border-top: 1px solid var(--border); flex: none; font-size: 0.92em; }
+.ef-win.selected .ef-ml, .ef-sml { background: var(--canvas-active); }
+.ef .ml-b { padding: 0 2px; min-height: 24px; }
+.ef .ml-buffer .ml-b { font-weight: 700; color: var(--text); }
+.ef .ml-b[aria-pressed="false"] { text-decoration: line-through; }
+.ef-ml .ml-el { white-space: nowrap; }
+.ef .ml-lighters .ml-b { padding: 0 1px; }
+
+/* the message area, which becomes the one-line input */
+.ef-echo { position: relative; flex: none; background: var(--canvas); border-top: 1px solid var(--border); }
+.ef-msg { margin: 0; padding: 0 4px; min-height: 24px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: text; color: var(--text); }
+.ef-msg[hidden] { display: none; }
+.ef-mb-form { display: flex; align-items: baseline; padding: 0 4px; margin: 0; }
+.ef-mb-form[hidden] { display: none; }
+.ef-prompt { color: var(--text-alt); font-weight: 700; white-space: pre; flex: none; }
+.ef-in { flex: 1 1 auto; min-width: 0; font: inherit; color: var(--text); background: transparent; border: 0; padding: 0; margin: 0; min-height: 24px; caret-color: var(--link); -webkit-appearance: none; appearance: none; }
+.ef-in:focus-visible { outline: none; box-shadow: inset 0 -2px 0 var(--focus); }
+.ef-comp { position: absolute; left: -1px; right: -1px; bottom: 100%; z-index: 9; list-style: none; margin: 0; padding: 0; background: var(--canvas); border: 1px solid var(--control); max-height: 16rem; overflow: auto; }
+.ef-comp[hidden] { display: none; }
+.ef-opt { padding: 0 6px; min-height: 24px; line-height: 24px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ef-opt[aria-selected="true"], .ef-opt:hover { background: var(--canvas-line); }
+.ef-opt.off { color: var(--text-dim); }
+.ef-more { padding: 0 6px; color: var(--text-dim); }
+
+/* small frames: one buffer and a mode-line whose buffer name is the grip */
+.ef-small { max-height: 70vh; }
+.ef-sb { padding: 4px 6px; overflow: auto; flex: 1 1 auto; }
+.ef-sb p { margin: 0 0 4px; }
+.ef-sml { display: flex; }
+.ef .ef-sgrip { font-weight: 700; cursor: move; touch-action: none; }
+.ef-sp { flex: 1 1 auto; }
+.ef .ef-wb-b { color: var(--link); padding: 0 2px; }
+.ef .ef-wb-b[aria-pressed="true"] { font-weight: 700; color: var(--text); }
+.ef-group { margin: 4px 0; }
+.ef-gl { color: var(--text-dim); }
+.ef-dl { margin: 0; } .ef-dl div { display: flex; gap: 1ch; } .ef-dl dt { color: var(--text-dim); min-width: 9ch; } .ef-dl dd { margin: 0; overflow-wrap: anywhere; }
+.ef-here-h { font-weight: 700; }
+.ef-credits.lg-short { display: block; padding: 0 0 4px; }
+.ef-credits.lg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: var(--border); }
+.ef-credits .lg-cell { grid-column: auto; }
+.ef-note { color: var(--text-dim); margin-top: 4px; }
+
+/* the legend as a watermark: no box, the canvas at 90 % behind its words, hairlines only between cells */
+html[data-ui="free"] .legend.watermark { border: 0; background: color-mix(in srgb, var(--canvas) 90%, transparent); }
+html[data-ui="free"] .legend.watermark .lg-bar { background: none; border-bottom: 0; }
+html[data-ui="free"] .legend.watermark .lg-short, html[data-ui="free"] .legend.watermark .lg-cell { color: var(--text-dim); }
+html[data-ui="free"] .legend.watermark .lg-cell { background: color-mix(in srgb, var(--canvas) 92%, transparent); }
+html[data-ui="free"] .legend[hidden] { display: none !important; }
+html[data-ui="free"] .legend.fl-hidden .lg-bar { float: right; }
+
+@media (min-width: 47.51rem) {
+  .ef.fl-float { position: absolute; left: var(--fx, 8px); top: var(--fy, 8px); width: var(--fw, 440px); max-height: calc(100% - var(--fy, 8px) - 8px); z-index: 7; }
+  .ef.fl-float:not(.ef-small) { height: var(--fh, auto); }
+  .ef.fl-float:not(.ef-open):not(.ef-small) { height: auto; }
+  .ef-small.fl-float { z-index: 8; }
+}
+.ef:not(.ef-open) .ef-body { display: none; }
+@media (max-width: 47.5rem) {
+  html[data-ui="free"] .stage-grid { display: flex; flex-direction: column; }
+  html[data-ui="free"] .stage-grid > .stage-drawing { flex: 1 1 auto; min-height: 0; height: auto; }
+  html[data-ui="free"] .stage-grid > .legend { flex: none; border: 0; border-top: 1px solid var(--border); }
+  html[data-ui="free"] .legend .lg-short { font-size: 11px; line-height: 16px; }   /* the credit row in as few lines as it can, AA kept */
+  .ef { flex: none; border-width: 1px 0 0; }
+  .ef.ef-open .ef-body { max-height: 45vh; }
+  .ef-small { max-height: 40vh; }
+  .ef .ef-grip { display: none; }
+  .ef-pop { top: auto; bottom: 100%; left: 0; max-width: 100%; }   /* the frame is at the foot: menus open upward */
+  .ef-tree-h { flex-direction: column; }
+}
+@media (forced-colors: active) {
+  .ef { border: 1px solid CanvasText; }
+  .ef .ef-tile[aria-pressed="true"], .ef-win.selected .ef-ml, .ef-opt[aria-selected="true"] { outline: 2px solid Highlight; }
+}
+@media print { .ef { display: none !important; } }

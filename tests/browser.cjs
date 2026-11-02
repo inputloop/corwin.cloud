@@ -55,8 +55,8 @@ let n = 0; const ok = (m) => { n++; console.log('ok', n, '-', m); };
     }
     ok(`no horizontal scroll on any page at ${w}px`);
 
-    // tabs, by keyboard
-    await page.goto(base + 'index.html'); await page.waitForTimeout(250);
+    // tabs, by keyboard (a link to a tab opens the long page: classic for that visit, docs/NAV.md revision 4)
+    await page.goto(base + 'index.html#tab-topology'); await page.waitForTimeout(250);
     const sel = () => page.evaluate(() => document.querySelector('[role=tab][aria-selected=true]').id);
     const tabIndexes = () => page.evaluate(() => [...document.querySelectorAll('[role=tab]')].map((t) => t.tabIndex));
     assert.equal(await sel(), 'tab-topology');
@@ -116,8 +116,8 @@ let n = 0; const ok = (m) => { n++; console.log('ok', n, '-', m); };
       ok(`about-corwin's Customize palette: kept per browser across pages, Escape closes, Reset forgets, at ${w}px`);
     }
 
-    // the prompt
-    await page.goto(base + 'index.html'); await page.waitForTimeout(150);
+    // the prompt (on the free home page Alt+x is the Emacs frame's M-x: tests/free-browser.cjs)
+    await page.goto(base + 'directory.html'); await page.waitForTimeout(150);
     await page.keyboard.press('Alt+x');
     assert.equal(await page.evaluate(() => document.activeElement.id), 'prompt');
     await page.keyboard.type('quantum'); await page.keyboard.press('Enter'); await page.waitForTimeout(300);
@@ -148,7 +148,7 @@ let n = 0; const ok = (m) => { n++; console.log('ok', n, '-', m); };
       // a working copy of the person's own is never replaced
       await tf().evaluate(() => { window.TopoForge.doc = { name: 'mine', pages: [{ name: 'P', nodes: [{ id: 'a', type: 'server', x: 0, y: 0, text: 'my box' }], links: [] }] }; });
       await page.evaluate(() => { const f = document.getElementById('topology'); f.contentWindow.dispatchEvent(new Event('beforeunload')); });
-      await page.goto(base + 'index.html?drawing=gitcha'); await page.waitForTimeout(1500);
+      await page.goto(base + 'index.html?ui=classic&drawing=gitcha'); await page.waitForTimeout(1500);
       assert.ok(!/load=/.test(tf().url()), 'the frame was given ?load= over a working copy: ' + tf().url());
       assert.equal(await tf().evaluate(() => window.TopoForge.doc.name), 'mine');
       assert.match(await page.textContent('#stage-msg'), /your own drawing/);
