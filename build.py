@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 
 import catalog as C
 import demos as D
@@ -30,7 +31,7 @@ import navindex as NV
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("site.js", "stage.js", "badges.js", "nav.js")
+JS_FILES = ("site.js", "stage.js", "badges.js", "float.js", "nav.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
@@ -167,11 +168,10 @@ def everywhere():
 def foot(buf):
     return """<div class="modeline" id="modeline">
   <a class="ml-link" href="#minibuffer" aria-label="corwin.cloud mode line: go to the prompt and the list of everywhere">
-    <span class="ml-flags" aria-hidden="true">-:%%%%-</span>
     <span class="ml-buf">%s</span>
     <span class="ml-pos" aria-hidden="true"></span>
     <span class="ml-sec" aria-hidden="true"></span>
-    <span class="ml-modes" aria-hidden="true">(HTML LibreJS)</span>
+    <span class="ml-modes" aria-hidden="true">go anywhere &#8595;</span>
   </a>
 </div>
 <footer class="minibuffer-wrap" id="minibuffer">
@@ -281,21 +281,64 @@ def topology_area(have, index, navx=None):
     frame = ('<iframe id="topology" class="topology" title="TopoForge, opened on the shop\'s drawings" data-first="%s" '
              'data-resume="topology/topoforge/index.html" data-doc="%s" data-pages="%s"></iframe>'
              % (e(first, quote=True), e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True)))
-    body = frame
-    if navx:
-        body = ('<div class="stage-grid" id="stage-grid">%s'
-                '<div class="stage-drawing">%s</div></div>' % (NV.render(navx), frame))
+    body = '<div class="stage-grid" id="stage-grid">%s<div class="stage-drawing">%s</div>%s</div>' % (
+        NV.render(navx) if navx else "", frame, legend(index, first))
     return ('<section class="stage" id="top" aria-labelledby="stage-h">'
             '<h1 id="stage-h" class="stage-h">The shop, drawn <span class="muted">one page per project: the tabs along the bottom of the drawing</span></h1>'
             + body.replace("%", "%%") +
             '<noscript><p class="stage-off">TopoForge needs JavaScript. Without it: <a href="directory.html">the directory</a>, '
             '<a href="#projects">the projects in words</a> below, and <a href="%s" download>the drawings as a file</a> to open in your own copy.</p></noscript>'
-            '<p class="stage-note">TopoForge, the drawing app, is Bryant Frankford\'s. What you draw stays in this browser until you save it yourself (File). '
-            '<a href="topology/topoforge/index.html">Full size</a> · <a href="%s" download>the drawings as a file</a> · <a href="topology/">topology\'s own front door</a>. '
-            '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button> '
-            '<span id="stage-msg" role="status"></span></p>'
             + processes_note(index) +
-            '</section>') % (e(index["file"], quote=True), e(index["file"], quote=True))
+            '</section>') % (e(index["file"], quote=True),)
+
+
+# TopoForge's maker, his public page (about-corwin: content/involvements/inputloop.txt and
+# content/personae/bryant.txt), and its licence as TopoForge's own README.org ("Licences") states it.
+BRYANT_URL = "https://github.com/takushieternal"
+TF_SRC_APP = C.ORG + "/topology/tree/corwin/www/topoforge"
+TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"
+TF_LICENCE = ("Code: GPL-3.0-or-later or LGPL-3.0-or-later, your choice. "
+              "Prose (its README, its other documents, the story it writes): CC-BY-SA-4.0.")
+
+
+def site_revision():
+    """The site's revision and the day it was built, for the legend's sheet cell."""
+    try:
+        r = subprocess.run(["git", "describe", "--always", "--dirty"], cwd=ROOT, capture_output=True, text=True, timeout=10)
+        rev = r.stdout.strip() if r.returncode == 0 and r.stdout.strip() else "unknown"
+    except (OSError, subprocess.SubprocessError):
+        rev = "unknown"
+    return rev, time.strftime("%Y-%m-%d", time.gmtime())
+
+
+def legend(index, first):
+    """The legend under the drawing, drawn as an architect's title block: a grid of hairline cells.
+    TopoForge's maker gets the most room: who made it, its licence, its source. Without scripts it is a
+    block under the drawing; js/float.js floats it over the canvas and lets it move and hide."""
+    rev, day = site_revision()
+    gh = '<a href="%s">Bryant Frankford</a>' % BRYANT_URL
+    short = ('<p class="lg-short">TopoForge by %s · code GPL-3.0-or-later or LGPL-3.0-or-later · prose CC-BY-SA-4.0</p>' % gh)
+    cells = [
+        ("lg-app", "Drawing app", 'TopoForge, made by %s for Corwin Brust, with Corwin and contributors. Bryant is listed first on it.' % gh),
+        ("lg-lic", "TopoForge's licence", 'Code: <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3.0-or-later</a> or '
+         '<a href="https://www.gnu.org/licenses/lgpl-3.0.html">LGPL-3.0-or-later</a>, your choice. '
+         'Prose: <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC-BY-SA-4.0</a>. As its README.org says.'),
+        ("lg-src", "TopoForge's source", 'topology, branch corwin: <a href="%s">www/topoforge/</a>, the app served here; '
+         '<a href="%s">topoforge/</a>, its README, AUTHORS and licences.' % (TF_SRC_APP, TF_SRC_PROJECT)),
+        ("lg-you", "Your drawing", 'Stays in this browser until you save it (File, Export). '
+         '<a href="%s" id="stage-full">TopoForge full size</a> · <a href="%s" download>the shop\'s drawings as a file</a> · '
+         '<a href="topology/">topology\'s own front door</a>. '
+         '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button> '
+         '<span id="stage-msg" role="status"></span>' % (e(first, quote=True), e(index["file"], quote=True))),
+        ("lg-sheet", "Sheet", 'The shop, drawn: a page per project. corwin.cloud <code>%s</code>, %s.' % (e(rev), day)),
+    ]
+    grid = "".join('<div class="lg-cell %s"><dt>%s</dt><dd>%s</dd></div>' % (c, e(h), d) for c, h, d in cells)
+    # the notice says why the shop's drawings are not showing (js/stage.js fills it); it heads the
+    # legend, and stays when the legend is hidden to its one row
+    notice = ('<p class="stage-notice" id="stage-notice" hidden><span id="stage-notice-t"></span> '
+              '<button type="button" class="linkish" id="stage-notice-b">Open the shop\'s drawings</button></p>')
+    return ('<aside class="legend" id="legend" aria-labelledby="legend-h"><h2 id="legend-h" class="lg-h">Legend</h2>%s%s'
+            '<dl class="lg-grid">%s</dl></aside>' % (notice, short, grid))
 
 
 def processes_note(index):
@@ -320,7 +363,7 @@ NAV_SCRIPTS = '<script src="js/taxonomy.js" defer></script>\n'
 def page_index(have, index, navx=None):
     return (head("corwin.cloud: the shop, drawn",
                  "TopoForge, opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
-                 '<script src="js/stage.js" defer></script>\n'
+                 '<script src="js/stage.js" defer></script>\n<script src="js/float.js" defer></script>\n'
                  + ((NAV_SCRIPTS if SHARED.get("taxonomy") else "") + '<script src="js/nav.js" defer></script>\n' if navx else ""))
             + nav("home") + '<main id="main">\n' + topology_area(have, index, navx) + ('<div class="wrap shared-wrap">%s</div>' % ci_strip() if ci_strip() else "") + render_tabs() + "</main>\n" + foot("corwin.cloud"))
 

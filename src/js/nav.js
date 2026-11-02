@@ -4,13 +4,15 @@
 //
 // nav.js: the navigator beside the drawing, drawn as an Emacs frame (docs/NAV.md says what and why).
 // Without this file the navigator is a plain list of links. With it:
-//   - a title bar (the buffer and its context, the drawing's page, collapse and widen), a menu bar,
-//     a tab bar once there are two buffers, a tool bar of categories per buffer, one to four windows
-//     (splits) each with a pinned area and its own mode-line, and a prompt with an echo line;
+//   - a palette that floats over the drawing (js/float.js: drag its grip, arrow keys, or the Window
+//     menu; dock it left or right; hide it to a strip), with a menu bar that also carries the site's
+//     own pages, a tab bar once there are two buffers, a tool bar of categories per buffer, one to four
+//     windows (splits) each with a pinned area and its own mode-line, and a minibuffer: the prompt,
+//     a [Pin as buffer] action and the echo area;
 //   - the tool bar's pressed categories and the prompt's words narrow the windows together;
 //   - pins (items and sections) stay put and visible; drag them, or Alt+Up and Alt+Down, to reorder;
 //   - "Pin results to a new buffer" bakes the context into a new tab (or switches to one that has it);
-//   - the right edge drags (or arrow keys) to change the width.
+//   - its edge drags (or arrow keys) to change the width.
 // It reads one file from this site, nav/index.json, and asks the network for nothing else. It keeps
 // its state in this browser only (corwin.cloud.nav.v1), and works, forgetting on reload, when that
 // storage is refused. Words are matched with about-corwin's taxonomy.js when it was staged.
@@ -19,12 +21,12 @@
   var doc = document, host = doc.getElementById('nav'), grid = doc.getElementById('stage-grid');
   var frame = doc.getElementById('topology');
   if (!host || !grid || !window.fetch || !window.JSON) return;
-  var KEY = 'corwin.cloud.nav.v1', MAXWIN = 4, MINW = 200, DEFW = 320, STEP = 16;
+  var KEY = 'corwin.cloud.nav.v1', MAXWIN = 4;
   var T = window.Taxonomy && window.Taxonomy.tokenize && window.Taxonomy.similarity ? window.Taxonomy : null;
-  var FACET_NAMES = { show: 'Show', notation: 'Notation', pillar: 'Pillar', says: 'Says' };
+  var FACET_NAMES = { show: 'Show', notation: 'Notation', pillar: 'Is a', says: 'Topic' };
   var FACETS = ['notation', 'pillar', 'says'];
   var ix, ITEMS = {}, SECS = [], SEC_LABEL = {}, LABEL = {}, STOP = {}, VOCAB = [], state, hover = {}, prefix = null;
-  var els = {};
+  var els = {}, fl = null;
 
   function load() { try { return JSON.parse(window.localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }
   function save() { try { window.localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* refused: kept for this visit only */ } }
@@ -137,7 +139,7 @@
   }
   function deleteWin() {
     var t = tab();
-    if (leaves(t.tree).length < 2) { say('Attempt to delete the sole ordinary window'); return; }
+    if (leaves(t.tree).length < 2) { say('This is the only window, so it stays (Emacs: "Attempt to delete the sole ordinary window").'); return; }
     (function walk(n) {
       if (!n.kids) return;
       n.kids = n.kids.filter(function (k) { return k.w !== t.sel; });
@@ -149,22 +151,22 @@
     t.sel = leaves(t.tree)[0];
     commit(); focusWin(t.sel);
   }
-  function oneWin() { var t = tab(); t.tree = { w: t.sel }; Object.keys(t.wins).forEach(function (k) { if (+k !== t.sel) delete t.wins[k]; }); commit(); }
-  function otherWin() { var t = tab(), ls = leaves(t.tree); t.sel = ls[(ls.indexOf(t.sel) + 1) % ls.length]; commit(); focusWin(t.sel); }
+  function oneWin() { var t = tab(), n = leaves(t.tree).length; t.tree = { w: t.sel }; Object.keys(t.wins).forEach(function (k) { if (+k !== t.sel) delete t.wins[k]; }); say(n > 1 ? 'One window: the others are closed (C-x 1).' : 'There is only one window.'); commit(); }
+  function otherWin() { var t = tab(), ls = leaves(t.tree); if (ls.length < 2) { say('There is no other window: Split below or Split right makes one.'); return; } t.sel = ls[(ls.indexOf(t.sel) + 1) % ls.length]; say('Window ' + (leaves(t.tree).indexOf(t.sel) + 1) + ' of ' + ls.length + ' (C-x o).'); commit(); focusWin(t.sel); }
   function addTab(t, msg) { state.tabs.push(t); state.cur = state.tabs.length - 1; say(msg); commit(); }
-  function newBuffer() { addTab(newTab(uniqueName('*nav*')), 'A new buffer. The tab bar shows once there are two (C-x t 2).'); }
+  function newBuffer() { addTab(newTab(uniqueName('*all*')), 'A new buffer. The tab bar shows once there are two (C-x t 2).'); }
   function closeTab(i) {
-    if (state.tabs.length < 2) { say('No other tab'); return; }
+    if (state.tabs.length < 2) { say('This is the only buffer, so it stays.'); return; }
     if (i === undefined) i = state.cur;
     state.tabs.splice(i, 1);
     state.cur = Math.min(state.cur, state.tabs.length - 1);
     commit();
   }
-  function nextTab() { if (state.tabs.length > 1) { state.cur = (state.cur + 1) % state.tabs.length; commit(); } }
+  function nextTab() { if (state.tabs.length < 2) { say('There is no other buffer: New buffer makes one.'); return; } state.cur = (state.cur + 1) % state.tabs.length; say('Buffer ' + tab().name + '.'); commit(); }
   function pinToBuffer() {
     var t = tab(), base = clone(t.base);
     if (!ctxEmpty(t.live)) base.push(clone(t.live));
-    if (!base.length) { say('Nothing to pin: press a category or type in the prompt first.'); return; }
+    if (!base.length) { say('Nothing to pin yet: press a category or type words after Narrow first.'); return; }
     var key = canon(base);
     for (var i = 0; i < state.tabs.length; i++) {
       var o = state.tabs[i];
@@ -176,11 +178,11 @@
   }
   function setMode() {
     var t = tab();
-    if (ctxEmpty(t.live)) { say('Nothing to bake: press a category or type in the prompt first.'); return; }
+    if (ctxEmpty(t.live)) { say('Nothing to keep yet: press a category or type words after Narrow first.'); return; }
     t.base.push(clone(t.live)); t.live = emptyCtx(); els.q.value = '';
-    say('This buffer’s mode is now its context: ' + describe(t.base) + '.'); commit();
+    say('This buffer now keeps the filter: ' + describe(t.base) + '.'); commit();
   }
-  function clearMode() { var t = tab(); if (!t.base.length) { say('This buffer has no pinned context.'); return; } t.base = []; say('This buffer is live again: its pinned context is cleared.'); commit(); }
+  function clearMode() { var t = tab(); if (!t.base.length) { say('This buffer keeps no filter.'); return; } t.base = []; say('The kept filter is dropped: this buffer shows everything again.'); commit(); }
   function pinKey(p) { return p.k + ':' + p.id; }
   function togglePin(k, id) {
     var t = tab(), i = t.pins.map(pinKey).indexOf(k + ':' + id);
@@ -196,30 +198,32 @@
     say('Moved the pin to place ' + (to + 1) + ' of ' + t.pins.length + '.');
     commit();
   }
-  function width() { return state.width || DEFW; }
-  function maxWidth() { return Math.max(MINW + 40, Math.min(900, Math.round((grid.clientWidth || window.innerWidth) * 0.6))); }
-  function setWidth(w, quiet) {
-    state.width = Math.round(Math.max(MINW, Math.min(maxWidth(), w)));
-    state.wide = false;
-    applyWidth(); save();
-    if (!quiet) say('Navigator width: ' + state.width + ' pixels.');
+  // The Site menu is the page's own top bar (Home, Directory, ...), read from it so the two never
+  // disagree, plus Customize; on a wide screen the top bar itself is folded away into this menu.
+  function siteItems() {
+    var out = [];
+    Array.prototype.forEach.call(doc.querySelectorAll('header.top nav a'), function (a) {
+      out.push(['link', a.textContent + (a.getAttribute('aria-current') === 'page' ? ' (this page)' : ''), '', a.getAttribute('href')]);
+    });
+    var lic = doc.querySelector('a[rel="jslicense"]');
+    if (lic) out.push(['link', 'JavaScript licences', '', lic.getAttribute('href')]);
+    if (doc.getElementById('custom-btn')) out.push(['customize', 'Customize reading\u2026', '']);
+    return out;
   }
-  function applyWidth() {
-    var w = state.wide ? maxWidth() : width();
-    grid.style.setProperty('--nav-w', w + 'px');
-    grid.classList.toggle('nav-collapsed', !!state.collapsed);
-    host.classList.toggle('collapsed', !!state.collapsed);
-    if (els.handle) {
-      els.handle.setAttribute('aria-valuenow', String(w));
-      els.handle.setAttribute('aria-valuemin', String(MINW));
-      els.handle.setAttribute('aria-valuemax', String(maxWidth()));
-    }
+  function windowItems() {
+    var w = [['split-v', 'Split below', 'C-x 2'], ['split-h', 'Split right', 'C-x 3'], ['other', 'Other window', 'C-x o'], ['one', 'One window', 'C-x 1'], ['close', 'Close window', 'C-x 0']];
+    if (!fl) return w;
+    if (fl.narrow()) return w.concat([['hide', fl.isHidden() ? 'Show the navigator' : 'Hide the navigator to a strip', '']]);
+    return w.concat([['dock-left', 'Dock on the left', ''], ['dock-right', 'Dock on the right', ''], ['float', 'Float over the drawing', ''],
+      ['hide', fl.isHidden() ? 'Show the navigator' : 'Hide the navigator to a strip', ''],
+      ['mv-l', 'Move left', ''], ['mv-r', 'Move right', ''], ['mv-u', 'Move up', ''], ['mv-d', 'Move down', ''], ['reset', 'Back to where it started', '']]);
   }
   var MENUS = {
-    Buffers: [['newbuf', 'New buffer', 'C-x t 2'], ['closebuf', 'Close buffer', 'C-x t 0'], ['nextbuf', 'Next buffer', 'C-x t o']],
-    Window: [['split-v', 'Split below', 'C-x 2'], ['split-h', 'Split right', 'C-x 3'], ['other', 'Other window', 'C-x o'], ['one', 'One window', 'C-x 1'], ['close', 'Close window', 'C-x 0']],
-    Mode: [['setmode', 'Set mode from the prompt', 'C-c m'], ['clearmode', 'Clear mode', 'C-c k'], ['pinbuf', 'Pin results to a new buffer', 'Ctrl+Enter']],
-    Help: [['keys', 'Keys', ''], ['about', 'About the navigator', '']]
+    Site: siteItems,
+    Buffers: function () { return [['newbuf', 'New buffer', 'C-x t 2'], ['closebuf', 'Close buffer', 'C-x t 0'], ['nextbuf', 'Next buffer', 'C-x t o'], ['pinbuf', 'Pin results to a new buffer', 'Ctrl+Enter']]; },
+    Window: windowItems,
+    Filter: function () { return [['setmode', 'Keep this filter in this buffer', 'C-c m'], ['clearmode', 'Drop the kept filter', 'C-c k'], ['pinbuf', 'Pin results to a new buffer', 'Ctrl+Enter']]; },
+    Help: function () { return [['keys', 'Keys', ''], ['about', 'About the navigator', '']]; }
   };
   var openMenu = null;
   function menuShow(m) {
@@ -229,36 +233,44 @@
     els.pop.hidden = !openMenu;
     if (!openMenu) return;
     els.pop.setAttribute('aria-label', openMenu + ' menu');
-    MENUS[openMenu].forEach(function (c) {
-      els.pop.appendChild(mk('button', { type: 'button', 'data-cmd': c[0] }, [c[1], c[2] ? mk('span', { cls: 'kb', text: ' ' + c[2] }) : null]));
+    MENUS[openMenu]().forEach(function (c) {
+      if (c[0] === 'link') els.pop.appendChild(mk('a', { href: c[3], cls: 'mi', 'data-link': c[3] }, [c[1]]));
+      else els.pop.appendChild(mk('button', { type: 'button', cls: 'mi', 'data-cmd': c[0] }, [c[1], c[2] ? mk('span', { cls: 'kb', text: ' ' + c[2] }) : null]));
     });
-    var f = els.pop.querySelector('button'); if (f) f.focus();
+    var f = els.pop.querySelector('.mi'); if (f) f.focus();
   }
   var COMMANDS = {
     'closebuf': function () { closeTab(); }, 'nextbuf': nextTab, 'other': otherWin, 'pinbuf': function () { pinToBuffer(); },
-    'about': function () { say('The navigator lists what the drawing draws, by category. Press categories in the tool bar and type words in the prompt: both narrow at once. Pins stay put. docs/NAV.md in the site\u2019s repository says how it decides.'); },
+    'about': function () { say('The navigator lists what the drawing draws, by category. Press categories in the tool bar and type words after Narrow: both narrow at once. Pins stay put. It floats over the drawing and may cover part of it: drag its top row, dock it, or hide it. docs/NAV.md in the site\u2019s repository says how it decides.'); },
+    'customize': function () { var b = doc.getElementById('custom-btn'); if (b) { b.click(); var r = doc.querySelector('#custom-panel input'); if (r) r.focus(); say('Customize: the reading text and colours of this site, kept in this browser.'); } },
+    'dock-left': function () { fl.dock('left'); }, 'dock-right': function () { fl.dock('right'); }, 'float': function () { fl.dock('float'); },
+    'hide': function () { fl.toggle(); }, 'reset': function () { fl.reset(); },
+    'mv-l': function () { fl.move(-64, 0); }, 'mv-r': function () { fl.move(64, 0); }, 'mv-u': function () { fl.move(0, -64); }, 'mv-d': function () { fl.move(0, 64); },
     'newbuf': newBuffer, 'split-v': function () { split('v'); }, 'split-h': function () { split('h'); },
     'one': oneWin, 'close': deleteWin, 'setmode': setMode, 'clearmode': clearMode, 'keys': keysHelp
   };
   function keysHelp() {
     say('Keys, with focus in the navigator (let go of Ctrl before the second key): C-x 2 split below, C-x 3 split right, C-x 0 close window, ' +
         'C-x 1 one window, C-x o next window, C-x t 2 new buffer, C-x t 0 close buffer, C-x t o next buffer, C-x { narrower, C-x } wider, ' +
-        'C-c p pin the item at point, C-c m set mode, C-c k clear mode, Alt+x the prompt, Up and Down move, Alt+Up and Alt+Down move a pin, ' +
-        'Ctrl+Enter in the prompt pins the results to a new buffer, Escape or C-g quits.');
+        'C-c p pin the item at point, C-c m keep the filter, C-c k drop it, Alt+x Narrow, Up and Down move, Alt+Up and Alt+Down move a pin, ' +
+        'Ctrl+Enter after Narrow pins the results to a new buffer, arrow keys on the top row move the navigator, Escape or C-g quits.');
   }
 
   // ---- drawing the frame ---------------------------------------------------------------------------
   function build() {
     host.textContent = '';
     host.classList.add('nf-on');
-    els.title = mk('div', { cls: 'nf-title' });
-    els.ftName = mk('span', { cls: 'ft-name' });
-    els.ftDraw = mk('span', { cls: 'ft-draw' });
-    els.collapse = mk('button', { type: 'button', cls: 'ft-btn', 'data-cmd': 'collapse', 'aria-expanded': 'true', text: '_' });
-    els.widen = mk('button', { type: 'button', cls: 'ft-btn', 'data-cmd': 'widen', 'aria-pressed': 'false', 'aria-label': 'Widen the navigator', text: '\u25a1' });
-    els.title.appendChild(mk('h2', { cls: 'visually-hidden', id: 'nav-h', text: 'Navigator' }));
-    els.title.appendChild(els.ftName); els.title.appendChild(els.ftDraw);
-    els.title.appendChild(mk('span', { cls: 'ft-btns' }, [els.collapse, els.widen]));
+    // the top row: the grip (drag it, or arrow keys) and the palette's own buttons. No title bar.
+    els.title = mk('div', { cls: 'nf-bar' });
+    els.grip = mk('button', { type: 'button', cls: 'fl-grip nf-grip', id: 'nav-grip', 'aria-describedby': 'nav-grip-d' }, ['\u283f ', mk('span', { id: 'nav-h', text: 'Navigator' })]);
+    els.gripD = mk('span', { cls: 'visually-hidden', id: 'nav-grip-d', text: 'Drag to move the navigator over the drawing, or use the arrow keys here; Window, Move does it with one press.' });
+    els.dockL = mk('button', { type: 'button', cls: 'fl-btn', 'data-cmd': 'dock-left', 'aria-pressed': 'false', 'aria-label': 'Dock the navigator on the left', text: 'left' });
+    els.dockF = mk('button', { type: 'button', cls: 'fl-btn', 'data-cmd': 'float', 'aria-pressed': 'false', 'aria-label': 'Float the navigator over the drawing', text: 'float' });
+    els.dockR = mk('button', { type: 'button', cls: 'fl-btn', 'data-cmd': 'dock-right', 'aria-pressed': 'false', 'aria-label': 'Dock the navigator on the right', text: 'right' });
+    els.collapse = mk('button', { type: 'button', cls: 'fl-btn nf-hide', 'data-cmd': 'hide', 'aria-expanded': 'true', 'aria-controls': 'nf-body' });
+    els.title.appendChild(els.grip); els.title.appendChild(els.gripD);
+    els.title.appendChild(mk('span', { cls: 'nf-docks' }, [els.dockL, els.dockF, els.dockR]));
+    els.title.appendChild(els.collapse);
     var menu = mk('div', { cls: 'nf-menu', role: 'group', 'aria-label': 'Menu bar' });
     Object.keys(MENUS).forEach(function (m) {
       menu.appendChild(mk('button', { type: 'button', cls: 'menu-b', 'data-menu': m, 'aria-expanded': 'false', 'aria-controls': 'nf-pop', text: m }));
@@ -268,14 +280,16 @@
     els.tabs = mk('div', { cls: 'nf-tabs', role: 'tablist', 'aria-label': 'Buffers (tab bar)' });
     els.tools = mk('div', { cls: 'nf-tools', role: 'group', 'aria-label': 'Categories (tool bar)' });
     els.wins = mk('div', { cls: 'nf-wins', id: 'nf-wins' });
+    // the minibuffer: one line, the prompt, the input (no box), and an Emacs widget button
     els.q = mk('input', { id: 'nav-q', type: 'search', spellcheck: 'false', autocomplete: 'off', 'aria-describedby': 'nav-echo', placeholder: 'words to narrow by' });
-    els.pinbuf = mk('button', { type: 'button', id: 'nav-pinbuf', cls: 'mb-pin', text: 'Pin results to a new buffer' });
+    els.pinbuf = mk('button', { type: 'button', id: 'nav-pinbuf', cls: 'mb-act', title: 'Pin these results as a new buffer (Ctrl+Enter)', 'aria-label': 'Pin these results as a new buffer (Ctrl+Enter)', text: '[Pin as buffer]' });
     var form = mk('form', { cls: 'nf-mb', role: 'search', 'aria-label': 'Narrow the navigator' },
-      [mk('label', { for: 'nav-q', cls: 'mb-prompt', text: 'Narrow:' }), els.q, els.pinbuf]);
+      [mk('label', { for: 'nav-q', cls: 'mb-prompt', text: 'Narrow: ' }), els.q, els.pinbuf]);
     els.echo = mk('p', { id: 'nav-echo', cls: 'nf-echo', role: 'status' });
     els.handle = mk('div', { cls: 'nf-handle', role: 'separator', tabindex: '0', 'aria-orientation': 'vertical', 'aria-label': 'Navigator width: drag, or use the arrow keys' });
+    els.body = mk('div', { cls: 'nf-body', id: 'nf-body' }, [menu, els.pop, els.tabs, els.tools, els.wins, form, els.echo]);
     host.setAttribute('aria-labelledby', 'nav-h');
-    [els.title, menu, els.pop, els.tabs, els.tools, els.wins, form, els.echo, els.handle].forEach(function (n) { host.appendChild(n); });
+    [els.title, els.body, els.handle].forEach(function (n) { host.appendChild(n); });
     form.addEventListener('submit', function (ev) { ev.preventDefault(); summary(); });
   }
 
@@ -283,19 +297,21 @@
     var keep = focusKey();
     renderTitle(); renderTabs(); renderTools(); renderWins();
     els.q.value = tab().live.q;
-    applyWidth();
     restoreFocus(keep);
   }
   function commit() { render(); save(); }
 
   function renderTitle() {
-    var t = tab();
-    els.ftName.textContent = t.name + (t.base.length ? ' — ' + describe(t.base, true) : '');
-    els.collapse.textContent = state.collapsed ? '\u25b8' : '_';
-    els.collapse.setAttribute('aria-expanded', state.collapsed ? 'false' : 'true');
-    els.collapse.setAttribute('aria-label', state.collapsed ? 'Expand the navigator' : 'Collapse the navigator');
-    els.widen.setAttribute('aria-pressed', state.wide ? 'true' : 'false');
-    els.widen.setAttribute('aria-label', state.wide ? 'Back to your width' : 'Widen the navigator');
+    if (!fl) return;
+    var m = fl.state.mode, nar = fl.narrow(), hid = fl.isHidden();
+    els.dockL.setAttribute('aria-pressed', String(!nar && m === 'left'));
+    els.dockF.setAttribute('aria-pressed', String(!nar && m === 'float'));
+    els.dockR.setAttribute('aria-pressed', String(!nar && m === 'right'));
+    els.collapse.textContent = hid ? 'show' : 'hide';
+    els.collapse.setAttribute('aria-expanded', hid ? 'false' : 'true');
+    els.collapse.setAttribute('aria-label', hid ? 'Show the navigator' : 'Hide the navigator to a strip');
+    var n = 0; tab() && (n = compute(tab()).shown);
+    els.grip.setAttribute('title', hid ? 'Navigator: ' + n + ' of ' + ix.items.length + ' shown' : 'Drag to move');
   }
   function renderTabs() {
     els.tabs.textContent = '';
@@ -304,7 +320,7 @@
     state.tabs.forEach(function (t, i) {
       var on = i === state.cur;
       var b = mk('button', { type: 'button', role: 'tab', cls: 'nf-tab', 'data-tab': i, 'aria-selected': on ? 'true' : 'false', 'aria-controls': 'nf-wins', tabindex: on ? '0' : '-1' },
-        [t.base.length ? mk('span', { cls: 'tab-ctx', 'aria-hidden': 'true', text: '● ' }) : null, t.name]);
+        [t.name]);
       var x = mk('button', { type: 'button', cls: 'nf-tabx', 'data-tabx': i, 'aria-label': 'Close ' + t.name, text: '×' });
       els.tabs.appendChild(mk('span', { cls: 'nf-tabw' + (on ? ' on' : '') }, [b, x]));
     });
@@ -314,7 +330,7 @@
     els.tools.textContent = '';
     ['show'].concat(FACETS).forEach(function (f) {
       var folded = (t.tfold || ['says']).indexOf(f) >= 0;
-      var g = mk('div', { cls: 'tb-group', role: 'group', 'aria-label': FACET_NAMES[f] }, [mk('button', { type: 'button', cls: 'tb-name', 'data-tfold': f, 'aria-expanded': folded ? 'false' : 'true', text: FACET_NAMES[f] })]);
+      var g = mk('div', { cls: 'tb-group', role: 'group', 'aria-label': FACET_NAMES[f] }, [mk('button', { type: 'button', cls: 'tb-name', 'data-tfold': f, 'aria-expanded': folded ? 'false' : 'true', title: (folded ? 'Unfold' : 'Fold') + ' the ' + FACET_NAMES[f] + ' row', 'aria-label': FACET_NAMES[f] + ': ' + (folded ? 'unfold' : 'fold') + ' this row', text: FACET_NAMES[f] })]);
       ix.facets[f].forEach(function (v) {
         var live = f === 'show' ? t.live.show : t.live.f[f];
         var baked = t.base.some(function (c) { return (f === 'show' ? c.show : c.f[f]).indexOf(v.id) >= 0; });
@@ -370,7 +386,7 @@
     var n = its.filter(function (it) { return model.pass[it.id]; }).length;
     var folded = t.wins[w].fold.indexOf(sid) >= 0, pinned = !!model.pg[sid];
     return mk('h3', { cls: 'sec-h' }, [
-      mk('button', { type: 'button', cls: 'fold', 'data-fold': sid, 'aria-expanded': folded ? 'false' : 'true' }, [glyph((ix.facets.show.filter(function (s) { return s.id === sid; })[0] || {}).glyph), SEC_LABEL[sid]]),
+      mk('button', { type: 'button', cls: 'fold', 'data-fold': sid, 'aria-expanded': folded ? 'false' : 'true', title: (folded ? 'Unfold ' : 'Fold ') + SEC_LABEL[sid] }, [glyph((ix.facets.show.filter(function (s) { return s.id === sid; })[0] || {}).glyph), SEC_LABEL[sid]]),
       mk('span', { cls: 'count', text: ' ' + n + ' of ' + its.length }),
       mk('button', { type: 'button', cls: 'pin-g', tabindex: inPins ? null : null, 'data-pin-g': sid, 'aria-pressed': pinned ? 'true' : 'false',
         'aria-label': (pinned ? 'Unpin the section ' : 'Pin the section ') + SEC_LABEL[sid], text: pinned ? 'unpin' : 'pin' })]);
@@ -394,7 +410,7 @@
         }
         if (i > 0) {
           var nm = p.k === 'i' ? ITEMS[p.id].name : SEC_LABEL[p.id];
-          var up = mk('button', { type: 'button', cls: 'pin-up', tabindex: '-1', 'data-up': String(i), 'aria-label': 'Move ' + nm + ' up', text: '\u2191' });
+          var up = mk('button', { type: 'button', cls: 'pin-up', tabindex: '-1', 'data-up': String(i), 'aria-label': 'Move ' + nm + ' up', title: 'Move up (or drag, or Alt+Up)', text: '\u2191' });
           if (p.k === 'i') li.insertBefore(up, li.lastChild); else li.querySelector('.sec-h').appendChild(up);
         }
         li.classList.add('pin-entry');
@@ -414,38 +430,32 @@
     if (first) first.setAttribute('tabindex', '0');
     var n = ls.indexOf(w) + 1;
     var ml = mk('div', { cls: 'ml', 'data-ml': w }, [
-      mk('span', { cls: 'ml-flags', 'aria-hidden': 'true' }), mk('span', { cls: 'ml-buf' }), mk('span', { cls: 'ml-pos', 'aria-hidden': 'true' }),
-      mk('button', { type: 'button', cls: 'ml-light', 'data-light': w }), mk('span', { cls: 'ml-count' }),
+      mk('span', { cls: 'ml-buf' }), mk('span', { cls: 'ml-count' }),
+      mk('button', { type: 'button', cls: 'ml-light', 'data-light': w, hidden: !t.base.length }),
       mk('span', { cls: 'ml-item' })]);
     var box = mk('div', { cls: 'win' + (w === t.sel ? ' selected' : ''), 'data-win': w, role: 'region', 'aria-label': 'Window ' + n + ' of ' + ls.length + ': ' + t.name }, [body, ml]);
     box._model = model;
-    body.addEventListener('scroll', function () { t.wins[w].scroll = body.scrollTop; posOf(w); }, { passive: true });
+    body.addEventListener('scroll', function () { t.wins[w].scroll = body.scrollTop; }, { passive: true });
     return box;
-  }
-  function posOf(w) {
-    var box = els.wins.querySelector('.win[data-win="' + w + '"]');
-    if (!box) return;
-    var b = box.querySelector('.win-body'), max = b.scrollHeight - b.clientHeight, y = b.scrollTop;
-    box.querySelector('.ml-pos').textContent = max <= 0 ? 'All' : y <= 2 ? 'Top' : y >= max - 2 ? 'Bot' : Math.round(100 * y / max) + '%';
   }
   function labels(it, f) { return it.facets[f].map(function (v) { return LABEL[f + ':' + v]; }); }
   function modeline(w) {
     var t = tab(), box = els.wins.querySelector('.win[data-win="' + w + '"]');
     if (!box) return;
     var ml = box.querySelector('.ml'), model = box._model, ls = leaves(t.tree), baked = t.base.length > 0;
-    ml.querySelector('.ml-flags').textContent = '-:' + (baked ? '%%' : '--') + '-';
     ml.querySelector('.ml-buf').textContent = t.name;
-    posOf(w);
     var light = ml.querySelector('.ml-light');
     light.classList.toggle('lit', baked);
-    light.textContent = baked ? '●' : '○';
-    light.setAttribute('aria-label', baked ? 'Context light, lit: this buffer has a pinned context. Point at it or focus it to read it.' : 'Context light, not lit: this buffer has no pinned context.');
+    light.hidden = !baked;
+    light.textContent = baked ? 'kept filter: ' + describe(t.base, true) : '';
+    light.setAttribute('aria-label', baked ? 'This buffer keeps a filter: ' + describe(t.base, true) + '. Point at it or focus it to read it in words.' : '');
     var live = t.live.show.length ? t.live.show : t.base.reduce(function (a, c) { return a.concat(c.show); }, []);
     var per = live.filter(function (s, i) { return live.indexOf(s) === i; }).map(function (sid) {
       var its = ix.items.filter(function (it) { return it.section === sid; });
-      return SEC_LABEL[sid] + ' ' + its.filter(function (it) { return model.pass[it.id]; }).length + '/' + its.length;
+      return SEC_LABEL[sid] + ' ' + its.filter(function (it) { return model.pass[it.id]; }).length + ' of ' + its.length;
     });
-    ml.querySelector('.ml-count').textContent = (per.length ? per.join(' ') + ' · ' : '') + model.shown + '/' + ix.items.length + ' shown · W' + (ls.indexOf(w) + 1) + '/' + ls.length + (t.pins.length ? ' · ' + t.pins.length + ' pinned' : '');
+    ml.querySelector('.ml-count').textContent = model.shown + ' of ' + ix.items.length + ' shown' + (per.length ? ' (' + per.join(', ') + ')' : '') +
+      (ls.length > 1 ? ' · window ' + (ls.indexOf(w) + 1) + ' of ' + ls.length : '') + (t.pins.length ? ' · ' + t.pins.length + ' pinned' : '');
     var id = hover[w] || t.wins[w].point, it = id && ITEMS[id];
     var seg = ml.querySelector('.ml-item');
     seg.textContent = it ? it.name + ': ' + it.tip + ' · ' + [SEC_LABEL[it.section]].concat(labels(it, 'notation'), labels(it, 'pillar'), labels(it, 'says')).join(' · ') +
@@ -496,7 +506,7 @@
     var w = tf(), d = w && w.TopoForge.doc;
     if (!d) { window.location.href = it.href; return; }
     if (d.name !== frame.getAttribute('data-doc')) {
-      say('This is your own working copy, so ' + it.name + '’s page is not opened over it. "Start again from the shop’s drawings", under the drawing, opens the shop’s.');
+      say('The drawing open is your own, kept in this browser, so ' + it.name + '’s page is not opened over it. "Open the shop’s drawings", at the top of the legend, opens the shop’s.');
       return;
     }
     var i = d.pages.findIndex(function (p) { return p.name === it.page; });
@@ -508,7 +518,6 @@
   function watch() {
     var w = tf(), name = null;
     if (w) { var d = w.TopoForge.doc; name = d.pages[d.cur] ? d.pages[d.cur].name : null; }
-    els.ftDraw.textContent = name ? 'drawing: ' + name : 'drawing: (not open yet)';
     if (name && name !== lastPage) {
       lastPage = name;
       var t = tab(), hit = ix.items.filter(function (it) { return it.page === name && it.section !== 'hosts' && it.section !== 'people' && it.section !== 'paths'; })[0];
@@ -529,8 +538,6 @@
       if (w && w !== t.sel) { t.sel = w; Array.prototype.forEach.call(els.wins.querySelectorAll('.win'), function (b) { b.classList.toggle('selected', +b.getAttribute('data-win') === w); }); }
       if ((c = n.closest('[data-cmd]'))) {
         var cmd = c.getAttribute('data-cmd');
-        if (cmd === 'collapse') { state.collapsed = !state.collapsed; commit(); return; }
-        if (cmd === 'widen') { state.wide = !state.wide; commit(); say(state.wide ? 'Wide: the navigator takes up to 60% of the page.' : 'Back to your width.'); return; }
         if (openMenu) menuShow(null);
         if (COMMANDS[cmd]) COMMANDS[cmd]();
         return;
@@ -601,27 +608,10 @@
       movePin(from, to);
     });
     host.addEventListener('dragend', function () { dragFrom = -1; });
-    // the right edge
-    var startX = 0, startW = 0, dragging = false;
-    els.handle.addEventListener('pointerdown', function (ev) {
-      dragging = true; startX = ev.clientX; startW = state.wide ? maxWidth() : width();
-      try { els.handle.setPointerCapture(ev.pointerId); } catch (e) { /* fine */ }
-      ev.preventDefault();
-    });
-    els.handle.addEventListener('pointermove', function (ev) { if (dragging) setWidth(startW + ev.clientX - startX, true); });
-    els.handle.addEventListener('pointerup', function () { if (dragging) { dragging = false; say('Navigator width: ' + width() + ' pixels, kept in this browser.'); } });
-    els.handle.addEventListener('keydown', function (ev) {
-      var w = state.wide ? maxWidth() : width(), k = ev.key;
-      if (k === 'ArrowLeft' || k === 'ArrowRight' || k === 'PageUp' || k === 'PageDown' || k === 'Home' || k === 'End') {
-        ev.preventDefault(); ev.stopPropagation();
-        setWidth(k === 'Home' ? MINW : k === 'End' ? maxWidth() : w + (k === 'ArrowRight' ? STEP : k === 'ArrowLeft' ? -STEP : k === 'PageUp' ? 4 * STEP : -4 * STEP));
-      }
-    });
-    window.addEventListener('resize', applyWidth);
   }
   function lightSay() {
     var t = tab();
-    say(t.base.length ? 'Context: ' + describe(t.base) + '.' : 'No context is pinned in this buffer. "Pin results to a new buffer" makes one that has it.');
+    say(t.base.length ? 'Kept filter: ' + describe(t.base) + '.' : 'This buffer keeps no filter. [Pin as buffer] makes one that does.');
   }
 
   function keys(ev) {
@@ -635,7 +625,7 @@
       var k = ev.key, p = prefix; prefix = null;
       if (k === 'Escape' || (ev.ctrlKey && (k === 'g' || k === 'G'))) { say('Quit'); return; }
       var done = { 'C-x': { '2': function () { split('v'); }, '3': function () { split('h'); }, '0': deleteWin, '1': oneWin, 'o': otherWin,
-                            '{': function () { setWidth((state.wide ? maxWidth() : width()) - STEP); }, '}': function () { setWidth((state.wide ? maxWidth() : width()) + STEP); },
+                            '{': function () { if (fl) fl.set({ w: fl.state.w - 16 }); }, '}': function () { if (fl) fl.set({ w: fl.state.w + 16 }); },
                             't': function () { prefix = 'C-x t'; say('C-x t-'); } },
                    'C-x t': { '2': newBuffer, '0': function () { closeTab(); }, 'o': nextTab },
                    'C-c': { 'p': pinPoint, 'm': setMode, 'k': clearMode } }[p];
@@ -679,9 +669,23 @@
     ix.facets.show.forEach(function (s) { SECS.push(s.id); SEC_LABEL[s.id] = s.label; });
     FACETS.forEach(function (f) { ix.facets[f].forEach(function (v) { LABEL[f + ':' + v.id] = v.label; }); });
     (ix.stop || []).forEach(function (w) { STOP[w] = 1; });
-    state = sane(load()) || { width: null, collapsed: false, wide: false, cur: 0, tabs: [newTab('*nav*')] };
-    build(); wire(); render();
-    say(T ? 'The navigator: press categories, type words, or Alt+x here. "Keys" lists the rest.'
+    state = sane(load()) || { cur: 0, tabs: [newTab('*all*')] };
+    build();
+    if (window.CCFloat && window.CCFloat.available) {
+      fl = window.CCFloat.make({
+        name: 'nav', label: 'The navigator', el: host, grip: els.grip, edge: els.handle, docks: true, width: 320, hiddenNarrow: true,
+        say: say,
+        // starting on the left, over the canvas beside TopoForge's shapes; down to the legend's top
+        place: function (edges, W, H) {
+          var lg = window.CCFloat.get('legend'), y = 54, bottom = H - 8;
+          if (lg && !lg.isHidden() && lg.state.y !== null) bottom = lg.state.y - 12;
+          return { x: Math.max(8, Math.min(edges.left, W - 340)), y: y, h: Math.max(240, bottom - y) };
+        },
+        onApply: function () { if (els.dockL) renderTitle(); }
+      });
+    }
+    wire(); render();
+    say(T ? 'The navigator: press categories, or type words after Narrow (Alt+x). Help, Keys lists the rest.'
           : 'The navigator: press categories or type words (words match whole, plural or by their start; about-corwin’s matching was not staged).');
     watch();
     window.setInterval(watch, 700);

@@ -268,6 +268,38 @@ class SiteChecks(unittest.TestCase):
         else:
             self.assertIn("placeholder", h)
 
+    def test_legend_credits_bryant_and_states_topoforges_licence(self):
+        """The legend under the drawing (docs/NAV.md, revision 2): Bryant named with his public link,
+        TopoForge's licence as its own README.org states it, its source in topology, and more room for
+        TopoForge than for the site's own cell."""
+        h = read("index.html")
+        if not os.path.isdir(os.path.join(OUT, "topology")):
+            return
+        m = re.search(r'<aside class="legend" id="legend".*?</aside>', h, re.S)
+        self.assertTrue(m, "no legend on the home page")
+        lg = m.group(0)
+        bryant = "https://github.com/takushieternal"
+        self.assertIn('href="%s">Bryant Frankford</a>' % bryant, lg)
+        self.assertEqual(lg.count('href="%s"' % bryant), 2, "Bryant is linked in the legend and in its hidden row")
+        if os.path.isdir(ABOUT):   # the link is the one about-corwin publishes for him
+            with open(os.path.join(ABOUT, "content", "personae", "bryant.txt"), encoding="utf-8") as f:
+                self.assertIn("takushieternal", f.read())
+        text = re.sub(r"<[^>]+>", "", lg)
+        for s in ("GPL-3.0-or-later or LGPL-3.0-or-later, your choice", "CC-BY-SA-4.0"):
+            self.assertIn(s, text)
+        readme = os.path.join(TOPO, "topoforge", "README.org")
+        if os.path.isfile(readme):   # and it is what TopoForge's own README says
+            with open(readme, encoding="utf-8") as f:
+                r = re.sub(r"\s+", " ", f.read())
+            self.assertIn("GPL-3.0-or-later OR LGPL-3.0-or-later, your choice", r)
+            self.assertIn("CC-BY-SA-4.0", r)
+        for u in ("https://github.com/inputloop/topology/tree/corwin/www/topoforge", "https://github.com/inputloop/topology/tree/corwin/topoforge"):
+            self.assertIn('href="%s"' % u, lg)
+        cells = dict(re.findall(r'<div class="lg-cell (lg-[a-z]+)">(.*?)</div>', lg, re.S))
+        his = sum(len(re.sub(r"<[^>]+>", "", cells[k])) for k in ("lg-app", "lg-lic", "lg-src"))
+        ours = len(re.sub(r"<[^>]+>", "", cells["lg-sheet"]))
+        self.assertGreaterEqual(his, ours, "TopoForge gets less room in the legend than the site does")
+
     def test_topology_sources_are_not_in_the_repository(self):
         # The repository carries the shell only. Walk it (not the build output) for topology's files.
         for dp, ds, fs in os.walk(ROOT):

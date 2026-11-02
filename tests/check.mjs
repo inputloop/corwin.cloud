@@ -253,3 +253,17 @@ test('nothing in the navigator animates: its stylesheet section has no transitio
   const sec = css.slice(i);
   assert.ok(!/\b(transition|animation)\s*:/.test(sec), 'the navigator section animates something');
 });
+
+// ---- the palettes (docs/NAV.md, revision 2) -------------------------------------------------------
+const floatSrc = existsSync(join(out, 'js', 'float.js')) ? rd('js/float.js') : null;
+test('float.js asks the network for nothing, keeps storage inside try under its one key, and only reads TopoForge', { skip: !floatSrc }, () => {
+  const body = floatSrc.split('\n').slice(1).join('\n');
+  assert.ok(!/\bfetch\(|XMLHttpRequest|sendBeacon|WebSocket|EventSource|https?:\/\//.test(body), 'float.js reaches the network');
+  const lines = floatSrc.split('\n').filter((l) => /localStorage/.test(l));
+  assert.ok(lines.length >= 2);
+  for (const l of lines) assert.match(l, /try \{.*localStorage\.(get|set)Item\(KEY/, 'storage outside try: ' + l.trim());
+  assert.match(floatSrc, /KEY = 'corwin\.cloud\.float\.v1'/);
+  const tf = floatSrc.split('\n').filter((l) => /contentDocument|\bd\.|\bp\.|\bs\./.test(l) && /contentDocument|getElementById\('(palette|side)'\)/.test(l));
+  for (const l of tf) assert.ok(!/(appendChild|setAttribute|classList|innerHTML|textContent\s*=|style\.)/.test(l), 'float.js changes TopoForge: ' + l.trim());
+});
+

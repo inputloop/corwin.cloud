@@ -255,9 +255,10 @@ def make(out, tdir, dindex):
         public = pl != "place" or G.host_label(name) == name
         if not public:
             n_ws += 1
-        label = name if public else "a workstation"
-        iid = "%s-%s" % (sec[:-1] if sec != "people" else "person", G.slug(name) if public else "workstation-%d" % n_ws)
         on = drawn_on.get(name)
+        # two workstations would read the same; the project whose page draws each tells them apart
+        label = name if public else ("a workstation (%s)" % on if on else "a workstation")
+        iid = "%s-%s" % (sec[:-1] if sec != "people" else "person", G.slug(name) if public else "workstation-%d" % n_ws)
         href = "index.html?drawing=%s#top" % (on or "shop")
         page = dindex["projects"][on]["name"] if on else shop
         tip = G.summary(r["body"], 200) if public else "A place the drawing does not name on a public site."

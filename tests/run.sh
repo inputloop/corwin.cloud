@@ -34,6 +34,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/browser.cjs || fail=1
       step "the navigator in the browser (playwright)"
       SITE_OUT=$out "$node" tests/nav-browser.cjs || fail=1
+      step "the home page, revision 2: the drawing loads, the palettes, the minibuffer, the legend (playwright)"
+      SITE_OUT=$out "$node" tests/home-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -61,13 +63,13 @@ prove_red() {
   }
   # a planted fault only a browser can see: build the copy, then run the navigator's browser checks on it
   plant_b() {
-    name=$1 file=$2 expr=$3
+    name=$1 file=$2 expr=$3 suite=${4:-tests/nav-browser.cjs}
     rm -rf "$tmp/w"; mkdir "$tmp/w"
     (cd "$here" && tar cf - --exclude=./public --exclude=./node_modules --exclude=./.git --exclude=__pycache__ .) | (cd "$tmp/w" && tar xf -)
     sed "$expr" "$tmp/w/$file" > "$tmp/x" && cp "$tmp/x" "$tmp/w/$file"
     if cmp -s "$here/$file" "$tmp/w/$file"; then printf 'PLANT FAILED  %s (no change to %s)\n' "$name" "$file"; bad=1; return; fi
     rm -rf "$tmp/pub"
-    if (cd "$tmp/w" && "$py" build.py --out "$tmp/pub" >/dev/null 2>&1 && SITE_OUT="$tmp/pub" "$node" tests/nav-browser.cjs) >"$tmp/log" 2>&1; then
+    if (cd "$tmp/w" && "$py" build.py --out "$tmp/pub" >/dev/null 2>&1 && SITE_OUT="$tmp/pub" "$node" "$suite") >"$tmp/log" 2>&1; then
       printf 'STAYED GREEN  %s (browser)\n' "$name"; bad=1
     else printf 'went red      %s (browser)\n' "$name"; fi
   }
@@ -97,7 +99,7 @@ prove_red() {
   plant "an inline script left in a demo"   demos.py     's#    t = SCRIPT.sub(repl, t)#    t = t#'
   plant "a demo script not in jslicense"    build.py     's#for path, lic, source in res.get("scripts", \[\]):#for path, lic, source in []:#'
   plant "a demo page loses its credit"      build.py     's#e(d\["credit"\]), e(d\["licence"\]), e(d\["run"\])#"", e(d["licence"]), e(d["run"])#'
-  plant "stage.js writes to storage"        src/js/stage.js "s#^  var kept = false;#  var kept = false; localStorage.setItem('x', '1');#"
+  plant "stage.js writes to storage"        src/js/stage.js "s#^  var kind = classify(), kept#  localStorage.setItem('x', '1'); var kind = classify(), kept#"
   plant "the home frames a host page"       build.py     's#first = "topology/topoforge/index.html?load=/" + index\["file"\]#first = "topology/app.html"#'
   plant "the demo policy allows inline js"  build.py     "s#DEMO_POLICY = (\"default-src 'self'; script-src 'self';#DEMO_POLICY = (\"default-src 'self'; script-src 'self' 'unsafe-inline';#"
   plant "a card without its drawing link"   build.py     '/t.append(a("index.html?drawing=%s#top" % r\["id"\], "Drawing", "act"))/d'
@@ -122,8 +124,16 @@ prove_red() {
   plant "a process lends the nav no BPMN"    navindex.py  's#^            if names_in(words, name):$#            if False:#'
   plant "a nav category with no reason"      navindex.py  's#self.d\["why"\]\["%s:%s" % (facet, value)\] = why#self.d["why"]["%s:%s" % (facet, value)] = ""#'
   plant "taxonomy.js staged altered"         share.py     's#        f.write(t)$#        f.write(t + "//x\\n")#'
-  plant "the nav has no plain list"          build.py     's#(NV.render(navx), frame))#("", frame))#'
-  plant "nav.js missing from jslicense"      build.py     's#"badges.js", "nav.js")#"badges.js")#'
+  plant "the nav has no plain list"          build.py     's#NV.render(navx) if navx else ""#""#'
+  plant "nav.js missing from jslicense"      build.py     's#"float.js", "nav.js")#"float.js")#'
+  plant "float.js missing from jslicense"    build.py     's#"badges.js", "float.js"#"badges.js"#'
+  plant "float.js reads storage outside try" src/js/float.js 's#^  function saveAll() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function saveAll() {#'
+  plant "float.js asks another host"         src/js/float.js 's#^  var all = {}, list = \[\];#  var all = {}, list = []; fetch("https://x.example/");#'
+  # the legend (revision 2): Bryant named with his link, TopoForge's licence as its README.org says
+  plant "the legend loses Bryant's link"     build.py     's#^BRYANT_URL = "https://github.com/takushieternal"#BRYANT_URL = "\#bryant"#'
+  plant "the legend's licence altered"       build.py     's#">GPL-3.0-or-later</a> or #">GPL-2.0-only</a> or #'
+  plant "the legend's hidden row drops him"  build.py     's#<p class="lg-short">TopoForge by %s · code#<p class="lg-short">TopoForge%.0s by Bryant · code#'
+  plant "TopoForge's source not linked"      build.py     's#^TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"#TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin"#'
   plant "nav.js asks another host"           src/js/nav.js "s#window.fetch('nav/index.json'#window.fetch('https://x.example/nav/index.json'#"
   plant "nav.js reads storage outside try"   src/js/nav.js 's#^  function save() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function save() {#'
   plant "a single-key shortcut in the nav"   src/js/nav.js "s#if (ev.ctrlKey \&\& !ev.altKey \&\& !ev.metaKey \&\& (ev.key === 'x' || ev.key === 'X'))#if ((ev.key === 'x' || ev.key === 'X'))#"
@@ -138,15 +148,30 @@ prove_red() {
     plant_b "a lone hidden tab with one buffer" src/js/nav.js 's#^    if (els.tabs.hidden) return;.*$##'
     plant_b "pin-to-buffer makes duplicates"  src/js/nav.js 's#if (o.base.length \&\& canon(o.base) === key \&\& ctxEmpty(o.live)) {#if (false) {#'
     plant_b "the context light never lit"     src/js/nav.js "s#light.classList.toggle('lit', baked);#light.classList.toggle('lit', false);#"
-    plant_b "the context light says nothing"  src/js/nav.js "s#say(t.base.length ? 'Context: ' + describe(t.base) + '.'#say(t.base.length ? ''#"
-    plant_b "the width not kept"              src/js/nav.js 's#^    applyWidth(); save();$#    applyWidth();#'
+    plant_b "the context light says nothing"  src/js/nav.js "s#say(t.base.length ? 'Kept filter: ' + describe(t.base) + '.'#say(t.base.length ? ''#"
+    plant_b "the width not kept"              src/js/float.js 's#if (ed) { ed = null; saveAll();#if (ed) { ed = null;#'
     plant_b "the browser ignores the facets"  src/js/nav.js 's#      if (p.length \&\& !p.some(#      if (false \&\& !p.some(#'
     plant_b "an emptied section still shown"   src/js/nav.js "s#if (!ix.items.some(function (it) { return it.section === sid \&\& model.pass\[it.id\]; })) return;##"
-    plant_b "a fifth window allowed"          src/js/nav.js "s#MAXWIN = 4,#MAXWIN = 5,#"
+    plant_b "a fifth window allowed"          src/js/nav.js "s#MAXWIN = 4;#MAXWIN = 5;#"
     plant_b "an item does not open its page"  src/js/nav.js 's#if (b) { b.click();#if (b) {#'
     plant_b "the echo gives no reasons"       src/js/nav.js 's#say(reasons(ITEMS\[#say((ITEMS[#'
     plant_b "refused storage stops the nav"   src/js/nav.js "s#function load() { try { return JSON.parse(window.localStorage.getItem(KEY) || 'null'); } catch (e) { return null; } }#function load() { return JSON.parse(window.localStorage.getItem(KEY) || 'null'); }#"
     plant_b "the nav scrolls sideways at 390" src/css/site.css 's#^  .nf-handle { display: none; }#  .nf-handle { display: none; } .navframe { min-width: 480px; }#'
+    # revision 2 (docs/NAV.md): the drawing loads, the palettes, every menu item, the minibuffer, the legend
+    H=tests/home-browser.cjs
+    plant_b "an empty kept copy beats the shop"   src/js/stage.js "s#^    if (!shapes) return 'empty';#    if (false) return 'empty';#" $H
+    plant_b "TopoForge's sample beats the shop"   src/js/stage.js 's#^    if (d.name === SAMPLE.name#    if (false \&\& d.name === SAMPLE.name#' $H
+    plant_b "no notice over the visitor's own"    src/js/stage.js 's#^    notice.hidden = !text;#    notice.hidden = true;#' $H
+    plant_b "Full size plants the sample again"   build.py 's#% (e(first, quote=True), e(index\["file"\], quote=True))),#% ("topology/topoforge/index.html", e(index["file"], quote=True))),#' $H
+    plant_b "the navigator docked by default"     src/js/float.js "s#: 'float',#: 'left',#" $H
+    plant_b "the palette's place not kept"        src/js/float.js 's#^    try { window.localStorage.setItem(KEY, JSON.stringify(o)); }.*#    void o;#' $H
+    plant_b "no keyboard move on the grip"        src/js/float.js 's#ArrowRight: \[n, 0\]#ArrowRiight: [n, 0]#' $H
+    plant_b "no single-pointer Move"              src/js/nav.js "s#, \['mv-d', 'Move down', ''\]##" $H
+    plant_b "the Site menu drops a link"          src/js/nav.js "s#querySelectorAll('header.top nav a')#querySelectorAll('header.top nav a:not([href=\"packages.html\"])')#" $H
+    plant_b "a menu item that does nothing"       src/js/nav.js "s#'nextbuf': nextTab,#'nextbuf': function () {},#" $H
+    plant_b "the minibuffer input boxed again"    src/css/site.css 's#background: transparent; border: 0; border-radius: 0; padding: 0; margin: 0; min-height: 24px; caret#background: transparent; border: 1px solid; border-radius: 0; padding: 0; margin: 0; min-height: 24px; caret#' $H
+    plant_b "the echo area in another face"       src/css/site.css 's#height: 60px; overflow: auto; font: inherit;#max-height: 6.5em; overflow: auto; font: 14px/22px var(--sans);#' $H
+    plant_b "the legend covers focus"             src/js/float.js 's#L.temp = true; L.apply();#L.apply();#' $H
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

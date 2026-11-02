@@ -3,12 +3,15 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
 // stage.js: opens TopoForge on the home page, and does nothing else. It reads one thing this
-// browser keeps, TopoForge's own working copy (the key TopoForge writes, topoforge.autosave.v1),
-// only to ask whether there is one; it never reads what is in it, writes nothing, and asks the
-// network for nothing.
-//   - No working copy yet: TopoForge opens on the shop's drawings, by TopoForge's own ?load=.
-//   - A working copy: TopoForge opens on it, as TopoForge always does. Your drawing is never
-//     replaced unless you press "Start again from the shop's drawings".
+// browser keeps, TopoForge's own working copy (the key TopoForge writes, topoforge.autosave.v1): its
+// name, its page names and whether any page has a shape. It never writes it, writes nothing else,
+// and asks the network for nothing. docs/NAV.md (revision 2, "The drawing loads") says why:
+//   - nothing kept, an empty drawing (TopoForge's File, New), or TopoForge's own sample unchanged
+//     (it plants itself when TopoForge is opened on its own): the shop's drawings open, by TopoForge's
+//     own ?load=; none of these holds anything of the visitor's;
+//   - the shop's drawings, kept: they open as left, with a notice if this build has pages they lack;
+//   - a drawing of the visitor's own: it opens, as TopoForge always does, with a notice at the top of the
+//     legend and a button that opens the shop's in its place. Nothing of theirs is replaced unasked.
 //   - index.html?drawing=<project>: once TopoForge is up, the page for that project is chosen by
 //     pressing TopoForge's own page tab, if the drawing in front of you is the shop's.
 (function () {
@@ -22,8 +25,36 @@
   var ours = f.getAttribute('data-doc');
   var want = null;
   try { want = new URLSearchParams(location.search).get('drawing'); } catch (e) { /* old browser: no choice */ }
-  var kept = false;
-  try { kept = window.localStorage.getItem('topoforge.autosave.v1') !== null; } catch (e) { /* storage off: TopoForge keeps nothing either */ }
+  var notice = document.getElementById('stage-notice'), noticeT = document.getElementById('stage-notice-t');
+  var noticeB = document.getElementById('stage-notice-b'), full = document.getElementById('stage-full');
+  // TopoForge's own sample, as it makes it: the name, one page, and its counts of shapes and links
+  var SAMPLE = { name: 'Sample office network', nodes: 19, links: 15 };
+  function classify() {
+    var raw = null, d;
+    try { raw = window.localStorage.getItem('topoforge.autosave.v1'); } catch (e) { return 'none'; }   // storage off: TopoForge keeps nothing either
+    if (raw === null) return 'none';
+    try { d = JSON.parse(raw); } catch (e) { return 'own'; }   // unreadable to us; TopoForge may still read it: not ours to replace
+    var pages = d && Array.isArray(d.pages) ? d.pages : [];
+    var shapes = pages.reduce(function (n, p) { return n + ((p && p.nodes) || []).length + ((p && p.links) || []).length; }, 0);
+    if (!shapes) return 'empty';
+    if (d.name === SAMPLE.name && pages.length === 1 && (pages[0].nodes || []).length === SAMPLE.nodes && (pages[0].links || []).length === SAMPLE.links) return 'sample';
+    if (d.name === ours) {
+      var have = {}; pages.forEach(function (p) { have[p && p.name] = 1; });
+      var lack = Object.keys(pages_wanted()).filter(function (n) { return !have[n]; });
+      return lack.length ? { k: 'old', lack: lack.length } : 'shop';
+    }
+    return { k: 'own', name: String(d.name || 'untitled') };
+  }
+  function pages_wanted() { var o = {}; Object.keys(pages).forEach(function (k) { o[pages[k]] = 1; }); return o; }
+  function show(text, button) {
+    if (!notice) return;
+    notice.hidden = !text;
+    if (noticeT) noticeT.textContent = text || '';
+    if (noticeB) { noticeB.textContent = button || ''; noticeB.hidden = !button; }
+  }
+  var kind = classify(), kept = !(kind === 'none' || kind === 'empty' || kind === 'sample');
+  // "TopoForge full size" opens the shop's drawings unless a drawing worth keeping is kept here
+  if (full && kept) full.setAttribute('href', f.getAttribute('data-resume'));
 
   function choose(tries, loading) {
     if (!want) return;
@@ -36,7 +67,7 @@
       return;
     }
     if (doc.name !== ours) {
-      say('This is your own working copy, so the page for ' + want + ' is not opened over it. "Start again from the shop\'s drawings" opens it.');
+      say('This is your own drawing, kept in this browser, so the page for ' + want + ' is not opened over it. "Open the shop\'s drawings", at the top of the legend, opens it.');
       return;
     }
     var i = doc.pages.findIndex(function (p) { return p.name === name; });
@@ -56,10 +87,18 @@
     f.src = f.getAttribute(first ? 'data-first' : 'data-resume');
   }
   open(!kept);
-  if (kept) say('Showing your working copy from your last visit.');
-  if (fresh) fresh.addEventListener('click', function () {
-    say('Opening the shop\'s drawings in place of the working copy in this browser.');
+  if (kind === 'empty') say('The drawing kept in this browser was empty, so the shop\'s drawings are open.');
+  else if (kind === 'sample') say('This browser had kept TopoForge\'s own sample; the shop\'s drawings are open in its place.');
+  else if (kind === 'shop') say('Showing the shop\'s drawings as you left them.');
+  else if (kind.k === 'old') { say('Your copy of the shop\'s drawings is older than this site.'); show('Your copy of the shop\'s drawings is older than this site: ' + kind.lack + ' page' + (kind.lack === 1 ? ' is' : 's are') + ' missing.', 'Open the current drawings'); }
+  else if (kind === 'own' || kind.k === 'own') { var nm = kind.name ? '\u201c' + kind.name + '\u201d' : 'one we cannot read'; say('This is your own drawing, kept in this browser.'); show('This is your own drawing, kept in this browser: ' + nm + '. The shop\'s drawings replace it here; File, Export keeps a copy first.', 'Open the shop\'s drawings'); }
+  function fresh_() {
+    show(null);
+    say('Opening the shop\'s drawings in place of the drawing kept in this browser.');
+    if (full) full.setAttribute('href', f.getAttribute('data-first'));
     open(true);
-  });
+  }
+  if (fresh) fresh.addEventListener('click', fresh_);
+  if (noticeB) noticeB.addEventListener('click', fresh_);
 })();
 // @license-end

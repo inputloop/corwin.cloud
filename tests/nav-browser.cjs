@@ -43,7 +43,8 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
     page.on('request', (r) => { const u = r.url(); if (!u.startsWith(base) && !/^(data|blob|about):/.test(u)) offsite.push(u); });
     page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
     page.on('pageerror', (e) => errors.push('pageerror ' + e.message));
-    const ready = async () => { await page.waitForSelector('#nav[data-ready="yes"]', { timeout: 10000 }); await page.waitForTimeout(150); };
+    // on a narrow screen the navigator starts as its strip: show it, as a visitor would
+    const ready = async () => { await page.waitForSelector('#nav[data-ready="yes"]', { timeout: 10000 }); await page.waitForTimeout(150); if (!(await page.isVisible('#nav-q'))) await page.click('.nf-hide'); };
     const echo = () => page.textContent('#nav-echo');
     const shownIn = (sel) => page.$$eval(sel, (as) => as.map((a) => a.getAttribute('data-id')));
     const pins = () => page.evaluate(() => [...document.querySelector('.win .pinlist').children].map((li) => { const a = li.querySelector(':scope > a.it'); return a ? a.getAttribute('data-id') : 'g:' + li.querySelector('[data-pin-g]').getAttribute('data-pin-g'); }));
@@ -65,8 +66,8 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
       await page.waitForFunction((name) => { const f = document.getElementById('topology'); const d = f.contentWindow && f.contentWindow.TopoForge && f.contentWindow.TopoForge.doc; return d && d.name === name; }, drawing.doc, { timeout: 15000 });
       await page.click('.win a.it[data-id="project-gitcha"]');
       await page.waitForFunction((n) => { const d = document.getElementById('topology').contentWindow.TopoForge.doc; return d.pages[d.cur].name === n; }, drawing.projects.gitcha.name, { timeout: 5000 });
-      await page.waitForFunction((n) => document.querySelector('.ft-draw').textContent === 'drawing: ' + n, drawing.projects.gitcha.name, { timeout: 3000 });
-      ok('an item opens its page in the drawing, and the title bar names the page');
+      await page.waitForFunction(() => /^gitcha/i.test(document.querySelector('.win .ml-item').textContent), null, { timeout: 3000 });
+      ok('an item opens its page in the drawing, and the mode-line follows it');
     }
 
     // a filter that empties a section hides it (Corwin, 2026-11-01 19:04)
@@ -132,6 +133,9 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
     await press('show', 'hosts', false);
     await page.click('.win .pinlist a.it[data-id="project-corwin.cloud"] + .pin-i');
     assert.deepEqual(await pins(), ['project-topology', 'g:projects', 'project-corwin.cloud']);
+    // the pinned Projects section is long; folded, all three pins fit in the floating palette at once
+    await page.click('.win .pinlist [data-fold="projects"]');
+    await page.evaluate(() => { document.querySelector('.win .win-body').scrollTop = 0; });
     if (w >= 1000) await page.locator('.win .pinlist > li').nth(2).dragTo(page.locator('.win .pinlist > li').nth(0));
     else { await page.click('.win .pinlist [data-up="2"]'); await page.click('.win .pinlist [data-up="1"]'); }   // no drag on touch: the buttons
     await page.waitForTimeout(100);
@@ -151,10 +155,10 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
     assert.equal(await page.$$eval('.nf-tab', (x) => x.length), 2);
     assert.equal(await page.getAttribute('.nf-tab[data-tab="1"]', 'aria-selected'), 'true');
     assert.equal(await page.isVisible('.win .ml-light.lit'), true, 'the light is not lit in the baked buffer');
-    assert.match(await page.textContent('.win .ml-flags'), /%%/);
+    assert.match(await page.textContent('.win .ml-light'), /^kept filter: /);
     assert.deepEqual(await shownIn('.win .sec a.it'), want, 'the baked buffer shows other items');
     await page.hover('.win .ml-light');
-    assert.equal(await echo(), 'Context: Show Projects; Notation BPMN; words: topology.');
+    assert.equal(await echo(), 'Kept filter: Show Projects; Notation BPMN; words: topology.');
     ok('pin results to a new buffer: the tab bar appears, the context is baked, the light is lit and pointing at it says the context');
     await shot('buffers');
     await page.click('.nf-tab[data-tab="0"]');
@@ -186,10 +190,10 @@ const EXAMPLE = { show: ['projects'], f: { notation: ['bpmn'] }, q: 'topology' }
       assert.ok(Math.abs((await page.locator('#nav').boundingBox()).width - after - 16) <= 1, 'ArrowRight on the edge did not widen by 16px');
       assert.equal(await page.getAttribute('.nf-handle', 'aria-valuenow'), String(Math.round(after + 16)));
       ok('dragging the right edge changes the width, which survives a reload; the arrow keys do it too');
-      await page.click('[data-cmd="collapse"]');
-      assert.ok((await page.locator('#nav').boundingBox()).width < 60, 'collapse did not shrink the frame');
-      await page.click('[data-cmd="collapse"]');
-      ok('the title bar collapses and expands the frame');
+      await page.click('[data-cmd="hide"]');
+      assert.ok((await page.locator('#nav').boundingBox()).height < 40, 'hide did not shrink the palette to its strip');
+      await page.click('[data-cmd="hide"]');
+      ok('the palette hides to its strip and comes back');
     } else {
       assert.equal(await page.isVisible('.nf-handle'), false, 'the edge handle shows on a narrow screen');
       ok('on a narrow screen the frame sits above the drawing and has no edge handle');

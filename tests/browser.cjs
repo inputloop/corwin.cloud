@@ -97,7 +97,7 @@ let n = 0; const ok = (m) => { n++; console.log('ok', n, '-', m); };
 
     // about-corwin's Customize palette, shared: choices kept in this browser, Escape closes, Reset forgets
     if (fs.existsSync(path.join(out, 'js', 'customize.js'))) {
-      await page.goto(base + 'index.html'); await page.waitForTimeout(200);
+      await page.goto(base + 'directory.html'); await page.waitForTimeout(200);
       await page.click('#custom-btn');
       assert.equal(await page.isVisible('#custom-panel'), true);
       await page.check('#custom-panel input[name="size"][value="3"]', { force: true });
@@ -151,7 +151,7 @@ let n = 0; const ok = (m) => { n++; console.log('ok', n, '-', m); };
       await page.goto(base + 'index.html?drawing=gitcha'); await page.waitForTimeout(1500);
       assert.ok(!/load=/.test(tf().url()), 'the frame was given ?load= over a working copy: ' + tf().url());
       assert.equal(await tf().evaluate(() => window.TopoForge.doc.name), 'mine');
-      assert.match(await page.textContent('#stage-msg'), /your own working copy/);
+      assert.match(await page.textContent('#stage-msg'), /your own drawing/);
       await page.click('#stage-fresh');
       await page.waitForFunction((name) => { const d = document.getElementById('topology').contentWindow.TopoForge; return d && d.doc && d.doc.name === name; }, index.doc, { timeout: 15000 });
       ok('a working copy of your own is kept; "Start again" brings the shop\'s drawings back');

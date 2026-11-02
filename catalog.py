@@ -27,6 +27,8 @@ PUBLIC_URLS = [
     ORG + "/vibrobeast-skills/tree/HEAD/skills",
     ORG + "/corwin.cloud",
     ORG + "/topology/tree/corwin",
+    ORG + "/topology/tree/corwin/www/topoforge",
+    ORG + "/topology/tree/corwin/topoforge",
     ORG + "/about-corwin",
     ORG + "/gitcha",
     ORG + "/ta",
@@ -55,6 +57,8 @@ PUBLIC_URLS = [
     "http://www.jclark.com/xml/copying.txt",
     "http://www.xfree86.org/3.3.6/COPYRIGHT2.html#5",
     "https://github.com/definitelynotaspren",
+    "https://github.com/takushieternal",
+    "https://www.gnu.org/licenses/lgpl-3.0.html",
     "https://creativecommons.org/licenses/by-sa/4.0/",
     "mailto:" + MAIL,
 ]
