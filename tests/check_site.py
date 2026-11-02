@@ -6,6 +6,7 @@
 The key guard is the external-link allow-list: this repository is public, so a link to a private
 repository anywhere in the output must fail the build.
 """
+import json
 import os
 import re
 import sys
@@ -394,6 +395,124 @@ class NextPassChecks(unittest.TestCase):
         for r in catalog.REPOS:
             if r.get("channel"):
                 self.assertIn('data-channel="%s" hidden' % r["channel"], d, r["id"])
+
+
+class NavChecks(unittest.TestCase):
+    """The left nav (docs/NAV.md): its index, the example from Corwin's words, the plain list."""
+
+    def setUp(self):
+        p = os.path.join(OUT, "nav", "index.json")
+        if not os.path.isfile(p):
+            self.skipTest("no nav index: this build had no topology checkout")
+        sys.path.insert(0, os.path.join(ROOT, "tests"))
+        import nav_expect
+        self.NE = nav_expect
+        self.ix = nav_expect.load(OUT)
+
+    def test_every_thing_drawn_is_an_item_in_one_of_seven_sections(self):
+        ids = {i["id"] for i in self.ix["items"]}
+        for r in catalog.REPOS:
+            self.assertIn("project-" + r["id"], ids)
+        for d in catalog.DEMOS:
+            self.assertIn("demo-" + d["id"], ids)
+        import processes
+        for pr in processes.PROCESSES:
+            self.assertIn("process-" + pr["id"], ids)
+        with open(os.path.join(OUT, "drawings", "index.json"), encoding="utf-8") as f:
+            pages = [p["name"] for p in json.load(f)["pages"]]
+        reached = {i.get("page") for i in self.ix["items"]}
+        for name in pages:
+            self.assertIn(name, reached, "no item opens the drawing page " + name)
+        secs = [s["id"] for s in self.ix["facets"]["show"]]
+        self.assertEqual(secs, ["projects", "processes", "hosts", "people", "paths", "pages", "demos"])
+        for i in self.ix["items"]:
+            self.assertIn(i["section"], secs, i["id"])
+
+    def test_every_category_says_why(self):
+        for i in self.ix["items"]:
+            for f, vals in i["facets"].items():
+                known = [v["id"] for v in self.ix["facets"][f]]
+                for v in vals:
+                    self.assertIn(v, known, i["id"])
+                    self.assertTrue(i["why"].get("%s:%s" % (f, v), "").strip(), "%s is in %s:%s with no reason" % (i["id"], f, v))
+
+    def test_the_example_from_his_words_is_computed_from_the_data(self):
+        """Projects + BPMN + "topology": the index's answer, and the same answer read from the sources."""
+        got = self.NE.expect(self.ix, [{"show": ["projects"], "f": {"notation": ["bpmn"]}, "q": "topology"}])
+        import drawings as G
+        import processes as PR
+        recs = G.load_examples(TOPO)
+        table, src = PR.read_notations(TOPO)
+        kinds = dict(catalog.KINDS)
+
+        def rec_text(name):
+            r = recs.get(name)
+            return " ".join([r["name"], r["body"]] + [v for k, v in r["front"].items() if k not in ("repo", "private")]) if r else ""
+
+        ptexts = [" ".join([p["name"], p["title"], p["source"], p["credit"]] + [n for _, n in p["lanes"]] + [e["text"] for e in p["elements"]]).lower()
+                  for p in PR.PROCESSES]
+        expected = []
+        for r in catalog.REPOS:
+            app = next((x for x in catalog.APPS if x["repo"] == r["id"]), None)
+            own = [r["name"], r["one"], r["credit"], kinds.get(r["kind"], "")]
+            if app:
+                own += [app["tagline"], app["what"], " ".join(app["does"]), app["how_title"], " ".join(" ".join(s) for s in app["flow"]),
+                        app["how"], app["status"], app["needs"], app["credit"]]
+            own.append(rec_text(r["name"]))
+            own += [rec_text(c) for c, _ in G.contained(r["name"], recs)]
+            own += [n for n, _ in G.related(r["name"], recs)]
+            text = " ".join(own).lower()
+            name = re.escape(r["name"].lower())
+            named = any(re.search(r"(?<![a-z0-9'+.-])" + name + r"(?![a-z0-9'+-])(?!\.[a-z0-9])", t) for t in ptexts)
+            bpmn = "bpmn" in text or named or src.startswith(r["name"] + "'s ")
+            says_topology = re.search(r"(?<![a-z0-9'+.-])topology", text) is not None
+            if bpmn and says_topology:
+                expected.append("project-" + r["id"])
+        self.assertEqual(got, expected, "the index and the sources disagree on Projects + BPMN + topology")
+        self.assertIn("project-topology", got)
+        print("\n  Projects + BPMN + \"topology\" -> %s" % ", ".join(x.replace("project-", "") for x in got), file=sys.stderr)
+
+    def test_the_nav_is_a_plain_list_of_links_without_scripts(self):
+        home = read("index.html")
+        m = re.search(r'<aside class="navframe" id="nav".*?</aside>', home, re.S)
+        self.assertTrue(m, "the home page has no navigator")
+        links = re.findall(r'<a href="([^"]+)" data-item="([^"]+)"', m.group(0))
+        self.assertEqual(sorted(i for _, i in links), sorted(i["id"] for i in self.ix["items"]))
+        pages = json.loads(html_unescape(re.search(r'data-pages="([^"]+)"', home).group(1)))
+        for href, iid in links:
+            href = html_unescape(href)
+            q = re.match(r"^index\.html\?drawing=([^#]+)#top$", href)
+            if q:
+                self.assertIn(q.group(1), pages, "%s opens ?drawing=%s, which names no page" % (iid, q.group(1)))
+            else:
+                self.assertTrue(os.path.isfile(os.path.join(OUT, href, "index.html")), iid + " links nowhere: " + href)
+
+    def test_no_private_part_or_name_in_the_index(self):
+        raw = read("nav/index.json")
+        self.assertFalse(PRIVATE_URL.search(raw), "a private repository's address is in the nav index")
+        self.assertFalse(FORBIDDEN.search(raw))
+        import drawings as G
+        for r in G.load_examples(TOPO).values():
+            f = r["front"]
+            if f.get("pillar") == "place" and f.get("kind") in ("server", "desktop", "laptop") and not re.match(catalog.PUBLIC_HOSTS_RE, r["name"]):
+                self.assertNotRegex(raw, r"\b%s\b" % re.escape(r["name"]), r["name"] + " is named in the nav index")
+
+    def test_taxonomy_js_is_about_corwins_byte_for_byte_and_licensed(self):
+        src = os.path.join(ABOUT, "src", "js", "taxonomy.js")
+        if not os.path.isfile(src):
+            self.skipTest("no about-corwin checkout")
+        with open(src, "rb") as a, open(os.path.join(OUT, "js", "taxonomy.js"), "rb") as b:
+            self.assertEqual(a.read(), b.read(), "js/taxonomy.js is not about-corwin's, byte for byte")
+        lic = read("jslicense.html")
+        for f in ("nav.js", "taxonomy.js"):
+            self.assertIn('href="js/%s"' % f, lic)
+        home = read("index.html")
+        self.assertLess(home.index('src="js/taxonomy.js"'), home.index('src="js/nav.js"'), "taxonomy.js must load before nav.js")
+
+
+def html_unescape(t):
+    import html
+    return html.unescape(t)
 
 
 def catalog_demo(did):

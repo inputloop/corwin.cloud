@@ -63,6 +63,17 @@ page links `jslicense.html`. The policy for `/demo/*/app/` is written to `genera
   says its last revision and stamp in words; with no feed the line stays hidden. The site policy's
   `connect-src` is `'self'` for this.
 
+## The navigator (2026-11-01)
+
+Beside the drawing, on the left, an Emacs frame lists everything the drawing draws (projects,
+processes, hosts, people, paths, pages, demos) in layered categories: a tool bar of categories you
+press (by kind, notation, pillar and what the catalog says each is) and a prompt whose words narrow
+at the same time. Splits with their own mode-lines, pins that stay put, buffers as tabs, a context you
+can bake into a buffer, and a right edge you can drag. `docs/NAV.md` says what it does and the rule
+that decides what shows; `navindex.py` builds its one data file (`nav/index.json`) at build time from
+the drawing's own sources; `src/js/nav.js` draws it, matching words with about-corwin's `taxonomy.js`
+(staged by `share.py`, unchanged). With scripts off it is a plain list of links.
+
 `docs/AMBITIONS.md` is our reading of what this site is for; `docs/UI-AUDIT-2026-11-01.md` lists
 what differs from TopoForge as Bryant made it, and why each difference stays or went.
 
@@ -86,11 +97,15 @@ The checks: every internal link resolves; every external link is on the allow-li
 addresses in `catalog.py` (a private repository's address anywhere in the output fails); every tab
 is reachable from a directory card; every directory project has its own page in the default
 drawings, saying who made it as the directory does; nothing under a `## Private` heading and no
-private host name is drawn; Bryant's drawing is his, byte for byte; every demo page names who made
+private host name is drawn; the navigator's index covers every drawn thing, gives a reason for every
+category, carries no private name, and answers Projects + BPMN + "topology" the same way a second
+reader in Python (`tests/nav_expect.py`) works it out from the sources; Bryant's drawing is his, byte for byte; every demo page names who made
 it, its licence and how to run it; no staged demo page keeps an inline script; the ARIA tab pattern; no inline script or style; LibreJS
 labels and the `jslicense.html` row; no machine paths or vendor strings; the deploy policy stays
 strict. `tests/browser.cjs` drives the built site in Chromium at 1280 and 390 pixels, under the
-deploy policies, with scripts on and off; it runs when the `playwright` package is installed.
+deploy policies, with scripts on and off; it runs when the `playwright` package is installed. `tests/nav-browser.cjs` does the same for the
+navigator (splits, pins, drag, buffers, the context light, the width, storage refused, scripts off),
+and `--prove-red` plants a fault for each of those promises and runs it in the browser too.
 Node 18 or later for the node checks.
 
 ## Change the words

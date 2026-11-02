@@ -13,6 +13,8 @@ topology: the build reads them from a local checkout of about-corwin (ABOUT_DIR,
                                    rules, unchanged, into public/css/shared.css (with where they came from)
     build.py load_snapshots() and render_ci()   the CI strip, rendered by about-corwin's own code from
                                    its content/ci/builds.json (the snapshot its scripts/fetch-ci saves)
+    src/js/taxonomy.js             -> public/js/taxonomy.js, unchanged: the left nav (js/nav.js) matches
+                                   the prompt's words with its tokenize() and similarity() (docs/NAV.md)
 
 Without a checkout the pages build without them and the build says so. Standard library only.
 """
@@ -46,7 +48,7 @@ def css_section(css, title):
 
 def stage(out, adir):
     """Returns {"staged": bool, "why", "commit", "markup", "ci"} and writes js/customize.js and css/shared.css."""
-    res = {"staged": False, "why": "", "commit": None, "markup": "", "ci": ""}
+    res = {"staged": False, "why": "", "commit": None, "markup": "", "ci": "", "taxonomy": False}
     src = os.path.join(adir or "", "src")
     try:
         with open(os.path.join(src, "js", "customize.js"), encoding="utf-8") as f:
@@ -79,6 +81,7 @@ def stage(out, adir):
         f.write(head + "\n".join(parts) + "\n/* ---- the side cards (the CI strip) */\n" + "\n".join(side) + "\n")
     with open(os.path.join(out, "js", "customize.js"), "w", encoding="utf-8") as f:
         f.write(js)
+    res["taxonomy"] = stage_taxonomy(out, src)
     res["markup"] = m.group(1)
     res["ci"] = ci_strip(adir, res)
     res["staged"] = True
@@ -88,6 +91,9 @@ def stage(out, adir):
 def ci_strip(adir, res):
     """about-corwin's own render_ci(), from its own snapshot. An empty string (and a reason) if it fails."""
     path = os.path.join(adir, "build.py")
+    # about-corwin's build.py imports modules that sit beside it (build_tone, 2026-11-01), so its folder
+    # is on the import path while it loads, and taken off again after.
+    sys.path.insert(0, os.path.abspath(adir))
     try:
         spec = importlib.util.spec_from_file_location("about_corwin_build", path)
         mod = importlib.util.module_from_spec(spec)
@@ -97,3 +103,23 @@ def ci_strip(adir, res):
         print("share: the CI strip is left out: %s" % ex, file=sys.stderr)
         res["ci_why"] = str(ex)
         return ""
+    finally:
+        try:
+            sys.path.remove(os.path.abspath(adir))
+        except ValueError:
+            pass
+
+
+def stage_taxonomy(out, src):
+    """about-corwin's taxonomy.js, unchanged, for the left nav's word matching. False if it is missing
+    or lost its labels; the nav then matches words by its own plain rule and says so."""
+    try:
+        with open(os.path.join(src, "js", "taxonomy.js"), encoding="utf-8") as f:
+            t = f.read()
+    except OSError:
+        return False
+    if not t.startswith(LABEL) or "// @license-end" not in t:
+        return False
+    with open(os.path.join(out, "js", "taxonomy.js"), "w", encoding="utf-8") as f:
+        f.write(t)
+    return True

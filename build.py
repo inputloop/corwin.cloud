@@ -26,16 +26,17 @@ import demos as D
 import drawings as G
 import vendor as V
 import share as SH
+import navindex as NV
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("site.js", "stage.js", "badges.js")
+JS_FILES = ("site.js", "stage.js", "badges.js", "nav.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
 
 e = html.escape
-SHARED = {"staged": False, "markup": "", "ci": ""}   # set by main() from share.stage(): about-corwin's palette and CI strip
+SHARED = {"staged": False, "markup": "", "ci": "", "taxonomy": False}   # set by main() from share.stage(): about-corwin's palette and CI strip
 
 
 def a(href, text, cls=""):
@@ -261,7 +262,7 @@ def render_tabs():
 
 # ---- pages -----------------------------------------------------------------------------------
 
-def topology_area(have, index):
+def topology_area(have, index, navx=None):
     """The front door is TopoForge itself, full width, opened on the shop's drawings: one page per
     project, the tabs along its bottom edge. js/stage.js picks the address: the shop's drawings on a
     first visit (TopoForge's own ?load=), the person's working copy when TopoForge has kept one."""
@@ -274,11 +275,19 @@ def topology_area(have, index):
         pages["gitcha-bryant"] = index["pages"][index["gitcha_bryant"]["page"]]["name"]
     for pid, v in index.get("processes", {}).items():
         pages["process-" + pid] = v["name"]
+    if navx:
+        pages.update(navx["keys"])
     first = "topology/topoforge/index.html?load=/" + index["file"]
+    frame = ('<iframe id="topology" class="topology" title="TopoForge, opened on the shop\'s drawings" data-first="%s" '
+             'data-resume="topology/topoforge/index.html" data-doc="%s" data-pages="%s"></iframe>'
+             % (e(first, quote=True), e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True)))
+    body = frame
+    if navx:
+        body = ('<div class="stage-grid" id="stage-grid">%s'
+                '<div class="stage-drawing">%s</div></div>' % (NV.render(navx), frame))
     return ('<section class="stage" id="top" aria-labelledby="stage-h">'
             '<h1 id="stage-h" class="stage-h">The shop, drawn <span class="muted">one page per project: the tabs along the bottom of the drawing</span></h1>'
-            '<iframe id="topology" class="topology" title="TopoForge, opened on the shop\'s drawings" data-first="%s" '
-            'data-resume="topology/topoforge/index.html" data-doc="%s" data-pages="%s"></iframe>'
+            + body.replace("%", "%%") +
             '<noscript><p class="stage-off">TopoForge needs JavaScript. Without it: <a href="directory.html">the directory</a>, '
             '<a href="#projects">the projects in words</a> below, and <a href="%s" download>the drawings as a file</a> to open in your own copy.</p></noscript>'
             '<p class="stage-note">TopoForge, the drawing app, is Bryant Frankford\'s. What you draw stays in this browser until you save it yourself (File). '
@@ -286,8 +295,7 @@ def topology_area(have, index):
             '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button> '
             '<span id="stage-msg" role="status"></span></p>'
             + processes_note(index) +
-            '</section>') % (e(first, quote=True), e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True),
-                             e(index["file"], quote=True), e(index["file"], quote=True))
+            '</section>') % (e(index["file"], quote=True), e(index["file"], quote=True))
 
 
 def processes_note(index):
@@ -306,11 +314,15 @@ def processes_note(index):
             'and the notation decides the shape. Pick the notation you read:</p><ul class="stage-note">%s</ul></div>' % "".join(items))
 
 
-def page_index(have, index):
+NAV_SCRIPTS = '<script src="js/taxonomy.js" defer></script>\n'
+
+
+def page_index(have, index, navx=None):
     return (head("corwin.cloud: the shop, drawn",
                  "TopoForge, opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
-                 '<script src="js/stage.js" defer></script>\n')
-            + nav("home") + '<main id="main">\n' + topology_area(have, index) + ('<div class="wrap shared-wrap">%s</div>' % ci_strip() if ci_strip() else "") + render_tabs() + "</main>\n" + foot("corwin.cloud"))
+                 '<script src="js/stage.js" defer></script>\n'
+                 + ((NAV_SCRIPTS if SHARED.get("taxonomy") else "") + '<script src="js/nav.js" defer></script>\n' if navx else ""))
+            + nav("home") + '<main id="main">\n' + topology_area(have, index, navx) + ('<div class="wrap shared-wrap">%s</div>' % ci_strip() if ci_strip() else "") + render_tabs() + "</main>\n" + foot("corwin.cloud"))
 
 
 def demo_of(repo_id):
@@ -395,7 +407,7 @@ SOURCE_LABELS = {C.P5_SOURCE: "p5.js 1.9.0"}
 def page_jslicense(staged):
     lab = '<a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU-GPL-3.0-or-later</a>'
     rows = []
-    for f in JS_FILES + (("customize.js",) if SHARED["staged"] else ()):
+    for f in JS_FILES + (("customize.js",) if SHARED["staged"] else ()) + (("taxonomy.js",) if SHARED.get("taxonomy") else ()):
         rows.append('<tr><td><a href="js/%s">%s</a></td><td>%s</td><td><a href="js/%s">%s</a></td></tr>' % (f, f, lab, f, f))
     for did, res in sorted(staged.items()):
         for path, lic, source in res.get("scripts", []):
@@ -415,7 +427,7 @@ def page_jslicense(staged):
 <h1>JavaScript licence information</h1>
 <p>Every script on corwin.cloud is free software and is served from this site. This table is in the form <a href="https://www.gnu.org/software/librejs/">GNU LibreJS</a> reads, and lists the demos' scripts too. This site's own scripts are not minified. Two demos carry libraries minified: Quantum 3D5 carries p5.js as its repository ships it (for speed), and NextTime's demo runs with pinned copies of Vue, Vue Router and MapLibre from the npm registry; each such row links the full source, which for the pinned libraries is served from this site too. The pages work with scripts off, except the drawing app and the demos, which are programs.</p>
 <table id="jslicense-labels1"><thead><tr><th scope="col">Script</th><th scope="col">Licence</th><th scope="col">Source</th></tr></thead><tbody>%s</tbody></table>
-<p>topology, staged under /topology/ from its own checkout, carries its own scripts and its own licence notices. customize.js (the Customize control) is about-corwin's, staged from its checkout when this site was built, unchanged.</p>
+<p>topology, staged under /topology/ from its own checkout, carries its own scripts and its own licence notices. customize.js (the Customize control) and taxonomy.js (the word matching of the navigator beside the drawing) are about-corwin's, staged from its checkout when this site was built, unchanged.</p>
 </main>
 """ % "".join(rows) + foot("jslicense"))
 
@@ -654,6 +666,7 @@ def main():
     if not SHARED["staged"]:
         print("build: about-corwin's Customize palette and CI strip are left out: %s" % SHARED["why"], file=sys.stderr)
     index = G.make(out, args.topology, args.inputloop)
+    navx = NV.make(out, args.topology, index) if have else None
     staged = D.stage_all(out, args.inputloop)
     stage_shots(out, args.inputloop)
     for did, res in staged.items():
@@ -662,7 +675,7 @@ def main():
         if any(src for _, _, src in res.get("scripts", [])):
             print("build: WARN demo %s serves a minified script (its full source is linked in jslicense.html)" % did, file=sys.stderr)
     write_demo_csp(staged)
-    write(out, "index.html", page_index(have, index))
+    write(out, "index.html", page_index(have, index, navx))
     write(out, "demo/index.html", page_demos(staged))
     for d in C.DEMOS:
         write(out, "demo/%s/index.html" % d["id"], demo_page(d, staged.get(d["id"]), args.inputloop))

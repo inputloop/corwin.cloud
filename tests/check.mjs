@@ -225,3 +225,31 @@ test('every process element is drawn with the shape its notation gives its role,
   }
   assert.ok(n >= 30, 'process elements checked: ' + n);
 });
+
+// ---- the left nav (docs/NAV.md) ------------------------------------------------------------------
+const navSrc = existsSync(join(out, 'js', 'nav.js')) ? rd('js/nav.js') : null;
+test('nav.js reads one file from this site, nav/index.json, and names no other host', { skip: !navSrc }, () => {
+  const body = navSrc.split('\n').slice(1).join('\n');
+  assert.equal((body.match(/\bfetch\(/g) || []).length, 1, 'nav.js fetches more than one thing');
+  assert.match(body, /fetch\('nav\/index\.json'/);
+  assert.ok(!/https?:\/\//.test(body), 'nav.js names an address on another host');
+  assert.ok(!/XMLHttpRequest|sendBeacon|WebSocket|EventSource/.test(body));
+});
+test('nav.js touches storage only inside try, under its one key', { skip: !navSrc }, () => {
+  const lines = navSrc.split('\n').filter((l) => /localStorage/.test(l));
+  assert.ok(lines.length >= 2);
+  for (const l of lines) assert.match(l, /try \{.*localStorage\.(get|set)Item\(KEY/, 'storage outside try: ' + l.trim());
+  assert.match(navSrc, /KEY = 'corwin\.cloud\.nav\.v1'/);
+});
+test('the nav keys need Ctrl or Alt first: no single-key shortcut starts anything', { skip: !navSrc }, () => {
+  assert.match(navSrc, /ev\.ctrlKey && !ev\.altKey && !ev\.metaKey && \(ev\.key === 'x'/);
+  assert.match(navSrc, /ev\.altKey && !ev\.ctrlKey && !ev\.metaKey && \(ev\.key === 'x'/);
+  assert.match(navSrc, /if \(inField\) return;/, 'the prefix keys must leave the prompt alone (Ctrl+X is cut there)');
+});
+test('nothing in the navigator animates: its stylesheet section has no transition or animation', () => {
+  const css = rd('css/site.css');
+  const i = css.indexOf('/* ---- the navigator');
+  assert.ok(i > 0, 'no navigator section in site.css');
+  const sec = css.slice(i);
+  assert.ok(!/\b(transition|animation)\s*:/.test(sec), 'the navigator section animates something');
+});
