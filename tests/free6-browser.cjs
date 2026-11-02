@@ -204,6 +204,39 @@ const meets = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h &&
       ok(`topology forge 1.9 part A: the first fit sits between the frames; %zoom says the zoom; *Here* floats beside the selection without zooming; *Properties* sets the name in one undo step; C-x in the drawing with a selection cuts (CUA), at ${tag}`);
     } else ok(`topology forge 1.9 part A checks skipped: the staged app is 1.8, at ${tag}`);
 
+    // ---- stage 2 (1.9 parts B and C): the map as the preview, its own moves re-checked against the frames ----
+    // gated on the app having preview() (1.9 B) only: a missing map frame is then a failure, not a skip
+    if (await app(p).evaluate(() => typeof TopoForge.preview === 'function')) {
+      const sw2 = await app(p).evaluate(() => TopoForge.embed());
+      assert.ok(sw2.map && sw2.preview, 'free did not turn on the map and preview switches: ' + JSON.stringify(sw2));
+      assert.ok(await app(p).evaluate(() => !!document.querySelector('#mmwrap .mm-grip')), 'the map has no frame of its own (no door-handle controls)');
+      const cap = () => app(p).evaluate(() => { const c = document.querySelector('#minimap .mm-cap'); return c && !c.hidden ? c.textContent : ''; });
+      const rings = () => app(p).evaluate(() => document.querySelectorAll('#mmPrev rect').length);
+      await p.hover('#ef-1 .ef-tile[data-cat="sec"]'); await p.waitForTimeout(100);
+      assert.match(await cap(), /Security/, 'pointing at a tool-bar tile does not caption the map');
+      assert.equal(await p.isVisible('#ef-hud'), false, 'with 1.9 the stand-in box still shows');
+      await p.mouse.move(w / 2, 5); await p.waitForTimeout(150);
+      assert.equal(await cap(), '', 'the map keeps the preview after the pointer leaves');
+      await p.focus('#ef-1 .ef-shape[data-shape="firewall"]'); await p.waitForTimeout(100);
+      assert.match(await cap(), /Firewall/, 'focusing a shape in the finder does not caption the map');
+      await app(p).evaluate(() => TopoForge.showPage(0)); await p.waitForTimeout(150);
+      await p.hover('#ef-2 .navframe a.it[data-id="project-topology"]'); await p.waitForTimeout(150);
+      assert.match(await cap(), /topology/, 'pointing at a navigator item does not caption the map');
+      assert.ok(await rings() >= 1, 'pointing at a navigator item rings nothing on the shop\'s page');
+      await p.mouse.move(w / 2, 5); await p.waitForTimeout(150);
+      // move the map up into frame 2's lower part with its own grip: the frame ends above it
+      const m0 = await app(p).evaluate(() => TopoForge.panels().map);
+      await app(p).locator('#mmwrap .mm-grip').focus();
+      for (let i = 0; i < 4; i++) await app(p).locator('#mmwrap .mm-grip').press('Shift+ArrowUp');
+      await p.waitForTimeout(250);
+      const m1 = await app(p).evaluate(() => TopoForge.panels().map), b2 = await box(p, '#ef-2');
+      assert.ok(m1.y < m0.y - 100, 'the map did not move up: ' + JSON.stringify([m0, m1]));
+      assert.ok(b2.y + b2.h <= m1.y + 1, 'after the map moved, frame 2 still runs over it: ' + JSON.stringify([b2, m1]));
+      await app(p).evaluate(() => { try { const k = 'topoforge.ui.v1', o = JSON.parse(localStorage.getItem(k) || '{}'); delete o.minimap; localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} });
+      await p.evaluate(() => CCFloat.get('frame2').reset());
+      ok(`stage 2: free turns on the map and preview; a tool-bar tile, a finder shape and a navigator item each caption and ring the map (the stand-in box stands down); moving the map with its own grip makes frame 2 end above it, at ${tag}`);
+    } else ok(`stage 2 checks skipped: the staged app has no map preview, at ${tag}`);
+
     assert.ok((await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 0, 'the page scrolls sideways at ' + tag);
     assert.deepEqual(offsite, [], 'requests to other hosts: ' + offsite.join(' | '));
     assert.deepEqual(errors, [], 'console errors: ' + errors.join(' | '));
@@ -237,6 +270,28 @@ const meets = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h &&
     assert.deepEqual(errors, [], 'errors at ' + tag + ': ' + errors.join(' | '));
     ok(`menus at ${tag}: every frame's menu bar is one line` + (folded.length ? '; ' + folded.map((m) => m.id + ' folds ' + m.hidden.join(', ') + ' into », which lists them').join('; ') : '; nothing folded'));
     await fresh(p); await ctx.close();
+  }
+
+  // ---- classic: the app's own page tabs at 1920, 1280 and 390 (1.9 C) ----
+  for (const [w, h] of [[1920, 950], [1280, 800], [390, 800]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } }); const p = await ctx.newPage();
+    await fresh(p); await p.goto(base + 'index.html?ui=classic'); await waitDoc(p); await p.waitForTimeout(600);
+    if (!(await app(p).evaluate(() => /^1\.(9|[1-9]\d)|^[2-9]/.test(TopoForge.version)))) { ok(`classic tabs at ${w}: skipped, the staged app is 1.8`); await ctx.close(); continue; }
+    const T = await app(p).evaluate(() => { const el = document.getElementById('pagetabs'); const r = el.getBoundingClientRect(); return { sw: el.scrollWidth, cw: el.clientWidth, ovf: el.classList.contains('pt-ovf'), shown: [...el.querySelectorAll('.ptab[data-pi]:not(.add)')].filter((t) => !t.hidden).length, all: el.querySelectorAll('.ptab[data-pi]:not(.add)').length, visible: r.width > 0 }; });
+    if (!T.visible) { ok(`classic tabs at ${w}: the app keeps its page tabs in a drawer at this width`); await ctx.close(); continue; }
+    assert.ok(T.sw <= T.cw + 1, `the app's page tabs scroll sideways at ${w}: ` + JSON.stringify(T));
+    if (T.ovf) {
+      assert.ok(T.shown < T.all && T.shown >= 1, 'an overflowing strip shows every tab or none');
+      const first = () => app(p).evaluate(() => [...document.querySelectorAll('#pagetabs .ptab[data-pi]:not(.add)')].findIndex((t) => !t.hidden));
+      const f0 = await first(); await app(p).locator('#pagetabs .pt-next').click(); await p.waitForTimeout(80);
+      assert.equal(await first(), f0 + 1, '› did not move the window of tabs one tab');
+      await app(p).locator('#pagetabs .pt-all').click(); await p.waitForTimeout(80);
+      assert.equal(await app(p).locator('#pagetabs .pt-all').getAttribute('aria-expanded'), 'true', 'All did not open the list of pages');
+      await app(p).locator('body').press('Escape');
+    }
+    if (shots) await p.screenshot({ path: path.join(shots, `r6-classic-tabs-${w}.png`) });
+    ok(`classic at ${w}: the app's page tabs never scroll sideways` + (T.ovf ? `; ${T.shown} of ${T.all} shown, › moves one, All opens the list` : '; they all fit'));
+    await ctx.close();
   }
 
   // ---- storage refused: the frames still resize ----

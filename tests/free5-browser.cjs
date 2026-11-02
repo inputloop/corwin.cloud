@@ -85,8 +85,10 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
     assert.equal(await p.getAttribute('#ef-1 .ef-tile[data-cat="sec"]', 'aria-describedby'), 'ef-tip');
     const tipc = await p.evaluate(() => { const t = document.getElementById('ef-tip'), cs = getComputedStyle(t); return [cs.color, cs.backgroundColor]; });
     assert.ok(contrast(tipc[0], tipc[1]) >= 4.5, 'the tooltip is below AA');
-    // ---- 3. the preview box (1.8: the plain stand-in) ----
+    // ---- 3. the preview box (1.8: the plain stand-in; with 1.9 staged, the app is told it is 1.8 for this) ----
     if (wide) {
+      const vv = await app(p).evaluate(() => { const v = TopoForge.version; TopoForge.version = '1.8'; return v; });
+      await p.mouse.move(w / 2, 5); await p.waitForTimeout(450); await p.hover('#ef-1 .ef-tile[data-cat="sec"]'); await p.waitForTimeout(80);
       assert.ok(await p.isVisible('#ef-hud'), 'no preview box on hover');
       const hud = await p.textContent('#ef-hud');
       assert.ok(/Security: 3 shapes/.test(hud) && /Firewall/.test(hud) && /stand-in/.test(hud), 'the preview box does not say the category and that it is a stand-in: ' + hud);
@@ -94,6 +96,7 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
       assert.ok(contrast(hc[0], hc[1]) >= 4.5, 'the preview box is below AA');
       const hb = await box(p, '#ef-hud'), mapb = await app(p).evaluate(() => TopoForge.panels().map);
       assert.ok(hb.y + hb.h <= mapb.y + 1, 'the preview box is not above the overview map');
+      await app(p).evaluate((v) => { TopoForge.version = v; }, vv);
     }
     await p.mouse.move(w / 2, 5); await p.waitForTimeout(500);
     assert.equal(await p.isVisible('#ef-tip'), false, 'the tooltip stays after the pointer leaves');

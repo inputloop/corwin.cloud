@@ -138,10 +138,30 @@
   function hooks19() {
     var t = nine('embed');
     if (!t) return;
-    try { t.embed({ keys: true, context: true, pagelist: true, view: true }); } catch (e) { /* an older 1.9 without the words */ }
+    // 1.9 B: the map in its own frame (moved and resized by its own door-handle controls) and the preview in it
+    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true }); } catch (e) { /* an older 1.9 without the words */ }
+    mapCheck();
     try { VIEW = t.view || null; } catch (e) { VIEW = null; }
     firstFit();
   }
+  // the frames and the map do not overlap (stage 2): the app keeps the map's place in its own storage
+  // (topoforge.ui.v1, key minimap), so a move or resize there reaches this page as a storage event; then a
+  // frame whose lower part the map now covers ends above it (never shorter than 200 pixels), and an unmoved
+  // legend is placed again beside it. No polling.
+  function mapCheck() {
+    var t = tf(), m = null;
+    try { m = t && t.panels && t.panels().map; } catch (e) { m = null; }
+    if (!m || !m.shown || narrowQ.matches) return;
+    frames.forEach(function (f) {
+      var st = f.fl.state;
+      if (st.x === null) return;
+      var hh = f.fl.height(), r = { x: st.x, y: st.y, w: st.w, h: hh };
+      var meets = r.x < m.x + m.w && r.x + r.w > m.x && r.y < m.y + m.h && r.y + r.h > m.y;
+      if (meets && m.y - 12 - st.y >= 200) { f.fl.set({ h: Math.round(m.y - 12 - st.y) }, true); f.say('This frame now ends above the overview map.'); }
+    });
+    var L = window.CCFloat.get('legend'); if (L && L.auto) L.retarget();
+  }
+  window.addEventListener('storage', function (ev) { if (ev.key === 'topoforge.ui.v1') mapCheck(); });
   var viewQ = false;
   function viewSoon() { if (viewQ) return; viewQ = true; (window.requestAnimationFrame || setTimeout)(function () { viewQ = false; frames.forEach(function (f) { f.modelinesOnly(); }); }); }
   // the first fit leaves room for the frames (revision 6): the app fits the drawing to the whole canvas;
@@ -1125,19 +1145,37 @@
     }
     if ((id = el.getAttribute('data-shape'))) {
       var sh = SHAPE[id];
-      return sh ? { h: sh.label, b: 'A shape in ' + ((CATS.filter(function (x) { return x.id === sh.category; })[0] || {}).label || 'the palette') + '. Enter: in the middle of the view; a click arms it; or drag it.', target: { category: sh.category } } : null;
+      return sh ? { h: sh.label, b: 'A shape in ' + ((CATS.filter(function (x) { return x.id === sh.category; })[0] || {}).label || 'the palette') + '. Enter: in the middle of the view; a click arms it; or drag it.', target: { kind: sh.id } } : null;
     }
     if ((id = el.getAttribute('data-item') || (el.closest('.navframe') && el.getAttribute('data-id')))) {
       var it = (IX && IX.items.filter(function (x) { return x.id === id; })[0]) || (nav() && nav().item(id));
-      return it ? { h: it.name, b: (it.tip || it.description || '') + (it.page ? (it.tip ? ' ' : '') + 'Its page in the drawing: ' + it.page + '.' : ''), target: [it.id] } : null;
+      return it ? { h: it.name, b: (it.tip || it.description || '') + (it.page ? (it.tip ? ' ' : '') + 'Its page in the drawing: ' + it.page + '.' : ''), target: refsFor(it), caption: it.name } : null;
     }
     if (el.classList.contains('ef-tool')) return { h: el.getAttribute('data-tip') || '', b: el.getAttribute('aria-pressed') ? '' : 'A press runs it.', target: null };
     return null;
   }
+  // what the drawing draws for an item: the shapes whose tf_ref is the item's (drawings.py names them
+  // <page>-<slug>, shop-t-<slug>, <page>-near-<slug>, <slug>-zone ...), read from the open drawing
+  function slug(x) { return String(x || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+  function refsFor(it) {
+    var t = tf(), sl = slug(it.name), out = [it.id];
+    if (!sl || !t || !t.doc) return out;
+    try {
+      t.doc.pages.forEach(function (pg) {
+        pg.nodes.forEach(function (n) {
+          var r = String((n.data || {}).tf_ref || '');
+          if (r && (r === sl + '-zone' || r === sl + '-title' || r.slice(-(sl.length + 1)) === '-' + sl) && out.indexOf(r) < 0) out.push(r);
+        });
+      });
+    } catch (e) { /* the drawing is the app's; without it, the id alone */ }
+    return out;
+  }
+  // the preview: topology forge 1.9's map rings what is pointed at (preview()); with 1.8, or before the app
+  // is up, the plain box above the map says it in words
   function preview(el) {
     clearTimeout(hudT);
     var d = el && describe(el), t9 = nine('preview');
-    if (t9) { try { t9.preview(d ? d.target : null); } catch (e) { /* the app's own business */ } hud.hidden = true; return; }
+    if (t9) { try { t9.preview(d && d.target ? d.target : null, d && d.caption ? d.caption : undefined); } catch (e) { /* the app's own business */ } hud.hidden = true; return; }
     if (!d) { hudT = setTimeout(function () { hud.hidden = true; }, 400); return; }
     hud.querySelector('.ef-hud-h').textContent = d.h;
     hud.querySelector('.ef-hud-b').textContent = d.b;

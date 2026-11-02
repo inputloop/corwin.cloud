@@ -207,6 +207,34 @@ there, with the edges). The revision 4 check that `*Here*` sits beside the middl
 (1.9 floats it beside the shape); the check that 1.9's hooks stay off with 1.8 now tells the app it is
 1.8 for a moment, so it holds whichever app is staged.
 
+### Stage 2: topology forge 1.9 parts B and C (topology, branch corwin, `25fae11`)
+
+His words (08:57, c4 `q/2026-11-02-yes-and/PROMPT.md`): "when hovering/selecting something inside the
+nav/emacs frame use the mini-map as a HUD to give a little dashboard of what we are looking for. Allow the
+minimap to be resized and moved by dragging or position controls, put the positioning controls for it
+OUTSIDE the visible frame of the minimap; display them only when the mouse is near, as if a door handle
+appears when you reach for the car door"; and of the classic tabs: "limit how many we show and put the full
+list under a fly-up menu, then have < and > controls".
+
+- **The map is the preview.** Free asks the app for `map` (the map in a frame of its own, with its
+  door-handle controls above it: resize, Move, Position; shown when the pointer comes within 40 pixels,
+  on focus, and always on a touch screen) and `preview`. Pointing at or focusing a tool-bar tile rings that
+  category's shapes in the map (`preview({ category })`); a finder shape, that kind (`preview({ kind })`);
+  a navigator item, the shapes the drawing draws for it (its id and the `tf_ref`s drawings.py gave them:
+  `shop-t-<name>`, `<page>-near-<name>`, `<name>-zone` ...), captioned with its name. Leaving clears it
+  (`preview(null)`). Intention: a little dashboard of what a press would find, in the drawing's own map.
+  Yes, and: with 1.8, or before the app is up, the plain box above the map still says it in words.
+- **Frames and the map never overlap.** Frame 2 starts above the map; when the map is moved or resized with
+  its own controls, the app keeps its place in `topoforge.ui.v1` (key `minimap`), which reaches this page as
+  a storage event (no polling); then any frame the map now covers ends above it (never shorter than 200
+  pixels), and an unmoved legend is placed again. Intention: the frames yield to where he put the map.
+- **Classic tabs** are the app's own, fixed in 1.9 everywhere: the tabs that fit, `‹` and `›` moving one
+  tab, "All N ▴" opening a fly-up list with a filter. This page adds nothing around them (observed at
+  1920, 1280 and 390: 12, 8 and 1 of 31 shown; no sideways scroll).
+
+Built and checked: `tests/free6-browser.cjs` now has 26 checks (stage 2 and the classic tabs added), each
+with a planted fault.
+
 ## Revision 5: yes, and (2026-11-02, morning)
 
 ### What Corwin asked (his words, 08:57; the whole prompt is c4 `q/2026-11-02-yes-and/PROMPT.md`)

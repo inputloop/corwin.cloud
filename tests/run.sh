@@ -273,6 +273,11 @@ prove_red() {
     plant_b "*Properties* never calls setProps"   src/js/free.js 's#var ok = tt.setProps(SEL.id,#var ok = false \&\& tt.setProps(SEL.id,#' $S
     plant_b "no first fit between the frames"     src/js/free.js 's#if (!t || fitted || !READY#if (true || !t || fitted || !READY#' $S
     plant_b "no CUA cut"                          src/js/free.js "s#if (seq.length === 1 \&\& (str === 'C-x' || str === 'C-c') \&\& SEL) {#if (false) {#" $S
+    # stage 2 (docs/NAV.md, revision 6): the map as the preview, frames re-checked when it moves
+    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true })#view: true, map: false, preview: false })#' $S
+    plant_b "a navigator item previews its id only" src/js/free.js 's#^    if (!sl || !t || !t.doc) return out;#    return out;#' $S
+    plant_b "a finder shape previews its category" src/js/free.js 's#target: { kind: sh.id } } : null;#target: { category: sh.category } } : null;#' $S
+    plant_b "no re-check when the map moves"      src/js/free.js "s#if (ev.key === 'topoforge.ui.v1') mapCheck();#if (false) mapCheck();#" $S
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi
