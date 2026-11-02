@@ -1312,10 +1312,12 @@
     var art = d.kind === 'kind' && d.target ? { shape: d.target.kind } : d.kind === 'selection' && SEL && SHAPE[SEL.kind] ? { shape: SEL.kind } : 'matches';
     return { title: d.title, facts: (d.facts || []).slice(0, 8), statement: d.statement || '', art: art };
   }
-  var PVF = null;   // the frame whose pointer made the last preview: its echo area gets the caption
+  var PVF = null, PVCAP = false;   // the frame whose pointer made the last preview (its echo area gets the caption); whether the page named it
+  // the app's own caption already counts ("Endpoints: 4 shapes · 21 on other pages"); a caption the page
+  // gave (an item's name) gets the counts after it, "(4 here, 21 on other pages)"
   function echoPreview(r) {
     if (!r || r.mode !== 'rings' || !r.caption || !PVF) return;
-    PVF.say(r.caption + (r.count !== undefined ? '  (' + r.count + ' here' + (r.other ? ', ' + r.other + ' on other pages' : '') + ')' : ''));
+    PVF.say(r.caption + (PVCAP && r.count !== undefined ? '  (' + r.count + ' here' + (r.other ? ', ' + r.other + ' on other pages' : '') + ')' : ''));
   }
   function preview(el) {
     clearTimeout(hudT);
@@ -1325,7 +1327,7 @@
       // the stand-in box is retired. Rings: the app's topoforge:preview brings the caption (echoPreview)
       hud.hidden = true;
       if (!d || d.kind === 'tool' || !d.target) { if (mode === 'rings') { try { t10.preview(null); } catch (e) { /* the app's */ } } else hideCardSoon(); return; }
-      PVF = frameOf(el);
+      PVF = frameOf(el); PVCAP = !!d.caption;
       var o = { caption: d.caption };
       if (mode !== 'rings') o.card = cardFor(d);
       try { t10.preview(d.target, o); } catch (e) { /* the app's */ }

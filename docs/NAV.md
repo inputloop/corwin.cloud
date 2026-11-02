@@ -108,7 +108,7 @@ wheel over the map (the switch `mapwheel`). What this page does with each, and w
 | page load | at ready the page reads `mapMode()` and follows it; it never calls `mapMode()` at load, except once in a browser's life: a choice made on this page before the app had modes (stage 1) is carried to the app, then `mapModeApp` is kept and the app's store is the one source of truth | the visitor's last choice wins, wherever it was made (on this page, in the app's menu, or in the app on its own page) |
 | cards (left), both (middle) | the data-built card (title, up to 8 facts, one statement) goes to `preview(target, { caption, card })`; art is the app's own: a kind's or a selected shape's picture (`{ shape }`), else `'matches'` | the card is in the map, as he asked ("display the ... card in the mini-map"); the drawing's highlight in the middle is the app's |
 | the stand-in box | retired when `TopoForge.version` is 1.10 or later; still the card for 1.9 and 1.8 | an older app still shows something useful |
-| rings (right) | the echo area says `topoforge:preview`'s caption with its counts, "(4 here, 2 on other pages)"; the map no longer writes it (`mapCaption` stays off) | "the text that we currently put into mini-map on item hover could be in the echo/input area" |
+| rings (right) | the echo area says `topoforge:preview`'s caption with its counts: the app's own caption already counts ("Endpoints: 4 shapes · 21 on other pages"); after a caption the page gave (an item's name) the counts follow, "(1 here, 3 on other pages)"; the map no longer writes it (`mapCaption` stays off) | "the text that we currently put into mini-map on item hover could be in the echo/input area" |
 | the selection | its card is sent as the preview of its own id; cleared with the selection | a selected shape has a card in the map as a pointed-at one does |
 
 Two choices are the app's, written here so nobody "fixes" them on this side:
@@ -143,6 +143,9 @@ revision 7 37; node 30 (one new: the page's own fallback mode is the middle). Fo
   attribute); the select message now sends `preview(null)` with 1.10.
 - In rings the preview now clears the moment the pointer leaves (as 1.9 did); in the left and middle the
   card stays 400 ms, then the selection's card or nothing.
+- The live check showed the counts twice in the echo area ("Endpoints: 4 shapes · 21 on other pages (4
+  here, 21 on other pages)"): the app's caption already counts, so the counts follow only a caption the
+  page gave.
 - The documented-calls check now also reads the names given `nine()` and `ten()`, and allows `mapMode`.
 
 ## Revision 6: frames that fit, a lettered title block, menus that never wrap (2026-11-02)

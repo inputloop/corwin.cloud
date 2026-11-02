@@ -291,13 +291,20 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       if (await ten(p)) {
         const last = await p.evaluate(() => (window.__pv || []).slice(-1)[0]);
         assert.ok(last && last.mode === 'rings' && last.card === null, 'in rings the app still sent a card: ' + JSON.stringify(last));
-        assert.equal(await p.textContent('#ef-1 .ef-msg'), last.caption + '  (' + last.count + ' here' + (last.other ? ', ' + last.other + ' on other pages' : '') + ')', 'the echo area is not topoforge:preview\'s caption with its counts');
+        assert.equal(await p.textContent('#ef-1 .ef-msg'), last.caption, 'the echo area is not topoforge:preview\'s caption (the app\'s own, which counts already)');
         assert.equal(await app(p).evaluate(() => { const c = document.querySelector('#minimap .mm-cap'); return !!c && !c.hidden; }), false, 'with 1.10 the caption is written in the map too (the page asked for it in the echo area)');
         assert.equal(await app(p).evaluate(() => document.querySelectorAll('#mmPrev rect').length), last.count, 'in rings the map does not ring the matches: ' + JSON.stringify(last));
         await p.hover('#ef-1 .ef-tile[data-cat="end"]'); await p.waitForTimeout(150);
         const le = await p.evaluate(() => (window.__pv || []).slice(-1)[0]);
         assert.ok(le.count > 0 && (await app(p).evaluate(() => document.querySelectorAll('#mmPrev rect').length)) === le.count, 'in rings the map does not ring the matches');
-        assert.match(await p.textContent('#ef-1 .ef-msg'), new RegExp('\\(' + le.count + ' here'), 'the echo area does not carry the counts');
+        assert.ok(/\d/.test(le.caption) && (await p.textContent('#ef-1 .ef-msg')) === le.caption, 'the echo area does not carry the app\'s counted caption once: ' + le.caption);
+        await p.mouse.move(w / 2, 5); await p.waitForTimeout(300);
+        // an item: the page names it, the counts follow, "(n here, m on other pages)"
+        await p.hover('#ef-2 .navframe a.it[data-id="project-topology"], #ef-1 a.ef-it[data-item="project-topology"]'); await p.waitForTimeout(150);
+        const li = await p.evaluate(() => (window.__pv || []).slice(-1)[0]), it7 = index.items.find((x) => x.id === 'project-topology');
+        const want = li.caption + '  (' + li.count + ' here' + (li.other ? ', ' + li.other + ' on other pages' : '') + ')';
+        const said = [await p.textContent('#ef-1 .ef-msg'), await p.textContent('#ef-2 .ef-msg')];
+        assert.ok(li.caption === it7.name && said.includes(want), 'an item\'s echo is not its name with the counts: ' + JSON.stringify([want, said]));
         if (shots) await p.screenshot({ path: path.join(shots, `r7s2-rings-${p.__scheme}-${w}.png`) });
       }
       assert.equal(await p.isVisible('#ef-hud'), false, 'in the rings position a card shows');

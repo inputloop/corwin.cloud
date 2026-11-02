@@ -302,6 +302,8 @@ prove_red() {
     plant_b "the stand-in box lost with 1.9"      src/js/free.js "s#vge(t.version, '1.10') \&\&#vge(t.version, '1.9') \&\&#" $V
     plant_b "a cleared selection keeps its card"  src/js/free.js "s#else if (!SEL \&\& ten('preview')) showSel(); ##" $V
     plant_b "a kind's card not its own picture"   src/js/free.js "s#d.kind === 'kind' \&\& d.target ? { shape: d.target.kind }#false ? 0#" $V
+    plant_b "the counts said twice in the echo"   src/js/free.js 's#(PVCAP \&\& r.count !== undefined#(r.count !== undefined#' $V
+    plant_b "an item's echo without its counts"   src/js/free.js 's#PVCAP = !!d.caption;#PVCAP = false;#' $V
     plant_b "the map's preview lingers in rings"  src/js/free.js "s#if (mode === 'rings') { try { t10.preview(null); }#if (false) { try { t10.preview(null); }#" tests/free6-browser.cjs
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
