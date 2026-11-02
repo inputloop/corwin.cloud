@@ -16,7 +16,7 @@
 // the app only where its panels are, by its own read-only TopoForge.panels(); it changes nothing there.
 (function () {
   'use strict';
-  var doc = document, KEY = 'corwin.cloud.float.v1', STEP = 16, BIG = 64, MINW = 220;
+  var doc = document, KEY = 'corwin.cloud.float.v1', STEP = 16, BIG = 64, MINW = 220, MINH = 200;
   var area = doc.getElementById('stage-grid'), frame = doc.getElementById('topology');
   var narrowQ = window.matchMedia ? window.matchMedia('(max-width: 47.5rem)') : { matches: false, addListener: function () {} };
   var all = {}, list = [];
@@ -67,6 +67,9 @@
       }
       s.x = Math.round(Math.max(0, Math.min(W - Math.min(ew, 120), s.x)));
       s.y = Math.round(Math.max(0, Math.min(H - Math.min(eh, 32), s.y)));
+      // o.avoid: a box (the layout switch, revision 6) no palette's top row may sit under; it is put below
+      var r = o.avoid && o.avoid();
+      if (r && s.x < r.x + r.w && s.x + ew > r.x && s.y < r.y + r.h && s.y + 40 > r.y) s.y = Math.round(r.y + r.h + 6);
     };
     f.apply = function () {
       var s = f.state, nar = f.narrow(), hid = f.isHidden();
@@ -85,12 +88,16 @@
         f.el.style.setProperty('--fx', s.x + 'px');
         f.el.style.setProperty('--fy', s.y + 'px');
         var room = area.clientHeight - s.y - 8;
-        if (s.h) f.el.style.setProperty('--fh', Math.max(200, Math.min(room, s.h)) + 'px'); else f.el.style.removeProperty('--fh');
+        if (s.h) f.el.style.setProperty('--fh', Math.max(MINH, Math.min(room, s.h)) + 'px'); else f.el.style.removeProperty('--fh');
       }
       f.el.style.setProperty('--fw', s.w + 'px');
       if (o.edge) { o.edge.setAttribute('aria-valuenow', String(s.w)); o.edge.setAttribute('aria-valuemin', String(MINW)); o.edge.setAttribute('aria-valuemax', String(f.maxW())); }
+      if (o.hedge) { var hh = f.height(); o.hedge.setAttribute('aria-valuenow', String(hh)); o.hedge.setAttribute('aria-valuemin', String(MINH)); o.hedge.setAttribute('aria-valuemax', String(f.maxH())); }
       if (o.onApply) o.onApply(f);
     };
+    // height (revision 6): s.h, or what the frame is drawn at when it was never set
+    f.maxH = function () { return Math.max(MINH, (area.clientHeight || window.innerHeight) - (f.state.y || 0) - 8); };
+    f.height = function () { return Math.round(f.state.h ? Math.max(MINH, Math.min(f.maxH(), f.state.h)) : (f.el.offsetHeight || MINH)); };
     f.set = function (patch, quiet) {
       Object.keys(patch).forEach(function (k) { f.state[k] = patch[k]; });
       if ('x' in patch || 'y' in patch) f.auto = false;
@@ -173,6 +180,56 @@
         if (o.say) o.say(o.label + ': ' + f.state.w + ' pixels wide.');
       });
     }
+    // the height edge (o.hedge) and the corner (o.corner), revision 6. The frame itself shows which mode a
+    // press there will be in: data-grab="w|h|wh" while pointed at or focused, data-drag while dragging
+    // (the width edge, o.edge, marks "w" the same way).
+    function mark(attr, v) { if (v) f.el.setAttribute(attr, v); else f.el.removeAttribute(attr); }
+    function bindResize(h, mode) {
+      if (!h) return;
+      var st = null;
+      ['pointerenter', 'focus'].forEach(function (t) { h.addEventListener(t, function () { if (!f.narrow()) mark('data-grab', mode); }); });
+      ['pointerleave', 'blur'].forEach(function (t) { h.addEventListener(t, function () { if (!st) mark('data-grab', null); }); });
+      h.addEventListener('pointerdown', function (ev) {
+        if (f.narrow() || ev.button > 0) return;
+        st = { x: ev.clientX, y: ev.clientY, w: f.state.w, h: f.height() };
+        mark('data-grab', mode); mark('data-drag', mode);
+        try { h.setPointerCapture(ev.pointerId); } catch (e) { /* fine */ }
+        ev.preventDefault();
+      });
+      h.addEventListener('pointermove', function (ev) {
+        if (!st) return;
+        if (mode !== 'h') f.state.w = Math.max(MINW, Math.min(f.maxW(), st.w + ev.clientX - st.x));
+        if (mode !== 'w') f.state.h = Math.max(MINH, Math.min(f.maxH(), st.h + ev.clientY - st.y));
+        f.apply();
+      });
+      h.addEventListener('pointerup', function () {
+        if (!st) return;
+        st = null; mark('data-drag', null); saveAll();
+        if (o.say) o.say(o.label + ': ' + f.state.w + ' by ' + f.height() + ' pixels, kept in this browser.');
+      });
+      h.addEventListener('keydown', function (ev) {
+        var k = ev.key, w = f.state.w, hh = f.height(), nw = null, nh = null;
+        if (mode !== 'h') nw = k === 'ArrowRight' ? w + STEP : k === 'ArrowLeft' ? w - STEP : null;
+        if (mode !== 'w') nh = k === 'ArrowDown' ? hh + STEP : k === 'ArrowUp' ? hh - STEP : null;
+        if (mode === 'h') nh = nh !== null ? nh : k === 'PageDown' ? hh + 4 * STEP : k === 'PageUp' ? hh - 4 * STEP : k === 'Home' ? MINH : k === 'End' ? f.maxH() : null;
+        if (nw === null && nh === null) return;
+        ev.preventDefault(); ev.stopPropagation();
+        var p = {};
+        if (nw !== null) p.w = Math.max(MINW, Math.min(f.maxW(), nw));
+        if (nh !== null) p.h = Math.max(MINH, Math.min(f.maxH(), nh));
+        f.set(p, true);
+        if (o.say) o.say(o.label + ': ' + f.state.w + ' by ' + f.height() + ' pixels.');
+      });
+    }
+    bindResize(o.hedge, 'h');
+    bindResize(o.corner, 'wh');
+    if (o.edge && o.marks) {
+      ['pointerenter', 'focus'].forEach(function (t) { o.edge.addEventListener(t, function () { if (!f.narrow()) mark('data-grab', 'w'); }); });
+      ['pointerleave', 'blur'].forEach(function (t) { o.edge.addEventListener(t, function () { if (!f.el.hasAttribute('data-drag')) mark('data-grab', null); }); });
+      o.edge.addEventListener('pointerdown', function () { if (!f.narrow()) { mark('data-grab', 'w'); mark('data-drag', 'w'); } });
+      o.edge.addEventListener('pointerup', function () { mark('data-drag', null); });
+    }
+    f.taller = function (d) { f.set({ h: Math.max(MINH, Math.min(f.maxH(), f.height() + d)) }, true); return f.height(); };
     list.push(f);
     f.apply();
     return f;
@@ -244,7 +301,8 @@
     // one line along the bottom of the canvas, left of the app's overview map
     place: function (edges, W, H, el) {
       var w = el.offsetWidth || 520;
-      return { x: Math.max(12, Math.min(edges.right - w, W - w - 12)), y: Math.max(12, H - (el.offsetHeight || 22) - 12) };
+      // hung 4 pixels above the canvas's foot, to leave the drawing the most room (revision 6)
+      return { x: Math.max(12, Math.min(edges.right - w, W - w - 12)), y: Math.max(12, H - (el.offsetHeight || 22) - 4) };
     }
   });
   lg.setAttribute('data-ready', 'yes');

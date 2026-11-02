@@ -41,6 +41,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free-browser.cjs || fail=1
       step "revision 5, yes and: the one-line legend, the frame's place and width, the three lines, the navigator in free, the tool-bar, the switch (playwright)"
       SITE_OUT=$out "$node" tests/free5-browser.cjs || fail=1
+      step "revision 6: frame 2's place, height and corner, the lettered legend, menus that never wrap, 1.9 part A (playwright)"
+      SITE_OUT=$out "$node" tests/free6-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -144,10 +146,15 @@ prove_red() {
   # the legend (revision 2): Bryant named with his link, TopoForge's licence as its README.org says
   plant "the legend loses Bryant's link"     build.py     's#^BRYANT_URL = "https://github.com/takushieternal"#BRYANT_URL = "\#bryant"#'
   plant "the legend's licence altered"       build.py     's#">GNU General Public License, version 3</a> #">GNU General Public License, version 2</a> #'
-  plant "the legend's line drops his link"   build.py     's#("lg-c-app", .topology forge · %s. % gh)#("lg-c-app", "topology forge · Bryant")#'
+  plant "the legend's line drops his link"   build.py     's#comp("lg-c-by", "by", gh),#comp("lg-c-by", "by", "Bryant Frankford"),#'
   # revision 5 (docs/NAV.md): the legend is one line, in words
   plant "the legend's line in SPDX again"    build.py     's#<abbr title="%s">GPLv3+ or LGPLv3+</abbr>. % lic_words#GPL-3.0-or-later OR LGPL-3.0-or-later%.0s" % lic_words#'
-  plant "a sentence in the legend's line"    build.py     's#("lg-c-src", .<a href="%s">source</a>. % TF_SRC_PROJECT)#("lg-c-src", "Its source is public. <a href=\\"%s\\">source</a>" % TF_SRC_PROJECT)#'
+  plant "a sentence in the legend's line"    build.py     's#comp("lg-c-date", "date", day),#comp("lg-c-date", "date", "Built today. " + day),#'
+  # revision 6 (docs/NAV.md): the legend's fonts, served here, with their licences and credit
+  plant "a legend font without its licence"   REUSE.toml   's#SPDX-License-Identifier = "OFL-1.1"#SPDX-License-Identifier = "OFL-1.0"#'
+  plant "a legend font from another host"     src/css/site.css 's#src: url("../fonts/osifont.woff") format("woff");#src: url("https://fonts.example.com/osifont.woff") format("woff");#'
+  plant "Credits forgets the fonts"           build.py     's#.Lettered in osifont, an ISO 3098 face#"Lettered in a face#'
+  plant "a legend font changed, not as staged" src/fonts/README 's#^  sha256 6ee5#  sha256 7ee5#'
   # topology forge 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
   plant "scripts cached for a day again"    deploy/nginx-corwin.cloud.conf 's#^        add_header Cache-Control "no-cache" always;\(.*\)$#        add_header Cache-Control "public, max-age=86400";#'
   plant "topology not revalidated"          deploy/corwin.cloud.interim.conf '/corwin-cloud-topology-csp.conf;/{n;d;}'
@@ -226,7 +233,7 @@ prove_red() {
     plant_b "an app command left out of the menus" src/js/free.js "s#refreshCmds().filter(function (c) { return c.menu.toLowerCase() === menu.toLowerCase(); })#refreshCmds().filter(function (c) { return c.menu.toLowerCase() === menu.toLowerCase() \&\& c.label !== 'Grid'; })#" $F
     plant_b "GPL dropped from the mode-line"      src/js/free.js "s#\['GPL', 'credits', #['', 'credits', #" $F
     plant_b "the watermark's off not kept"        src/js/float.js 's#setOff(!!freeState().legendOff, true);#setOff(false, true);#' $F
-    plant_b "the frame's text ignores Customize"  src/css/site.css 's#font: calc(13px \* var(--read-scale, 1))/1.5 var(--mono); }#font: 13px/1.5 var(--mono); }#' $F
+    plant_b "the frame's text ignores Customize"  src/css/site.css 's#font: calc(0.8125rem \* var(--read-scale, 1))/1.5 var(--mono); }#font: 0.8125rem/1.5 var(--mono); }#' $F
     plant_b "*Here* without the access settings"  src/js/free.js "s#mk('span', { cls: 'ef-gl', text: 'Colours: ' })#mk('span', { cls: 'ef-gl', text: 'Paint: ' })#" $F
     plant_b "the free page scrolls sideways at 390" src/css/site.css 's#^  .ef { flex: none; border-width: 1px 0 0; }#  .ef { flex: none; border-width: 1px 0 0; min-width: 480px; }#' $F
     plant_b "the frame's text below AA"           src/css/site.css 's#^\.ef-count { font-weight: 400; color: var(--text-dim);#.ef-count { font-weight: 400; color: var(--canvas-active);#' $F
@@ -247,6 +254,25 @@ prove_red() {
     plant_b "the 1.9 hooks on with 1.8"           src/js/free.js "s#return t \&\& vge(t.version, '1.9')#return t \&\& vge(t.version, '1.8')#" $R
     plant_b "the switch moves in classic"         src/css/site.css 's#^html\[data-ui="classic"\] \.ui-switch { background: var(--canvas);#html[data-ui="classic"] .ui-switch { top: 3rem; background: var(--canvas);#' $R
     plant_b "the switch in every classic visit"   src/js/ui.js "s#if (ui !== 'free' \&\& !blinking()) return;#if (false) return;#" $R
+    # revision 6 (docs/NAV.md): frames that fit, the lettered legend, menus that never wrap, 1.9 part A
+    S=tests/free6-browser.cjs
+    plant_b "frame 2 not at the top right"        src/js/free.js 's#return { x: Math.max(8, W - w2 - 8), y: y2,#return { x: 460, y: y2,#' $S
+    plant_b "a frame let under the switch"        src/js/float.js 's#if (r \&\& s.x < r.x + r.w#if (false \&\& r \&\& s.x < r.x + r.w#' $S
+    plant_b "the frame's height not kept"         src/js/float.js 's#h: saved \&\& isFinite(saved.h) ? saved.h : null,#h: null,#' $S
+    plant_b "no bottom edge"                      src/js/float.js "s#^    bindResize(o.hedge, .h.);#    void 0;#" $S
+    plant_b "the corner changes only the width"   src/js/float.js "s#if (mode !== 'w') f.state.h = #if (mode === 'h') f.state.h = #" $S
+    plant_b "the corner marks only the width"     src/js/float.js "s#^    bindResize(o.corner, .wh.);#    bindResize(o.corner, 'w');#" $S
+    plant_b "one font for both faces"             src/css/site.css 's#^\.lg-k { font: 300 9px/18px var(--letter-field);#.lg-k { font: 300 9px/18px var(--letter-value);#' $S
+    plant_b "the legend high off the foot"        src/js/float.js 's#H - (el.offsetHeight || 22) - 4) };#H - (el.offsetHeight || 22) - 40) };#' $S
+    plant_b "menus wrap: no overflow"             src/js/free.js 's#for (var i = 0; i < DROP.length \&\& !oneLine(); i++) {#for (var i = 0; i < 0; i++) {#' $S
+    plant_b "the lighter opens nothing"           src/js/free.js 's#f.menuOpen(null, ev.detail === 0, md, c);#void md;#' $S
+    plant_b "frame 2 not mirrored"                src/js/free.js 's#east = !fl.narrow() \&\& s.x !== null#east = false \&\& s.x !== null#' $S
+    plant_b "frame 2 too narrow at 1920"          src/js/free.js 's#width: grid.clientWidth >= 1800 ? 500 : 440, east: true#width: 440, east: true#' $S
+    plant_b "the frames ignore the default font"  src/css/site.css 's#font: calc(0.8125rem \* var(--read-scale, 1))/1.5 var(--mono); }#font: calc(13px * var(--read-scale, 1))/1.5 var(--mono); }#' $S
+    plant_b "*Here* zooms with 1.9"               src/js/free.js 's#^    if (t9 \&\& SEL) {#    if (false \&\& t9 \&\& SEL) {#' $S
+    plant_b "*Properties* never calls setProps"   src/js/free.js 's#var ok = tt.setProps(SEL.id,#var ok = false \&\& tt.setProps(SEL.id,#' $S
+    plant_b "no first fit between the frames"     src/js/free.js 's#if (!t || fitted || !READY#if (true || !t || fitted || !READY#' $S
+    plant_b "no CUA cut"                          src/js/free.js "s#if (seq.length === 1 \&\& (str === 'C-x' || str === 'C-c') \&\& SEL) {#if (false) {#" $S
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

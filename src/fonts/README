@@ -1,0 +1,17 @@
+The legend's two lettering faces (docs/NAV.md, revision 6), served from this site only.
+
+osifont.woff
+  osifont, an ISO 3098 typeface for technical drawings, by Zefram Cochrane (hikikomori82) and
+  contributors: https://github.com/hikikomori82/osifont, commit 2e9aa86 (2026-04-16), the file
+  osifont.woff, unchanged. Licence: GNU General Public License, version 3, with the font exception
+  in LICENSES/LicenseRef-osifont-GPL-3.0-with-font-exception.txt (the GPL text is LICENSES/GPL-3.0-or-later.txt). Upstream
+  also offers it under GPL version 2 or LGPL version 3, each with the font exception.
+  sha256 6ee565b163e38892db1c0c0df92141bfa2da146ada74025bfe6ed9fb9449ad08
+
+plex-sans-condensed-300.woff2, plex-sans-condensed-400.woff2
+  IBM Plex Sans Condensed, Light and Regular, Latin, by IBM: from the npm package
+  @fontsource/ibm-plex-sans-condensed 5.2.6 (files/ibm-plex-sans-condensed-latin-300-normal.woff2
+  and -400-normal.woff2), unchanged and renamed only. Licence: SIL Open Font License 1.1,
+  LICENSES/OFL-1.1.txt (Reserved Font Name "Plex": these files are not modified).
+  sha256 300 af2991d270a1c95f9c90c3b3aa4b54b5ec6c22017da2c0370e69de03bdf16f94
+  sha256 400 374c61fb8261a766c9a6d5d78a36047aa8f82ac86e5811008d3131de82795413

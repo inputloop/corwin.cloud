@@ -8,7 +8,204 @@ Status: revision 5, 2026-11-02 morning: **yes, and**. The navigator of revisions
 free beside the shape finder; the legend is one line; the frame moves, widens and grows its three
 lines together; the tool-bar is icons in even groups; a light switch for the layout that never moves.
 Revisions 4 and earlier, below, stand where revision 5 does not replace them. Correct it by editing
-this file.
+this file. Revision 6 (2026-11-02, late morning), next, adds to revision 5 and replaces only what it
+names.
+
+## Revision 6: frames that fit, a lettered title block, menus that never wrap (2026-11-02)
+
+### What Corwin asked (his words, 10:38, with a screenshot at 1920x1080; c4 `q/2026-11-02-frames-legend-menus/PROMPT.md`)
+
+"In the screenshot you can see approximately where I think the second Emacs frame should start out.
+It needs to be a little shorter and we need to be able to resize height also. If we do corner grab
+also do it second after height resize works and provide a subtle effect on the corner we are grabbing
+itself -not just the pointer- that shows what is going on, so it's easy to see that effect of
+click+drag is changing based on where the pointer is when we are starting that action."
+
+"Legend should have two different font treatments neither of which is visually grabbing, both are
+subtle because architects want people to look at what we drew, not at our names and meta-data [...]
+Think about how drafts-persons will form the legend at the bottom of a blueprint and then see if you
+can give it that treatment using a couple of different fonts to get a Subtle and Subtler [...] This
+can hang very near the bottom"
+
+"See if you can rethink the menus a little so that we don't have a wrap at 1080x when the window is
+full screen at default font sizing: there is a probably a little research project here since
+"default font sizing" covers a great deal of ground. Remember that these menus will [...] be mirrored
+left and right and that they also serve as our principle -only, excluding the footer- page level
+navigation, meaning that we have to get it right but also that we MUST be innovative"
+
+OBSERVED in his screenshot (rev 2c79670): the layout switch sits on top of frame 2's menu bar and
+hides "Navigator"; frame 2's menu bar wraps to two lines.
+
+### The second frame: where it starts, how tall
+
+Intention: two views at the window's two edges, the drawing between them, nothing hidden under the
+switch. Frame 2 (`*navigator*`) starts at the top right, its top just under the layout switch, 440
+pixels wide, and at most 560 tall, ending above the app's overview map. **No frame sits under the
+switch**: a frame placed, dragged or moved by keys so that its menu bar would meet the switch is put
+just below it (the switch never moves; the frame does).
+
+### Height, then the corner
+
+- **Height**: every Emacs frame's bottom edge is a handle (`role=separator`, horizontal): drag it, or
+  focus it and use Up and Down (16 pixels), Page Up and Page Down (64), Home (shortest, 200) and End
+  (tallest, to the canvas's foot); C-x ^ (Emacs's enlarge-window, here the frame) makes it 16 taller;
+  Options, Taller and Shorter. Kept per browser with its place and width.
+- **The corner** (bottom right), second: drags width and height together; focused, Left and Right
+  change the width and Up and Down the height.
+- **Which mode you are in shows on the frame itself**: pointing at or focusing the right edge draws a
+  hairline along that edge; the bottom edge, along the bottom; the corner draws a small L bracket in
+  the corner and both hairlines. While dragging, the same marks are drawn stronger. So before the
+  press you can see whether it will change the width, the height, or both. Nothing animates.
+
+### The legend: a title block, lettered Subtle and Subtler
+
+Read on title blocks: an architect's or engineer's sheet carries a title block at the bottom right
+(ISO 7200 names its fields: title, drawn by, approved by, document type, revision, date); its field
+names are printed small, in capitals, and the values are lettered in the sheet's lettering, ISO 3098
+for technical drawings (European CAD requires an ISO 3098 face; osifont exists for that). Here:
+
+- **Subtler**, the field names: IBM Plex Sans Condensed Light, small capitals, tracked (letter-spacing
+  0.12em), 9 pixels: APP, BY, LICENCE, PROSE, SOURCE, REV, DATE.
+- **Subtle**, the values: osifont (ISO 3098 lettering), 12 pixels, regular: topology forge, Bryant
+  Frankford (linked), GPLv3+ or LGPLv3+, CC BY-SA 4.0, topology (linked), the revision, the date; then
+  `credits`.
+- Both in the dim text colour, which keeps AA contrast (4.5:1): subtle by size, weight, width and
+  lettering, never by being hard to read.
+- One line, hairline compartments, hung 4 pixels above the canvas's foot.
+- Fonts served from this site only (`fonts/`; CSP `font-src 'self'`):
+  - osifont (https://github.com/hikikomori82/osifont, commit 2e9aa86): GNU GPL version 3 with the font
+    exception (upstream also offers GPL 2 or LGPL 3, each with it);
+  - IBM Plex Sans Condensed 300 and 400, Latin (npm @fontsource/ibm-plex-sans-condensed 5.2.6): SIL Open
+    Font License 1.1.
+  Both unchanged; provenance and hashes in `src/fonts/README`, licence texts in `LICENSES/`. Credits
+  names both. Where a font cannot load, the stacks fall back to the system's condensed or plain sans.
+
+### Menus that never wrap: the research, the cases, the design
+
+What "default font sizing" covers (read 2026-11-02):
+
+- the browser's default font sizes: Chrome's are standard 16 pixels, fixed-width (monospace) 13 and
+  minimum 0 (Chrome's extension docs, https://developer.chrome.com/extensions/fontSettings, name the
+  three settings; the values are Chrome's shipped defaults, from memory, not printed on that page);
+- the operating system's display scaling: Windows offers 100, 125, 150 and 175 % (Windows Central, "How
+  to adjust display scale settings in Windows 11"); a 1920x1080 screen at 125 % gives the page a
+  1536-pixel-wide CSS viewport, at 150 % 1280;
+- browser zoom, which scales the same way;
+- a user's own default or minimum font size, and Customize's text size here.
+
+The cases, and what each gets:
+
+- **Supported, nothing folded**: 1920x1080, full screen, 100 % scaling, 16-pixel default (CSS viewport
+  1920 wide): both frames show every global menu on one line.
+- **Supported, never wrapping**: 125 % and 150 % scaling, browser zoom, a larger default font, Customize's
+  text size: the menu bar stays one line, and what does not fit moves into `»` (below).
+- The frames' text now follows the browser's default font size (`0.8125rem`, 13 pixels at the 16-pixel
+  default, the same as the browser's fixed-width default) and Customize's size.
+
+The design, weighed (Corwin: "we MUST be innovative"):
+
+1. **The mode menu goes to the mode-line**, as Emacs does: clicking the major mode's name on a mode-line
+   (mouse-1 on the mode name) pops up that mode's menu. Here the lighter is the window's own mode,
+   `Finder` or `Navigator`, and it opens that mode's menu. Taken: authentic, and it frees the menu bar
+   from a menu that differs per window.
+2. **Priority+ overflow into `»`**: when the menus do not fit on one line, the least needed move, last
+   first, into a `»` menu at the inner end (Layout, Arrange, Help, Options, View, Edit, File, then the
+   mode menu); Site never moves. Taken: it is what makes "never wrap" true at every size; GTK's menubar
+   does the same with an overflow arrow.
+3. **Mirrored frames**: a frame on the right half of the window lays its menu bar out from the right:
+   the grip at the outer (right) end, the menus flush right in reading order, `»` and the fold button at
+   the inner end, menus opening toward the inside. Frame 1 is the mirror image. Taken: the two frames
+   read as a pair framing the drawing.
+4. Shorter labels: not taken. The app's menu names are the app's own, and "Site" stays a word (it is
+   the page's navigation; an icon would hide it).
+5. Site as the frame's name or an icon: not taken, for the same reason.
+6. One shared menu row between the two frames: not taken. The frames move apart and together freely;
+   a shared row would break the moment one moves. Written down as a fork.
+7. The navigator's menu stays in the menu bar too while its window is selected, when there is room
+   (yes, and): the mode-line lighter is one more way to it, not a replacement.
+
+### topology forge 1.9, part A, wired now (built against topology, branch corwin, `c67b9f4`, read-only)
+
+- `*Here*` floats beside the shape (`TopoForge.selectionRect()`), without zooming; with 1.8 it still
+  recentres first (revision 4).
+- A long press or right click on a shape (`context`, `topoforge:context`) opens `*Here*` beside it.
+- `*Properties*` edits the name and the tooltip in place through `TopoForge.setProps(id, patch)`
+  (one undo step each); [Open the app's own Properties] stays.
+- `%zoom` prints the zoom (`view`, `topoforge:view`) between `−` and `+`.
+- The first fit leaves room for the frames: once the drawing is loaded and the frames are where they
+  start, `TopoForge.setView` scales and moves the app's own fit into the space between the frames and
+  above the legend.
+- Keys (`keys`, `topoforge:key`): Alt+x, F10, C-x and C-c pressed in the drawing reach the frames. While
+  that is on, the drawing's own Ctrl+X and Ctrl+C are the page's; with something selected and no
+  second key within 200 ms, C-x cuts and C-c copies (`run('edit::cut')`, `run('edit::copy')`), as
+  Emacs's CUA mode does (`cua-prefix-override-inhibit-delay`).
+- `pagelist` (`topoforge:pages`): `*Pages*` follows a page added, renamed or removed.
+
+### Decisions, each with what would prove it wrong
+
+- [HIS] Frame 2 starts top right under the switch, shorter. Falsifier: his next screenshot moves it.
+- [MINE] At most 560 pixels tall. Falsifier: he still finds it too tall at 1080.
+- [MINE] C-x ^ for taller (Emacs's enlarge-window); shorter is the edge and Options only, as Emacs
+  has no default key for shrink-window. Falsifier: he reaches for a shrink key.
+- [DOMAIN] osifont for the values (ISO 3098, what CAD letters a title block with), Plex Condensed for
+  the field names. Falsifier: he finds osifont grabbing; then the values take Plex Condensed 400.
+- [MINE] Subtle by type, not by contrast: both stay AA. Falsifier: none here (AA is the floor).
+- [MINE] The frames' text follows the browser's default font size. Falsifier: someone with a large
+  default finds the frames too large; Customize's size then brings it down.
+- [MINE] CUA timing for cut and copy. Falsifier: C-x in the drawing cuts when he meant a prefix.
+
+### QA plan for revision 6 (written before the build)
+
+Where: `tests/free6-browser.cjs` (new; 1920x950, 1280 and 390, light and dark; 1536x730 at device
+scale 1.25 for 125 %; a 20-pixel default font through the browser's own font setting), the earlier
+suites updated where revision 6 changes what they check; part A's checks run against 1.9 part A
+(staged from topology, branch corwin) and skip with 1.8. Each promise gets a planted fault, proven in
+shards (`PLANT_SHARD`).
+
+TOWER
+- Frame 2 starts top right, under the switch, its box not meeting the switch's, at most 560 tall,
+  above the overview map. Dragged under the switch, it is put below. (plant: placed at y 8)
+- Height: the bottom edge's keys and drag change the height; C-x ^ adds 16; kept across a reload; the
+  corner changes both. (plants: height not kept; no bottom edge keys; corner moves only one)
+- The mode marks: hovering or focusing the right edge, the bottom edge and the corner each set its own
+  mark on the frame (and only its own); dragging sets the strong mark. (plant: the corner marks only the
+  width)
+- The legend: every value in osifont and every field name in Plex Condensed (computed fonts, and both
+  fonts loaded); field names uppercase and tracked; one line; its bottom within 8 pixels of the canvas's
+  foot; AA both. (plants: one font for both; the legend high off the foot)
+- Menus: at 1920x950 (100 %) both frames show every global menu on one line, nothing in `»`; at 1536x730
+  (125 %), at 1280 and with a 20-pixel default, every frame's menu bar is one line (`»` takes the rest);
+  `»` lists every hidden menu's items; the mode-line's lighter opens the mode's menu; frame 2 is
+  mirrored (grip at its right end). (plants: no overflow; the lighter opens nothing; no mirror)
+- 1.9 part A: `*Here*` beside the selection's rect with no zoom; context opens it; `*Properties*` sets the
+  name in one undo step; `%zoom` shows a percentage; the first fit sits between the frames; C-x with a
+  selection and no second key cuts. (plants: `*Here*` zooms with 1.9; setProps not called)
+LADDER: every new handle has a name and a value; the marks are not the only signal (the handles say
+their mode in their names); AA of the legend; no animation.
+SIGNAGE: credits names the two fonts and their licences.
+ROOF: fonts from this site only (no request elsewhere); CSP unchanged; no console errors.
+PEERING: 1.9 part A through its documented calls only; with 1.8 none of them runs.
+REMOTES: topology unchanged; built from a read-only archive of its corwin branch.
+DOME: storage refused, the frames still resize; 390 wide nothing floats and nothing scrolls sideways.
+
+Manifest: none owed.
+
+### Built and checked (2026-11-02, revision 6, with topology forge 1.9 part A)
+
+Built against topology, branch corwin, `c67b9f4` (1.9 part A), staged read-only with `git archive`.
+`sh tests/run.sh`: ALL CHECKS PASSED (Python, node 29, browser 33, navigator 31, classic 34, free 46,
+revision 5 30, revision 6 21). Observed at 1920x950: both frames show every menu on one line; frame 2
+starts at 1412,66 (500 by 560), under the switch; the drawing's first fit sits between the frames.
+At 1536x730 (125 %) and 1280, frame 2 folds Arrange and Layout into `»`; at 390, frame 1 folds Layout;
+with a 20-pixel default font both fold Arrange and Layout; never a second line.
+
+Found while building: a right-justified (mirrored) menu bar hides overflow at its start, where
+`scrollWidth` does not report it, so "Site" disappeared unnoticed; the fit is now measured by adding up
+the shown parts' widths. Frame 2's mode-line wrapped at 440 pixels at 1920, so frame 2 starts 500 wide
+on windows 1800 or wider. The corner handle poked 4 pixels past a full-width frame at 390 (now hidden
+there, with the edges). The revision 4 check that `*Here*` sits beside the middle holds for 1.8 only
+(1.9 floats it beside the shape); the check that 1.9's hooks stay off with 1.8 now tells the app it is
+1.8 for a moment, so it holds whichever app is staged.
 
 ## Revision 5: yes, and (2026-11-02, morning)
 

@@ -218,7 +218,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     // the legend, in classic: its one row under the drawing (the five cells are free's watermark and *Credits*)
     const row = p.locator('#legend .lg-line a[href="https://github.com/takushieternal"]');
     assert.ok(await row.isVisible(), 'classic does not credit Bryant under the drawing');
-    assert.match(await p.textContent('#legend .lg-line'), /GPLv3\+ or LGPLv3\+ ?prose CC BY-SA 4\.0/);
+    assert.match(await p.textContent('#legend .lg-line'), /GPLv3\+ or LGPLv3\+[\s\S]*CC BY-SA 4\.0/);
     assert.ok(!/-or-later|CC-BY-SA-/.test(await p.textContent('#legend .lg-line')), 'the legend line carries a machine-formatted licence string');
     assert.equal(await p.isVisible('#legend .lg-app'), false, 'classic shows the five-cell legend');
     assert.ok(await p.isVisible('#stage-full') && await p.isVisible('#stage-fresh'), 'classic hides the app full size or Start again');

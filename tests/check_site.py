@@ -334,7 +334,7 @@ class SiteChecks(unittest.TestCase):
         self.assertIn("topology forge (formerly TopoForge)", app)
         self.assertLess(app.index("Bryant Frankford"), app.index("Corwin"), "Bryant is not named first")
         line = re.sub(r"<[^>]+>", "", re.search(r'<p class="lg-line">(.*?)</p>', lg, re.S).group(1))
-        self.assertTrue(line.startswith("topology forge · Bryant Frankford"), "the legend's line does not start with the app and Bryant: " + line[:60])
+        self.assertTrue(re.match(r"app\s*topology forge\s*by\s*Bryant Frankford", line), "the legend's line does not start with the app and Bryant: " + line[:60])
 
     def test_the_legend_is_one_line_in_words(self):
         """Corwin, 2026-11-02: "lets try one line" in hairline compartments; "Why would we use a machine
@@ -352,6 +352,34 @@ class SiteChecks(unittest.TestCase):
         self.assertIn("GPLv3+", line.group(1))
         self.assertGreaterEqual(line.group(1).count('class="lg-c '), 5, "the line has fewer than five compartments")
         self.assertNotIn(". ", re.sub(r"<[^>]+>", "", line.group(1)), "a sentence in the legend's line")
+
+    def test_the_legend_fonts_are_served_here_with_their_licences(self):
+        """Revision 6: the legend is lettered in two fonts served from this site; each font file has a
+        REUSE annotation whose licence text is in LICENSES/, a line in src/fonts/README with its sha256, and
+        Credits (the legend's Sheet cell) names both fonts and their licences."""
+        import hashlib
+        fonts = os.path.join(OUT, "fonts")
+        files = sorted(f for f in os.listdir(fonts) if f.endswith((".woff", ".woff2"))) if os.path.isdir(fonts) else []
+        self.assertEqual(files, ["osifont.woff", "plex-sans-condensed-300.woff2", "plex-sans-condensed-400.woff2"])
+        with open(os.path.join(ROOT, "REUSE.toml"), encoding="utf-8") as fh:
+            reuse = fh.read()
+        with open(os.path.join(ROOT, "src", "fonts", "README"), encoding="utf-8") as fh:
+            readme = fh.read()
+        for f in files:
+            m = re.search(r'path = \[[^\]]*"src/fonts/%s"[^\]]*\]\s*SPDX-FileCopyrightText = "[^"]+"\s*SPDX-License-Identifier = "([^"]+)"' % re.escape(f), reuse)
+            self.assertTrue(m, f + " has no REUSE annotation")
+            self.assertTrue(os.path.isfile(os.path.join(ROOT, "LICENSES", m.group(1) + ".txt")), f + ": no LICENSES/" + m.group(1) + ".txt")
+            with open(os.path.join(fonts, f), "rb") as fh:
+                self.assertIn(hashlib.sha256(fh.read()).hexdigest(), readme, f + "'s sha256 is not in src/fonts/README")
+        css = read("css/site.css")
+        for f in files:
+            self.assertIn("../fonts/" + f, css, f + " is not used by the stylesheet")
+        self.assertNotRegex(css, r"@font-face[^}]*url\(\s*['\"]?https?:", "a font from another host")
+        h = read("index.html")
+        if os.path.isdir(os.path.join(OUT, "topology")):
+            sheet = re.sub(r"<[^>]+>", "", re.search(r'<div class="lg-cell lg-sheet">(.*?)</div>', h, re.S).group(1))
+            for w in ("osifont", "ISO 3098", "GNU General Public License, version 3, with the font exception", "IBM Plex Sans Condensed", "SIL Open Font License 1.1"):
+                self.assertIn(w, sheet, "Credits does not name: " + w)
 
     def test_the_name_is_never_misspelled(self):
         """Corwin, 2026-11-01 20:51: "topology is the correct name." The misspelling appears in none of the

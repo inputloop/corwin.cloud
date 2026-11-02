@@ -29,6 +29,17 @@
   var IX = null, CATS = [], SHAPE = {}, ICON = {}, CMDS = [], SEL = null, READY = null, PAGE = '';
   var frames = [], cur = null, small = {}, nextFrame = 1, MOTION = html.classList.contains('motion-on');
   var NAVAT = null, MAXLINES = 4, LH = 24, CELL = 30;   // where *navigator* is shown; lines and tool cells, in pixels
+  var VIEW = null, HERE_AT = null;   // topology forge 1.9: the view, and where *Here* floats (beside the selection)
+  // the menu bar's priority+ overflow (revision 6): the last of these go into » first; Site never does
+  var DROP = ['Layout', 'Arrange', 'Help', 'Options', 'View', 'Edit', 'File', 'Navigator'];
+  // the layout switch's box, in the stage's pixels: no frame's top row sits under it (js/float.js moves it below)
+  function switchBox() {
+    var sw = doc.getElementById('ui-switch');
+    if (!sw || !sw.offsetWidth) return null;
+    var r = sw.getBoundingClientRect(), g = grid.getBoundingClientRect();
+    return { x: r.left - g.left - 4, y: r.top - g.top - 4, w: r.width + 8, h: r.height + 8 };
+  }
+  function mapTop(H) { var t = tf(), m = null; try { m = t && t.panels && t.panels().map; } catch (e) { m = null; } return m && m.shown ? m.y : H - 150; }
   // what free keeps (the navigator's frame closed or not) is kept by js/float.js, under corwin.cloud.free.v1
   function fstate() { return window.CCFloat.freeState ? window.CCFloat.freeState() : {}; }
   function fkeep(k, v) { if (window.CCFloat.freeKeep) window.CCFloat.freeKeep(k, v); }
@@ -113,7 +124,8 @@
     if (ev.origin !== window.location.origin || ev.source !== app.contentWindow || !m || !m.detail) return;
     if (m.type === 'topoforge:ready') { READY = m.detail; PAGE = m.detail.page || ''; takeShapes(); refreshCmds(); hooks19(); }
     else if (m.type === 'topoforge:select') { SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; frames.forEach(function (f) { f.renderTools(); f.layoutTools(); }); }
-    else if (m.type === 'topoforge:context' && nine()) { SEL = m.detail && m.detail.count ? m.detail : SEL; here(); }
+    else if (m.type === 'topoforge:context' && nine()) { var cd = m.detail; SEL = SEL && SEL.id === cd.id ? SEL : { id: cd.id, ref: cd.ref, name: cd.name, tooltip: cd.tooltip, kind: cd.kind, page: cd.page, count: 1 }; here(cd.rect); }
+    else if (m.type === 'topoforge:view' && nine()) { VIEW = m.detail; viewSoon(); return; }
     else if (m.type === 'topoforge:pages' && nine()) { if (small.pages && !small.pages.root.hidden) small.pages.fill(); }
     else if (m.type === 'topoforge:key' && nine()) { keyFromApp(m.detail); return; }
     else return;
@@ -125,18 +137,54 @@
   // 1.9 or later and the call is there; with 1.8 nothing here runs
   function hooks19() {
     var t = nine('embed');
-    if (t) { try { t.embed({ keys: true, context: true, pagelist: true }); } catch (e) { /* an older 1.9 without the words */ } }
+    if (!t) return;
+    try { t.embed({ keys: true, context: true, pagelist: true, view: true }); } catch (e) { /* an older 1.9 without the words */ }
+    try { VIEW = t.view || null; } catch (e) { VIEW = null; }
+    firstFit();
+  }
+  var viewQ = false;
+  function viewSoon() { if (viewQ) return; viewQ = true; (window.requestAnimationFrame || setTimeout)(function () { viewQ = false; frames.forEach(function (f) { f.modelinesOnly(); }); }); }
+  // the first fit leaves room for the frames (revision 6): the app fits the drawing to the whole canvas;
+  // setView scales and moves that fit into the space between the frames and above the legend
+  var fitted = false;
+  function firstFit() {
+    var t = nine('setView');
+    if (!t || fitted || !READY || !READY.loaded || narrowQ.matches) return;
+    fitted = true;
+    setTimeout(function () {
+      var v = t.view, W = grid.clientWidth, H = grid.clientHeight;
+      if (!v || !v.k) return;
+      var L = 12, R = W - 12, T = 8, B = H - 40;
+      frames.forEach(function (f) {
+        var st = f.fl.state; if (st.x === null) return;
+        if (st.x + st.w / 2 < W / 2) L = Math.max(L, st.x + st.w + 12); else R = Math.min(R, st.x - 12);
+      });
+      var lg = doc.getElementById('legend');
+      if (lg && !lg.hidden && lg.offsetHeight) B = Math.min(B, lg.getBoundingClientRect().top - grid.getBoundingClientRect().top - 8);
+      if (R - L < 240) return;
+      var sc = Math.min((R - L) / W, (B - T) / H);
+      t.setView({ k: v.k * sc, x: L + v.x * sc + ((R - L) - W * sc) / 2, y: T + v.y * sc + ((B - T) - H * sc) / 2 });
+    }, 60);
   }
   // 1.9's keys switch: Alt+x, F10, C-x and C-c pressed in the drawing come here (topoforge:key, with Emacs's
   // key names); a sequence stays open until this page ends it, so it ends every one it finishes or refuses
   var KEYSEQ = { 'C-x 2': 'split-window-below', 'C-x 3': 'split-window-right', 'C-x 0': 'delete-window', 'C-x 1': 'delete-other-windows', 'C-x o': 'other-window',
-    'C-x b': 'switch-to-buffer', 'C-x {': 'shrink-frame', 'C-x }': 'enlarge-frame', 'C-x 5 2': 'make-frame', 'C-x 5 0': 'delete-frame', 'C-x 5 o': 'other-frame',
+    'C-x b': 'switch-to-buffer', 'C-x {': 'shrink-frame', 'C-x }': 'enlarge-frame', 'C-x ^': 'taller', 'C-x 5 2': 'make-frame', 'C-x 5 0': 'delete-frame', 'C-x 5 o': 'other-frame',
     'C-x t 2': 'nav:newbuf', 'C-x t 0': 'nav:closebuf', 'C-x t o': 'nav:nextbuf', 'C-c .': 'here', 'C-c p': 'nav:pin', 'C-c m': 'nav:setmode', 'C-c k': 'nav:clearmode' };
+  var cuaT = null;
   function keyFromApp(d) {
     var f = cur || frames[0], t = tf();
     if (!f || !d) return;
     var seq = d.seq && d.seq.length ? d.seq : [d.key], str = seq.join(' ');
     function end() { if (t && typeof t.endKeys === 'function') t.endKeys(); }
+    clearTimeout(cuaT);
+    // Emacs's CUA mode: C-x or C-c with something selected and no second key within 200 ms cuts or copies
+    if (seq.length === 1 && (str === 'C-x' || str === 'C-c') && SEL) {
+      var id = str === 'C-x' ? 'edit::cut' : 'edit::copy';
+      cuaT = setTimeout(function () { end(); if (runApp(id)) f.say((str === 'C-x' ? 'Cut' : 'Copied') + ' (' + str + ' with a selection, as Emacs’s CUA mode).'); }, 200);
+      f.say(str + '-');
+      return;
+    }
     if (seq[0] === 'M-x') { end(); core('execute-extended-command', f); return; }
     if (seq[0] === '<f10>') { end(); f.menuOpen(0, true); return; }
     if (seq[seq.length - 1] === 'C-g' || seq[seq.length - 1] === '<escape>') { end(); f.say('Quit'); return; }
@@ -208,9 +256,12 @@
       if (e.parts) {
         if (e.wrap) node.appendChild(doc.createTextNode('('));
         e.parts.forEach(function (q, i) {
-          var isMotion = q[1] === 'toggle-motion';
-          var b = mk('button', { type: 'button', cls: 'ml-b', 'data-act': q[1], 'data-help': q[2], 'aria-label': q[2],
-            id: isMotion && !motionMade ? 'motion' : null, 'aria-pressed': isMotion ? String(MOTION) : null, text: isMotion ? (MOTION ? 'Motion' : 'Still') : q[0] });
+          var isMotion = q[1] === 'toggle-motion', isMode = q[1] === 'describe-mode';
+          var modeName = c.buf === 'navigator' ? 'Navigator' : 'Finder';
+          var help = isMode ? modeName + ' mode: click for its menu (Emacs: the mode name on the mode-line opens the mode’s menu).' : q[2];
+          var b = mk('button', { type: 'button', cls: 'ml-b' + (isMode ? ' ml-mode' : ''), 'data-act': isMode ? 'mode-menu' : q[1], 'data-mode': isMode ? modeName : null, 'data-help': help, 'aria-label': help,
+            'aria-haspopup': isMode ? 'menu' : null, id: isMotion && !motionMade ? 'motion' : null, 'aria-pressed': isMotion ? String(MOTION) : null,
+            text: isMotion ? (MOTION ? 'Motion' : 'Still') : isMode ? modeName : (q[1] === 'view::fit-to-window' && VIEW && isFinite(VIEW.zoom) ? Math.round(VIEW.zoom) + '%' : q[0]) });
           if (isMotion) motionMade = true;
           if (i && e.wrap) node.appendChild(doc.createTextNode(' '));
           node.appendChild(b);
@@ -232,7 +283,7 @@
   var KEYS = { 'split-window-below': 'C-x 2', 'split-window-right': 'C-x 3', 'delete-window': 'C-x 0', 'delete-other-windows': 'C-x 1',
     'other-window': 'C-x o', 'make-frame': 'C-x 5 2', 'delete-frame': 'C-x 5 0', 'other-frame': 'C-x 5 o', 'here': 'C-c .',
     'execute-extended-command': 'Alt+x', 'menu-bar-open': 'F10', 'keyboard-quit': 'C-g', 'switch-to-buffer': 'C-x b',
-    'enlarge-frame': 'C-x }', 'shrink-frame': 'C-x {' };
+    'enlarge-frame': 'C-x }', 'shrink-frame': 'C-x {', 'taller': 'C-x ^' };
   var NAMES = { 'split-window-below': 'Split window below', 'split-window-right': 'Split window right', 'delete-window': 'Delete window',
     'delete-other-windows': 'One window', 'other-window': 'Other window', 'make-frame': 'New frame', 'delete-frame': 'Delete frame',
     'other-frame': 'Other frame', 'here': 'The frame by the shape (*Here*)', 'pages': 'Pages', 'properties': 'Properties', 'credits': 'Credits and licence',
@@ -241,6 +292,7 @@
     'fold': 'Show or hide the tool-bar and finder', 'move-left': 'Move left', 'move-right': 'Move right', 'move-up': 'Move up', 'move-down': 'Move down',
     'move-reset': 'Back to where it started', 'switch-to-buffer': 'Switch to buffer', 'execute-extended-command': 'M-x: run a command',
     'menu-bar-open': 'Open the menu bar', 'enlarge-frame': 'Wider', 'shrink-frame': 'Narrower', 'toolbar': 'Tool-bar in this frame',
+    'taller': 'Taller', 'shorter': 'Shorter', 'mode-menu': 'The mode’s menu',
     'show-navigator': 'Show *navigator* in this window', 'show-finder': 'Show *finder* in this window', 'nav-narrow': 'The navigator’s Narrow line' };
   function core(name, f) {
     f = f || cur;
@@ -259,6 +311,9 @@
       'move-reset': function () { f.fl.reset(); },
       'enlarge-frame': function () { f.fl.set({ w: f.fl.state.w + 16 }, true); f.say('The frame is ' + f.fl.state.w + ' pixels wide, kept in this browser (C-x }).'); },
       'shrink-frame': function () { f.fl.set({ w: f.fl.state.w - 16 }, true); f.say('The frame is ' + f.fl.state.w + ' pixels wide, kept in this browser (C-x {).'); },
+      'taller': function () { f.say('The frame is ' + f.fl.taller(16) + ' pixels tall, kept in this browser (C-x ^).'); },
+      'shorter': function () { f.say('The frame is ' + f.fl.taller(-16) + ' pixels tall, kept in this browser.'); },
+      'mode-menu': function () { var b = f.wins.querySelector('.ef-win.selected .ml-mode'); if (b) b.click(); },
       'toolbar': function () { f.st.toolbar = !f.st.toolbar; f.render(); f.say(f.st.toolbar ? 'The tool-bar is shown in this frame.' : 'The tool-bar is off in this frame (Options, Tool-bar in this frame brings it back).'); },
       'show-navigator': function () { f.show('navigator'); }, 'show-finder': function () { f.show('finder'); },
       'nav-narrow': function () { var q = doc.getElementById('nav-q'); if (q && NAVAT) { q.focus(); f.say('Narrow the navigator: type words; its pressed categories hold too. Ctrl+Enter pins the results as a buffer.'); } else f.say('The navigator is not shown: C-x b *navigator*.'); },
@@ -369,15 +424,27 @@
     // the right edge: the frame's width (drag, or arrow keys; kept per browser by js/float.js)
     f.edge = mk('div', { cls: 'ef-edge', role: 'separator', tabindex: '0', 'aria-orientation': 'vertical',
       'aria-label': 'Width of this frame: drag, or Left and Right (16 pixels), Page Up and Page Down, Home and End; C-x { and C-x } too' });
-    [f.menubar, f.pop, f.body, f.echo, f.edge].forEach(function (x) { f.root.appendChild(x); });
+    f.hedge = mk('div', { cls: 'ef-hedge', role: 'separator', tabindex: '0', 'aria-orientation': 'horizontal',
+      'aria-label': 'Height of this frame: drag, or Up and Down (16 pixels), Page Up and Page Down, Home and End; C-x ^ too' });
+    f.corner = mk('div', { cls: 'ef-corner', role: 'button', tabindex: '0',
+      'aria-label': 'Width and height of this frame together: drag, or Left and Right for the width, Up and Down for the height' });
+    [f.menubar, f.pop, f.body, f.echo, f.edge, f.hedge, f.corner].forEach(function (x) { f.root.appendChild(x); });
     grid.appendChild(f.root);
     f.fl = window.CCFloat.make({
       name: 'frame' + n, label: n === 1 ? 'The Emacs frame' : 'Emacs frame ' + n, el: f.root, grip: f.grip, drag: [f.menubar], edge: f.edge,
+      hedge: f.hedge, corner: f.corner, marks: true, avoid: switchBox,
       docks: false, width: opts.width || 440, hiddenNarrow: false,
       say: function (t) { f.say(t); },
+      onApply: function (fl) { f.mirror(fl); },
       place: function (edges, W, H) {
         var prev = frames[frames.length - 1], h = Math.max(320, Math.min(H - 24, 700));
         if (n === 1) return { x: 8, y: 8, h: h };
+        // the navigator's frame (revision 6, his screenshot): top right, just under the layout switch, shorter,
+        // ending above the app's overview map
+        if (opts.east) {
+          var sb = switchBox(), w2 = opts.width || 440, y2 = sb ? Math.round(sb.y + sb.h + 4) : 8;
+          return { x: Math.max(8, W - w2 - 8), y: y2, h: Math.max(240, Math.min(560, mapTop(H) - 12 - y2)) };
+        }
         // beside the frame before it when there is room (two views side by side), else stepped over it
         var px = prev && prev !== f && prev.fl.state.x !== null ? prev.fl.state.x + prev.fl.state.w + 12 : 460;
         var w = opts.width || 440;
@@ -386,7 +453,7 @@
     });
     f.wire();
     f.render();
-    if (window.ResizeObserver) { var lastW = 0; new window.ResizeObserver(function () { var w = f.root.offsetWidth; if (w !== lastW) { lastW = w; f.layoutTools(); f.linesSoon(); } }).observe(f.root); }
+    if (window.ResizeObserver) { var lastW = 0; new window.ResizeObserver(function () { var w = f.root.offsetWidth; if (w !== lastW) { lastW = w; f.fitMenus(); f.layoutTools(); f.linesSoon(); } }).observe(f.root); }
   }
   Frame.prototype.say = function (t) { this.msg.textContent = t; this.linesSoon(); };
   // the menu bar: the site, the app's menus, Navigator while a window showing *navigator* is selected
@@ -396,9 +463,40 @@
     if (nav() && this.st.wins[this.st.sel] && this.st.wins[this.st.sel].buf === 'navigator') m.push('Navigator');
     return m.concat(['Options', 'Help']);
   };
+  // a frame on the right half of the window is laid out from the right (revision 6): the two read as a
+  // pair framing the drawing
+  Frame.prototype.mirror = function (fl) {
+    var f = this, s = fl.state, W = grid.clientWidth, east = !fl.narrow() && s.x !== null && s.x + s.w / 2 > W / 2;
+    if (f.root.classList.contains('ef-east') !== east) { f.root.classList.toggle('ef-east', east); f.fitMenus(); }
+  };
+  // priority+: the menu bar is always one line; what does not fit goes, least needed first, into »
+  Frame.prototype.fitMenus = function () {
+    var f = this, mb = f.menubar, more = mb.querySelector('.ef-mb[data-menu="»"]');
+    if (!more || !mb.offsetWidth) return;
+    var btns = Array.prototype.slice.call(mb.querySelectorAll('.ef-mb'));
+    btns.forEach(function (b) { b.hidden = b === more; });
+    // the bar is one line by its style (nowrap); it fits when its shown parts' widths add up to no more
+    // than its own (summed, because a right-justified bar hides overflow at its start, not its end)
+    var cs = getComputedStyle(mb), room = mb.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    function oneLine() {
+      var sum = 0;
+      Array.prototype.forEach.call(mb.children, function (c) { if (c.hidden || !c.offsetWidth) return; sum += c.offsetWidth; });
+      return sum <= room + 0.5;
+    }
+    f.hiddenMenus = [];
+    if (oneLine()) return;
+    more.hidden = false;
+    for (var i = 0; i < DROP.length && !oneLine(); i++) {
+      var b = mb.querySelector('.ef-mb[data-menu="' + DROP[i] + '"]');
+      if (b && !b.hidden) { b.hidden = true; f.hiddenMenus.unshift(DROP[i]); }
+    }
+    // in menu order
+    f.hiddenMenus = f.menus.filter(function (m) { return f.hiddenMenus.indexOf(m) >= 0; });
+    more.setAttribute('aria-label', 'More menus: ' + f.hiddenMenus.join(', '));
+  };
   Frame.prototype.renderMenubar = function () {
-    var f = this, names = f.menuNames();
-    if (f.menus && f.menus.join() === names.join()) return;
+    var f = this, names = f.menuNames().concat(['»']);
+    if (f.menus && f.menus.join() === names.join()) { f.fitMenus(); return; }
     if (f.openMenu !== null && f.openMenu !== undefined) f.menuOpen(null);
     var had = f.menubar.contains(doc.activeElement) ? doc.activeElement.getAttribute('data-menu') : null;
     each(f.menubar.querySelectorAll('.ef-mb'), function (b) { b.parentNode.removeChild(b); });
@@ -407,7 +505,8 @@
       f.menubar.insertBefore(mk('button', { type: 'button', cls: 'ef-mb', role: 'menuitem', 'aria-haspopup': 'menu', 'aria-expanded': 'false', 'data-menu': m, tabindex: i ? '-1' : '0', text: m }), f.foldB.parentNode === f.menubar ? f.foldB : null);
     });
     if (f.foldB.parentNode !== f.menubar) f.menubar.appendChild(f.foldB);
-    if (had) { var b = f.menubar.querySelector('[data-menu="' + had + '"]'); if (b) b.focus(); }
+    f.fitMenus();
+    if (had) { var b = f.menubar.querySelector('[data-menu="' + had + '"]'); if (b && !b.hidden) b.focus(); }
     f.linesSoon();
   };
   // show a buffer in the selected window. One navigator lives in one window at a time: showing it here
@@ -674,21 +773,28 @@
       head('Palettes'); mine('properties'); mine('pages'); mine('here');
       if (!this.fl.narrow()) {
         head('Move this frame'); ['move-left', 'move-right', 'move-up', 'move-down', 'move-reset'].forEach(function (n) { mine(n); });
-        head('Width of this frame'); mine('enlarge-frame'); mine('shrink-frame');
+        head('Size of this frame'); mine('enlarge-frame'); mine('shrink-frame'); mine('taller'); mine('shorter');
       }
+    } else if (m === '»') {
+      var self = this;
+      (self.hiddenMenus || []).forEach(function (h) { head(h); self.items(h).forEach(function (it) { out.push(it); }); });
+    } else if (m === 'Finder') {
+      mine('describe-mode'); mine('filter-clear'); mine('fold', this.st.open); mine('toolbar', this.st.toolbar); head(''); mine('show-navigator'); mine('keys');
     } else if (m === 'Navigator') {
       (nav() ? nav().menus() : []).forEach(function (it) { if (it.header !== undefined) head(it.header); else out.push({ label: it.label, key: it.key, act: 'nav:' + it.cmd }); });
     } else if (m === 'Help') { mine('keys'); mine('credits'); mine('describe-mode'); head('The drawing app'); app_('Help'); }
     else app_(m);
     return out;
   };
-  Frame.prototype.menuOpen = function (i, focus) {
+  Frame.prototype.menuOpen = function (i, focus, named, anchor) {
     var f = this, btns = f.menubar.querySelectorAll('.ef-mb');
-    f.openMenu = i;
-    each(btns, function (b, j) { b.setAttribute('aria-expanded', String(j === i)); b.setAttribute('tabindex', j === i ? '0' : '-1'); });
+    f.openMenu = named ? -1 : i;
+    f.modeAnchor = named ? anchor : null;
+    f.pop.classList.toggle('ef-pop-up', !!named);
+    each(btns, function (b, j) { b.setAttribute('aria-expanded', String(!named && j === i)); b.setAttribute('tabindex', !named && j === i ? '0' : (named || i === null || i === undefined) && j === 0 ? '0' : '-1'); });
     f.pop.textContent = '';
-    if (i === null || i === undefined) { f.pop.hidden = true; return; }
-    var m = f.menus[i], b = btns[i];
+    if (!named && (i === null || i === undefined)) { f.pop.hidden = true; return; }
+    var m = named || f.menus[i], b = named ? anchor : btns[i];
     f.pop.setAttribute('aria-label', m + ' menu');
     f.items(m).forEach(function (it) {
       if (it.header !== undefined) { f.pop.appendChild(mk('div', { cls: 'ef-sep', role: 'separator', 'aria-label': it.header || null }, it.header ? [it.header] : [])); return; }
@@ -700,13 +806,18 @@
       f.pop.appendChild(node);
     });
     f.pop.hidden = false;
-    f.pop.style && f.pop.style.setProperty('--mx', Math.max(0, b.offsetLeft) + 'px');
+    // under its menu name; in a mirrored frame its right edge under the name's; the mode menu above its lighter
+    var rr = f.root.getBoundingClientRect(), br = b.getBoundingClientRect(), left = br.left - rr.left;
+    if (named || f.root.classList.contains('ef-east')) left = br.right - rr.left - f.pop.offsetWidth;
+    f.pop.style.setProperty('--mx', Math.round(Math.max(0, Math.min(rr.width - f.pop.offsetWidth, left))) + 'px');
+    f.pop.style.setProperty('--my', Math.round(br.top - rr.top) + 'px');
     if (focus) { var first = f.pop.querySelector('.ef-mi:not([aria-disabled])'); if (first) first.focus(); else b.focus(); }
   };
   Frame.prototype.menuClose = function (refocus) {
-    var f = this, i = f.openMenu;
+    var f = this, i = f.openMenu, a = f.modeAnchor;
     f.menuOpen(null);
-    if (refocus && i !== null && i !== undefined) f.menubar.querySelectorAll('.ef-mb')[i].focus();
+    if (refocus && i === -1 && a && a.isConnected) a.focus();
+    else if (refocus && i !== null && i !== undefined && i >= 0) f.menubar.querySelectorAll('.ef-mb')[i].focus();
   };
 
   // the message area and the one-line input
@@ -776,6 +887,11 @@
         return;
       }
       if ((c = n.closest('[data-long]')) && c._longDone) { c._longDone = false; return; }
+      if ((c = n.closest('[data-act="mode-menu"]'))) {
+        var md = c.getAttribute('data-mode');
+        if (f.openMenu === -1 && f.modeAnchor === c) { f.menuClose(true); return; }
+        f.menuOpen(null, ev.detail === 0, md, c); f.say(md + ' mode’s menu (the mode name on a mode-line opens it, as in Emacs).'); return;
+      }
       if ((c = n.closest('.ef-tool[aria-disabled="true"]'))) { f.say((c.getAttribute('data-tip') || 'That').replace(/\s+\(cannot run now\)$/, '').replace(/\s{3}.*$/, '') + ' cannot run now.'); return; }
       if ((c = n.closest('[data-act]'))) { run(c.getAttribute('data-act'), f); return; }
       if ((c = n.closest('.ef-tile'))) {
@@ -878,7 +994,7 @@
       var p = prefix; prefix = null;
       if (k === 'Escape' || (ev.ctrlKey && (k === 'g' || k === 'G'))) { f.say('Quit'); return; }
       var table = { 'C-x': { '2': 'split-window-below', '3': 'split-window-right', '0': 'delete-window', '1': 'delete-other-windows', 'o': 'other-window', '5': 'C-x 5',
-          'b': 'switch-to-buffer', '{': 'shrink-frame', '}': 'enlarge-frame', 't': 'C-x t' },
+          'b': 'switch-to-buffer', '{': 'shrink-frame', '}': 'enlarge-frame', '^': 'taller', 't': 'C-x t' },
         'C-x 5': { '2': 'make-frame', '0': 'delete-frame', 'o': 'other-frame' }, 'C-x t': { '2': 'nav:newbuf', '0': 'nav:closebuf', 'o': 'nav:nextbuf' },
         'C-c': { '.': 'here', 'p': 'nav:pin', 'm': 'nav:setmode', 'k': 'nav:clearmode' }, 'ESC': { 'x': 'execute-extended-command' } }[p];
       var name = table[k] || table[k.toLowerCase && k.toLowerCase()];
@@ -892,7 +1008,13 @@
     var mb = tg.closest && tg.closest('.ef-mb'), mi = tg.closest && tg.closest('.ef-mi');
     if (mb || mi) {
       var btns = Array.prototype.slice.call(f.menubar.querySelectorAll('.ef-mb')), i = mb ? btns.indexOf(mb) : f.openMenu;
-      if (k === 'ArrowRight' || k === 'ArrowLeft') { ev.preventDefault(); var j = (i + (k === 'ArrowRight' ? 1 : btns.length - 1)) % btns.length; if (f.openMenu !== null && f.openMenu !== undefined) f.menuOpen(j, true); else { btns[j].focus(); btns.forEach(function (b, x) { b.setAttribute('tabindex', x === j ? '0' : '-1'); }); } return; }
+      if ((k === 'ArrowRight' || k === 'ArrowLeft') && f.openMenu !== -1) {
+        ev.preventDefault();
+        var j = i, step = k === 'ArrowRight' ? 1 : btns.length - 1;
+        do { j = (j + step) % btns.length; } while (btns[j].hidden && j !== i);
+        if (f.openMenu !== null && f.openMenu !== undefined) f.menuOpen(j, true); else { btns[j].focus(); btns.forEach(function (b, x) { b.setAttribute('tabindex', x === j ? '0' : '-1'); }); }
+        return;
+      }
       if (mb && (k === 'ArrowDown' || k === 'Enter' || k === ' ')) { ev.preventDefault(); f.menuOpen(i, true); return; }
       if (mi && (k === 'ArrowDown' || k === 'ArrowUp' || k === 'Home' || k === 'End')) {
         ev.preventDefault();
@@ -1105,6 +1227,22 @@
       if (!SEL) b.appendChild(mk('p', { text: 'Nothing is selected in the drawing. Select a shape there; this shows what the app says of it.' }));
       else b.appendChild(mk('dl', { cls: 'ef-dl' }, [['Name', SEL.name], ['Says', SEL.tooltip || '(nothing)'], ['Kind', SEL.kind], ['Page', SEL.page], ['Id', SEL.id], ['Reference', SEL.ref || '(none)'], ['Selected', String(SEL.count)]]
         .map(function (r) { return mk('div', {}, [mk('dt', { text: r[0] }), mk('dd', { text: r[1] })]); })));
+      var t9 = nine('setProps');
+      if (SEL && SEL.id && t9) {
+        // 1.9: the name and the tooltip edited here, one undo step each (TopoForge.setProps)
+        [['Name', 'text', SEL.name], ['Says', 'tooltip', SEL.tooltip || '']].forEach(function (r) {
+          var id = 'ef-prop-' + r[1], inp = mk('input', { type: 'text', id: id, cls: 'ef-in ef-prop', value: r[2], spellcheck: 'false', autocomplete: 'off' });
+          var set = mk('button', { type: 'button', cls: 'ef-wb-b', 'data-set': r[1], text: '[Set]', 'aria-label': 'Set the ' + r[0].toLowerCase() + ' (one undo step)' });
+          function apply() {
+            var tt = nine('setProps'); if (!tt || !SEL) return;
+            var ok = tt.setProps(SEL.id, r[1] === 'text' ? { text: inp.value } : { data: { tooltip: inp.value } });
+            say(ok ? r[0] + ' set, one undo step (Edit, Undo takes it back).' : 'The app did not take that ' + r[0].toLowerCase() + '.');
+          }
+          set.addEventListener('click', apply);
+          inp.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') { ev.preventDefault(); apply(); } });
+          b.appendChild(mk('p', { cls: 'ef-propr' }, [mk('label', { for: id, cls: 'ef-gl', text: r[0] + ': ' }), inp, ' ', set]));
+        });
+      }
       var o = mk('button', { type: 'button', cls: 'ef-wb-b', text: '[Open the app’s own Properties]' });
       o.addEventListener('click', function () { var t = tf(); if (t) { t.embed({ props: true, 'hide-props': false }); say('The app’s own Properties float over the drawing: edit there. [Hide it] puts them away.'); } });
       var h = mk('button', { type: 'button', cls: 'ef-wb-b', text: '[Hide it]' });
@@ -1141,14 +1279,27 @@
         })).concat([mk('br'), mk('span', { cls: 'ef-gl', text: 'Motion: ' }),
           btn(MOTION ? '[reduce motion]' : '[allow motion]', function () { if (!pressCustom('calm', null)) toggleMotion(); small.here.fill(); }),
           btn('[Customize…]', customize)])));
-    }, function (edges, W, H) { return { x: Math.round(Math.min(W - 316, W / 2 + 32)), y: Math.round(Math.max(8, H / 2 - 40)) }; }]
+    }, function (edges, W, H) {
+      if (HERE_AT) return { x: Math.round(Math.max(8, Math.min(W - 316, HERE_AT.x))), y: Math.round(Math.max(8, Math.min(H - 200, HERE_AT.y))) };
+      return { x: Math.round(Math.min(W - 316, W / 2 + 32)), y: Math.round(Math.max(8, H / 2 - 40)) };
+    }]
   };
   function openSmall(name, replace) {
     if (!small[name]) { var d = SMALL[name]; small[name] = new Small(name, d[0], d[1], d[2]); }
     small[name].show(replace);
   }
   // Emacs floating into the canvas: recentre on the selection (as C-l does), then a small frame beside it
-  function here() {
+  function here(rect) {
+    var t9 = nine('selectionRect');
+    // 1.9: float beside the shape where it is, without moving the view
+    if (t9 && SEL) {
+      var r = rect || t9.selectionRect();
+      HERE_AT = r ? { x: r.x + r.w + 12, y: r.y } : null;
+      openSmall('here', true);
+      say(SEL ? 'The frame by ' + SEL.name + ', beside it.' : 'Nothing is selected; the access settings are here.');
+      return;
+    }
+    HERE_AT = null;
     var c = cmd('view::zoom-to-selection'), t = tf();
     if (SEL && t && c && c.enabled) t.run(c.id);
     openSmall('here', true);
@@ -1164,7 +1315,7 @@
     // yes, and (revision 5): on a wide screen the navigator opens beside the finder in a second frame,
     // until it is closed (C-x 5 0 there), which this browser then remembers
     if (!narrowQ.matches && fstate().navFrame !== false) {
-      var g = new Frame(nextFrame++, { buf: 'navigator', toolbar: false, width: 360 });
+      var g = new Frame(nextFrame++, { buf: 'navigator', toolbar: false, width: grid.clientWidth >= 1800 ? 500 : 440, east: true });
       g.navFrame = true; frames.push(g);
       g.say('*navigator*. C-x b: *finder*.');
     }
@@ -1183,7 +1334,7 @@
     var calm = doc.querySelector('#custom-panel input[name="calm"]');
     if (calm && calm.checked && MOTION) toggleMotion();
     var t = tf();
-    if (t && t.ready && t.ready.then) t.ready.then(function (d) { READY = READY || d; PAGE = PAGE || (d && d.page) || ''; takeShapes(); refreshCmds(); frames.forEach(function (x) { x.modelines(); }); });
+    if (t && t.ready && t.ready.then) t.ready.then(function (d) { READY = READY || d; PAGE = PAGE || (d && d.page) || ''; takeShapes(); refreshCmds(); hooks19(); frames.forEach(function (x) { x.modelines(); }); });
     grid.setAttribute('data-free', 'yes');
   }
   start();

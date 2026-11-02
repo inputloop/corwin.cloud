@@ -328,15 +328,20 @@ def legend(index, first):
     gh = '<a href="%s">Bryant Frankford</a>' % BRYANT_URL
     lic_words = ("GNU General Public License, version 3 or any later version, or GNU Lesser General Public License, "
                  "version 3 or any later version, as you choose")
+    # a title block (docs/NAV.md, revision 6): each compartment a field name (Subtler) and its value (Subtle)
+    def comp(cls, k, v):
+        return '<span class="lg-c %s"><span class="lg-k">%s</span><span class="lg-v">%s</span></span>' % (cls, k, v)
     comps = [
-        ("lg-c-app", 'topology forge · %s' % gh),
-        ("lg-c-lic", '<abbr title="%s">GPLv3+ or LGPLv3+</abbr>' % lic_words),
-        ("lg-c-prose", '<abbr title="prose: Creative Commons Attribution-ShareAlike 4.0 International">prose CC BY-SA 4.0</abbr>'),
-        ("lg-c-src", '<a href="%s">source</a>' % TF_SRC_PROJECT),
-        ("lg-c-rev", 'rev <code>%s</code> · %s' % (e(rev), day)),
+        comp("lg-c-app", "app", "topology forge"),
+        comp("lg-c-by", "by", gh),
+        comp("lg-c-lic", "licence", '<abbr title="%s">GPLv3+ or LGPLv3+</abbr>' % lic_words),
+        comp("lg-c-prose", "prose", '<abbr title="Creative Commons Attribution-ShareAlike 4.0 International">CC BY-SA 4.0</abbr>'),
+        comp("lg-c-src", "source", '<a href="%s">topology</a>' % TF_SRC_PROJECT),
+        comp("lg-c-rev", "rev", '<code>%s</code>' % e(rev)),
+        comp("lg-c-date", "date", day),
     ]
     line = ('<p class="lg-line">%s<button type="button" class="lg-c lg-more js-only-inline" aria-expanded="false" aria-controls="lg-grid">credits</button></p>'
-            % "".join('<span class="lg-c %s">%s</span>' % c for c in comps))
+            % "".join(comps))
     cells = [
         ("lg-app", "Drawing app", TF_NAME + ', made by %s for Corwin Brust, with Corwin and contributors. Bryant is listed first on it.' % gh),
         ("lg-lic", "Its licence", 'Its code may be used under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU General Public License, version 3</a> '
@@ -350,7 +355,9 @@ def legend(index, first):
          '<a href="topology/" id="stage-door">topology\'s own front door</a> · '
          '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button>'
          % (e(first, quote=True), e(index["file"], quote=True))),
-        ("lg-sheet", "Sheet", 'The shop, drawn: a page per project. corwin.cloud revision <code>%s</code>, built %s.' % (e(rev), day)),
+        ("lg-sheet", "Sheet", 'The shop, drawn: a page per project. corwin.cloud revision <code>%s</code>, built %s. '
+         'Lettered in osifont, an ISO 3098 face by Zefram Cochrane and contributors (GNU General Public License, version 3, with the font exception), '
+         'and IBM Plex Sans Condensed by IBM (SIL Open Font License 1.1), both served from this site.' % (e(rev), day)),
     ]
     grid = "".join('<div class="lg-cell %s"><dt>%s</dt><dd>%s</dd></div>' % (c, e(h), d) for c, h, d in cells)
     # the notice says why the shop's drawings are not showing (js/stage.js fills it); it heads the legend
@@ -718,7 +725,7 @@ def main():
     out = os.path.abspath(args.out)
     shutil.rmtree(out, ignore_errors=True)
     os.makedirs(out)
-    for sub in ("css", "js"):
+    for sub in ("css", "js", "fonts"):
         shutil.copytree(os.path.join(SRC, sub), os.path.join(out, sub))
     for f in ("favicon.svg", "robots.txt"):
         shutil.copy(os.path.join(SRC, f), os.path.join(out, f))

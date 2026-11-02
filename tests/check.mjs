@@ -315,7 +315,8 @@ test('free.js asks the app only through its documented calls', { skip: !freeSrc 
   for (const n of names) for (const m of freeSrc.matchAll(new RegExp('\\b' + n + '\\.(\\w+)\\(', 'g'))) calls.add(m[1]);
   // EMBED v1 as 1.8 documents it, plus endKeys() (documented as added in 1.9; free.js calls it only on a
   // topoforge:key message, which only 1.9 sends, and only when the version says 1.9)
-  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys'];
+  // and 1.9's (EMBED v1, "Added in 1.9"), each reached only when TopoForge.version says 1.9 (free.js nine())
+  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview'];
   for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
   for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
 });

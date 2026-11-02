@@ -68,7 +68,7 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
     const lg = await p.evaluate(() => { const l = document.querySelector('#legend .lg-line'); const cs = getComputedStyle(l); return { h: l.getBoundingClientRect().height, lh: parseFloat(cs.lineHeight), text: l.innerText, color: cs.color, bg: getComputedStyle(document.body).backgroundColor, n: l.querySelectorAll('.lg-c').length }; });
     if (wide) assert.ok(lg.h <= lg.lh * 1.5 + 2, `the legend is not one line (${lg.h} for a line of ${lg.lh}) at ${tag}`);
     assert.ok(!/-or-later|-only|CC-BY-SA-|SPDX/.test(lg.text), 'a machine-formatted licence string in the legend: ' + lg.text);
-    assert.ok(/^topology forge · Bryant Frankford/.test(lg.text.trim()) && /GPLv3\+/.test(lg.text), 'the legend line does not credit the app and Bryant first, or lacks GPLv3+: ' + lg.text);
+    assert.ok(/^app\s*topology forge\s*by\s*Bryant Frankford/i.test(lg.text.trim()) && /GPLv3\+/.test(lg.text), 'the legend line does not credit the app and Bryant first, or lacks GPLv3+: ' + lg.text);
     assert.ok(lg.n >= 6, 'fewer than six compartments');
     assert.ok(contrast(lg.color, lg.bg) >= 4.5, 'the legend line is below AA');
     ok(`the legend is ${wide ? 'one line' : 'whole compartments'} of ${lg.n} hairline compartments, in words (GPLv3+, no SPDX string), Bryant first, AA, at ${tag}`);
@@ -103,7 +103,11 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
     assert.match(await p.textContent('#ef-tip'), /Zoom in/);
     await keys(p, 'Escape');
     assert.equal(await p.isVisible('#ef-tip'), false, 'Escape did not dismiss the tooltip');
-    if (await app(p).evaluate(() => !/^1\.(9|[1-9]\d)|^[2-9]/.test(TopoForge.version))) assert.equal(await p.evaluate(() => CCFree.nineteen()), false, 'the 1.9 hooks think 1.8 is 1.9');
+    // whatever is staged, an app that says 1.8 gets none of 1.9's hooks
+    const v0 = await app(p).evaluate(() => { const v = TopoForge.version; TopoForge.version = '1.8'; return v; });
+    const thinks = await p.evaluate(() => CCFree.nineteen());
+    await app(p).evaluate((v) => { TopoForge.version = v; }, v0);
+    assert.equal(thinks, false, 'the 1.9 hooks think 1.8 is 1.9');
     ok(`the tool-bar: ${tools.length} tools, no labels, each with a name and a tooltip on hover and focus (AA, Escape dismisses)${wide ? '; the preview box says the category above the overview map' : ''}; 1.9's hooks off with 1.8, at ${tag}`);
 
     // ---- 4. groups evenly spaced ----
@@ -143,7 +147,7 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
       L = await lines(p, 1);
       assert.ok(L.n === 1 && L.menu === 1 && L.msg === 1 && L.ml.every((x) => x === 1), 'widened, the three lines did not come back to one: ' + JSON.stringify(L));
       // a long message alone makes the menu bar and the mode-lines grow with it
-      await p.click('#ef-1 .ml-lighters [data-act="describe-mode"]'); await p.waitForTimeout(100);
+      await p.click('#ef-1 .ef-mb[data-menu="Help"]'); await p.click('#ef-1 .ef-pop [data-act="describe-mode"]'); await p.waitForTimeout(100);
       L = await lines(p, 1);
       assert.ok(L.n >= 2 && L.menu === L.n && L.msg === L.n && L.ml.every((x) => x === L.n), 'a wrapping message did not grow the three lines together: ' + JSON.stringify(L));
       await p.evaluate(() => { document.querySelector('#ef-1 .ef-msg').textContent = 'short'; });

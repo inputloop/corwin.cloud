@@ -203,7 +203,14 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.ok(file.some((x) => /SVG image/.test(x)) && file.some((x) => /New frame.*C-x 5 2/.test(x)), 'File lacks the app\'s Export or the frame items');
     const appCount = await app(p).evaluate(() => TopoForge.commands().length);
     let inMenus = 0;
-    for (const m of ['File', 'Edit', 'Arrange', 'Layout', 'View', 'Help']) { await p.click(`#ef-1 .ef-mb[data-menu="${m}"]`); if (await p.getAttribute(`#ef-1 .ef-mb[data-menu="${m}"]`, 'aria-expanded') !== 'true') await p.click(`#ef-1 .ef-mb[data-menu="${m}"]`); inMenus += await p.locator('#ef-1 .ef-pop .ef-mi:not([data-act^="ui-"])').evaluateAll((b) => b.filter((x) => /^[a-z]+:/.test(x.getAttribute('data-act') || '')).length); }
+    // a menu the bar has no room for is in » (revision 6): count it there
+    const appMenus = ['File', 'Edit', 'Arrange', 'Layout', 'View', 'Help'];
+    for (const m of appMenus.concat(['»'])) {
+      const sel = `#ef-1 .ef-mb[data-menu="${m}"]`;
+      if (await p.locator(sel).isHidden()) continue;
+      await p.click(sel); if (await p.getAttribute(sel, 'aria-expanded') !== 'true') await p.click(sel);
+      inMenus += await p.locator('#ef-1 .ef-pop .ef-mi:not([data-act^="ui-"])').evaluateAll((b) => b.filter((x) => /^[a-z]+:/.test(x.getAttribute('data-act') || '')).length);
+    }
     assert.equal(inMenus, appCount, `the menus carry ${inMenus} of the app's ${appCount} commands`);
     await keys(p, 'Escape');
     assert.equal(await p.isVisible('#ef-1 .ef-pop'), false, 'Escape did not close the menu');
@@ -227,7 +234,8 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       const here = await p.textContent('#ef-here');
       assert.ok(here.includes(selName) && /Text:/.test(here) && /Colours:/.test(here) && /Motion:/.test(here), '*Here* lacks the selection or the access settings');
       const hb = await p.locator('#ef-here').boundingBox();
-      assert.ok(hb.x > w / 2 - 10 && hb.x < w / 2 + 80, '*Here* is not beside the middle of the drawing, where the selection is centred');
+      // with 1.8 the view is centred on the selection and *Here* floats beside the middle; with 1.9 it floats beside the shape where it is (free6-browser.cjs checks that)
+      if (!(await app(p).evaluate(() => /^1\.(9|[1-9]\d)|^[2-9]/.test(TopoForge.version)))) assert.ok(hb.x > w / 2 - 10 && hb.x < w / 2 + 80, '*Here* is not beside the middle of the drawing, where the selection is centred');
       await p.click('#ef-here button[aria-label="Larger text"]');
       assert.equal(await p.evaluate(() => document.documentElement.getAttribute('data-size')), '1', '[A+] did not press Customize\'s text size');
       const fs1 = await p.evaluate(() => parseFloat(getComputedStyle(document.getElementById('ef-1')).fontSize));
@@ -253,7 +261,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.ok(await lg.isVisible(), 'no watermark');
     const credit = p.locator('#legend .lg-line a[href="https://github.com/takushieternal"]');
     assert.ok(await credit.isVisible(), 'the watermark does not credit Bryant');
-    assert.match(await p.textContent('#legend .lg-line'), /GPLv3\+ or LGPLv3\+ ?prose CC BY-SA 4\.0/);
+    assert.match(await p.textContent('#legend .lg-line'), /GPLv3\+ or LGPLv3\+[\s\S]*CC BY-SA 4\.0/);
     if (wide) {
       assert.equal(await lg.evaluate((e) => getComputedStyle(e).borderTopWidth), '0px', 'the watermark has a box');
       const lgc = await p.evaluate(() => { const c = document.querySelector('#legend .lg-line'); return [getComputedStyle(c).color, getComputedStyle(document.body).backgroundColor]; });

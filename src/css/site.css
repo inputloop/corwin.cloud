@@ -484,7 +484,7 @@ html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0;
 
 /* the Emacs frame: one face, a monospace buffer; its parts in Emacs's order */
 .ef { position: relative; display: flex; flex-direction: column; min-width: 0; background: var(--canvas); color: var(--text); border: 1px solid var(--border);
-  font: calc(13px * var(--read-scale, 1))/1.5 var(--mono); }
+  font: calc(0.8125rem * var(--read-scale, 1))/1.5 var(--mono); }   /* 13 pixels at the browser's 16-pixel default, and its own size when the reader chose another (revision 6) */
 .ef[hidden] { display: none !important; }
 .ef button, .ef a.ef-it { font: inherit; color: var(--text); background: none; border: 1px solid transparent; border-radius: 0; padding: 0 4px; min-height: 24px; cursor: pointer; text-decoration: none; }
 .ef button:hover, .ef a.ef-it:hover { border-color: var(--border); }
@@ -494,7 +494,7 @@ html[data-ui="free"] .stage .stage-grid .topology { height: 100%; min-height: 0;
 .ef .ef-grip { cursor: move; touch-action: none; font-weight: 700; padding: 0 6px; }
 .ef .ef-mb[aria-expanded="true"] { background: var(--canvas-active); border-color: var(--border); }
 .ef .ef-fold { margin-left: auto; font-weight: 700; }
-.ef-pop { position: absolute; z-index: 9; left: var(--mx, 0); top: 28px; min-width: 16rem; max-width: min(28rem, 92vw); max-height: 60vh; overflow: auto;
+.ef-pop { position: absolute; z-index: 9; left: var(--mx, 0); top: calc(var(--ef-lines, 1) * 24px + 4px); min-width: 16rem; max-width: min(28rem, 92vw); max-height: 60vh; overflow: auto;
   display: flex; flex-direction: column; background: var(--canvas); border: 1px solid var(--control); padding: 2px 0; }
 .ef-pop[hidden] { display: none; }
 .ef-pop > * { flex: none; }
@@ -660,7 +660,51 @@ html[data-ui="free"] .legend[hidden] { display: none !important; }
 html[data-ui="free"] .ef .navframe button { background: none; border-color: transparent; }
 html[data-ui="free"] .ef .navframe button:hover { border-color: var(--border); }
 html[data-ui="free"] .ef .navframe .tb[aria-pressed="true"] { background: var(--canvas-active); border-color: var(--control); }
-@media (max-width: 47.5rem) { .ef-edge { display: none; } .ef-hud { display: none; } }
+@media (max-width: 47.5rem) { .ef-edge, .ef-hedge, .ef-corner { display: none; } .ef-hud { display: none; } }
 @media (forced-colors: active) { .ef-tip, .ef-hud { border: 1px solid CanvasText; } .ef .ef-tool[aria-pressed="true"] { outline: 2px solid Highlight; } }
 
 @media print { .ef-hud, .ef-tip { display: none !important; } }
+
+/* ---- revision 6 (docs/NAV.md): frames that fit, a lettered title block, menus that never wrap ---- */
+/* the height edge and the corner; the frame shows which a press will change (data-grab, data-drag) */
+.ef-hedge { position: absolute; left: 0; right: 12px; bottom: -4px; height: 8px; cursor: ns-resize; touch-action: none; z-index: 3; }
+.ef-corner { position: absolute; right: -4px; bottom: -4px; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none; z-index: 4; }
+.ef-hedge:focus-visible, .ef-corner:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ef-small .ef-hedge, .ef-small .ef-corner { display: none; }
+.ef[data-grab="w"] { box-shadow: inset -2px 0 0 var(--control); }
+.ef[data-grab="h"] { box-shadow: inset 0 -2px 0 var(--control); }
+.ef[data-grab="wh"] { box-shadow: inset -2px 0 0 var(--control), inset 0 -2px 0 var(--control); }
+.ef[data-drag="w"] { box-shadow: inset -3px 0 0 var(--focus); }
+.ef[data-drag="h"] { box-shadow: inset 0 -3px 0 var(--focus); }
+.ef[data-drag="wh"] { box-shadow: inset -3px 0 0 var(--focus), inset 0 -3px 0 var(--focus); }
+/* the corner's own mark: a small L bracket in the corner, drawn when it is pointed at, focused or dragged */
+.ef-corner::after { content: ""; position: absolute; right: 6px; bottom: 6px; width: 8px; height: 8px; border: solid transparent; border-width: 0 2px 2px 0; }
+.ef[data-grab="wh"] .ef-corner::after { border-color: var(--control); }
+.ef[data-drag="wh"] .ef-corner::after { border-color: var(--focus); width: 12px; height: 12px; border-width: 0 3px 3px 0; }
+/* the menu bar: one line always (js/free.js moves what does not fit into »); a frame on the right is mirrored */
+.ef .ef-menubar { flex-wrap: nowrap; overflow: hidden; }
+.ef .ef-menubar > * { flex-shrink: 0; }
+.ef .ef-mb[hidden] { display: none; }
+.ef .ef-mb[data-menu="»"] { font-weight: 700; }
+.ef.ef-measure .ef-menubar { flex-wrap: wrap; }
+.ef.ef-east .ef-menubar { justify-content: flex-end; }
+.ef.ef-east .ef-grip { order: 3; }
+.ef.ef-east .ef-mb[data-menu="»"] { order: -1; }
+.ef.ef-east .ef-fold { order: -2; margin-left: 0; margin-right: auto; }
+/* the mode's menu opens above its lighter on the mode-line */
+.ef-pop.ef-pop-up { top: auto; bottom: calc(100% - var(--my, 0px) + 2px); }
+.ef .ml-mode { text-decoration: underline dotted; text-underline-offset: 2px; }
+.ef-propr { display: flex; align-items: baseline; gap: 0; margin: 0 0 4px; }
+.ef .ef-prop { flex: 1 1 auto; border-bottom: 1px solid var(--border); }
+
+/* the legend, lettered as a title block: Subtler (field names: Plex Sans Condensed Light, small, capitals,
+   tracked) and Subtle (values: osifont, the ISO 3098 lettering of technical drawings). Served from fonts/. */
+@font-face { font-family: "osifont"; src: url("../fonts/osifont.woff") format("woff"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans Condensed"; src: url("../fonts/plex-sans-condensed-300.woff2") format("woff2"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "IBM Plex Sans Condensed"; src: url("../fonts/plex-sans-condensed-400.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; }
+:root { --letter-value: "osifont", "IBM Plex Sans Condensed", "Arial Narrow", var(--sans); --letter-field: "IBM Plex Sans Condensed", "Arial Narrow", var(--sans); }
+.lg-line { font-family: var(--letter-value); font-size: 12px; line-height: 18px; }
+.lg-k { font: 300 9px/18px var(--letter-field); text-transform: uppercase; letter-spacing: 0.12em; margin-right: 0.5em; }
+.lg-v { font-family: var(--letter-value); font-size: 12px; letter-spacing: 0.02em; }
+.lg-c code { font-family: var(--letter-value); }
+.js .lg-line .lg-more { font-family: var(--letter-value); }
