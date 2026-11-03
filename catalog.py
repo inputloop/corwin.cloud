@@ -37,6 +37,11 @@ PUBLIC_URLS = [
     ORG + "/pubs",
     ORG + "/egad",
     ORG + "/hello-taxgnomes",
+    # public since 2026-11-02 17:44 (Corwin); no code.bru.st remote, so GitHub is the one address
+    ORG + "/obsmage",
+    ORG + "/obsmage-corwin",
+    # obsmage's own home, linked once it answered 200 over https with a valid certificate (2026-11-02)
+    "https://obsmage.com/",
     ORG + "/gitcha/blob/HEAD/INSTALL.md",
     ORG + "/gitcha/tree/HEAD/topoforge",
     ORG + "/fourSwordsFromThePast/tree/HEAD/docs/screenshots",
@@ -70,7 +75,8 @@ PUBLIC_URL_PATTERNS = [r"^https://corwin\.bru\.st/[a-z][a-z0-9-]{1,30}/$"]
 # as "a workstation" with no name: this site names only the public ghostwheel hosts and forges.
 PUBLIC_HOSTS_RE = r"^(gw\d+|code\.bru\.st|github\.com/inputloop)$"
 # Private repositories: named on the directory, never linked, never in a URL.
-PRIVATE_NAMES = ["obsmage", "obsmage-corwin", "c4"]
+# (obsmage and obsmage-corwin left this list when Corwin made them public, 2026-11-02 17:44.)
+PRIVATE_NAMES = ["c4"]
 
 KINDS = [
     ("app", "Apps"),
@@ -91,10 +97,12 @@ REPOS = [
          url=ORG + "/topology/tree/corwin",
          one="Draws what you have, from the files that describe it. This is the home page.",
          credit="Corwin and Bryant; the drawing app, topology forge (formerly TopoForge), is Bryant's"),
-    dict(id="obsmage", name="obsmage", kind="app", public=False, tab="obsmage",
+    dict(id="obsmage", name="obsmage", kind="app", public=True, tab="obsmage",
+         url=ORG + "/obsmage", home="https://obsmage.com/",
          one="OBS Studio kept as readable settings, with a composer for multi-monitor scenes.",
          credit="Corwin and Bryant"),
-    dict(id="obsmage-corwin", name="obsmage-corwin", kind="app", public=False, tab=None,
+    dict(id="obsmage-corwin", name="obsmage-corwin", kind="app", public=True, tab=None,
+         url=ORG + "/obsmage-corwin",
          one="One person's rig for obsmage: their cameras, scenes and hosts.",
          credit="Corwin"),
     dict(id="vibrobeast", name="vibrobeast", kind="ai", public=True, tab="vibrobeast",
@@ -213,12 +221,12 @@ APPS = [
               ("STAGES.md", "one file to read and edit"), ("Unroll", "back to atoms, conflicts shown"),
               ("Join", "your OBS files, with a dated backup")],
         how="Nothing writes your live OBS files without an explicit write flag, and every write leaves a dated backup. A tool may point out a pattern, such as settings that always change together; a person decides.",
-        status="Today: the atom splitter and joiner, the roll-up, the composer and the build healer, each with tests. The core plugin builds and loads in OBS Studio 32.1.0 on Linux (2026-11-01); its menu entries only log so far. Latest build: version 0.0.1, a Debian package for amd64, built 2026-11-01 by the healer from the main branch. Not yet run on Windows. Designed: hand control and calibration. Private for now; this tab is here because it is the lab's main focus.",
+        status="Today: the atom splitter and joiner, the roll-up, the composer and the build healer, each with tests. The core plugin builds and loads in OBS Studio 32.1.0 on Linux (2026-11-01); its menu entries only log so far. Latest build: version 0.0.1, a Debian package for amd64, built 2026-11-01 by the healer from the main branch. Not yet run on Windows. Designed: hand control and calibration. Public since 2026-11-02; this tab is here because it is the lab's main focus.",
         state="today",
         licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0.",
         credit="Corwin and Bryant. OBS Studio itself belongs to its own project.",
         needs="Python 3 for the tools; POSIX sh for the healer.",
-        links=[("OBS Studio, upstream", "https://obsproject.com")],
+        links=[("Home: obsmage.com", "https://obsmage.com/"), ("Repository", ORG + "/obsmage"), ("One person's rig, built on it: obsmage-corwin", ORG + "/obsmage-corwin"), ("OBS Studio, upstream", "https://obsproject.com")],
         demo=None,
         extra="obsmage",
     ),
@@ -432,9 +440,9 @@ PACKAGES = [
     dict(name="vibrobeast-skills", kind="Claude plugin", state="today", public=True,
          what="The written skills, installed as a plugin through the Claude plugin marketplace, from the public repository.",
          where="Public repository.", tab="vibrobeast-skills", url=ORG + "/vibrobeast-skills"),
-    dict(name="obsmage healer and Debian layout", kind="Debian layout and service", state="built", public=False,
+    dict(name="obsmage healer and Debian layout", kind="Debian layout and service", state="built", public=True,
          what="A decomposed tree, a patch queue per upstream version, a Debian overlay, and a healer service. The healer exists, is tested, and runs daily as an ordinary user's timer; it builds the obsmage package (the plugin and the tools). A package of OBS itself, with our patches, is designed: there is no patch queue yet.",
-         where="Private for now.", tab="obsmage"),
+         where="Public repository (packaging/healer).", tab="obsmage", url=ORG + "/obsmage"),
     dict(name="card-games", kind="Emacs package on MELPA", state="today", public=True,
          what="About thirty card games for GNU Emacs. Corwin's own, not inputloop's.",
          where="MELPA and a public repository.", tab="card-games",

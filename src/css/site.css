@@ -712,13 +712,23 @@ html[data-ui="free"] .ef .navframe .tb[aria-pressed="true"] { background: var(--
 /* ---- revision 7 (docs/NAV.md): the map mode slider, cards ----------------------------------------- */
 /* the slider: three notches, the thumb on one; its group takes three cells */
 .ef-tg[data-group="map"] { grid-template-columns: 84px; }
-.ef-slider { position: relative; width: 84px; height: 28px; cursor: pointer; touch-action: manipulation; }
+.ef-slider { position: relative; width: 84px; height: 28px; cursor: pointer; touch-action: none; }
 .ef-slider:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-.ef-sl-track { position: absolute; left: 10px; right: 10px; top: 13px; height: 2px; background: var(--border); display: flex; justify-content: space-between; align-items: center; }
-.ef-sl-n { width: 6px; height: 6px; border-radius: 50%; background: var(--border); }
-.ef-sl-thumb { position: absolute; top: 7px; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--control); background: radial-gradient(circle at 38% 30%, var(--canvas) 0, var(--canvas-dim) 60%, var(--control) 140%); left: calc(10px - 7px); }
-.ef-slider[data-pos="1"] .ef-sl-thumb { left: calc(50% - 7px); }
-.ef-slider[data-pos="2"] .ef-sl-thumb { left: calc(100% - 10px - 7px); }
+/* revision 8, drawn as a slider: a recessed groove in the layout switch's material, three stops, and the
+   switch's domed knob, which glides to its stop with the layout switch's own timing (the browser's view
+   transition, 0.25 s and ease); with Motion off or reduced motion it jumps: html.motion-on is set only when
+   neither is asked for, and the reduced-motion rule above stills every transition */
+.ef-sl-track { position: absolute; left: 10px; right: 10px; top: 8px; height: 12px; box-sizing: border-box; border-radius: 999px;
+  border: 1px solid var(--border); background: radial-gradient(circle at 40% 30%, var(--canvas) 0, var(--canvas-dim) 70%, var(--canvas-line) 100%);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.18); display: flex; justify-content: space-between; align-items: center; padding: 0 3px; }
+.ef-sl-n { width: 4px; height: 4px; border-radius: 50%; background: var(--control); opacity: 0.55; }
+.ef-sl-thumb { position: absolute; top: 6px; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 1px solid var(--control);
+  background: radial-gradient(circle at 38% 30%, var(--canvas) 0, var(--canvas-dim) 60%, var(--control) 140%);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.45); left: 8px; }
+html.motion-on .ef-sl-thumb { transition: left 0.25s ease; }
+.ef-slider[data-drag] .ef-sl-thumb { transition: none; }
+.ef-slider[data-pos="1"] .ef-sl-thumb { left: 34px; }
+.ef-slider[data-pos="2"] .ef-sl-thumb { left: 60px; }
 .ef-slider:hover .ef-sl-thumb { border-color: var(--link); }
 /* the card: title top left, the visualization, clusters of facts, one statement; the drawing behind it
    fades (less background), no card lines and no frame */

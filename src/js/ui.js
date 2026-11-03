@@ -86,6 +86,13 @@
     document.body.appendChild(b);
   }
   function ready() { row(); lightSwitch(); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ready); else ready();
+  // revision 8 (fit it at 1280): the switch is made when the document turns interactive, which is before
+  // the deferred scripts run, so the frames are first placed with it already there (DOMContentLoaded comes
+  // after them); the Customize row waits for DOMContentLoaded, when customize.js has built its panel. Each
+  // does nothing a second time.
+  if (document.readyState === 'loading') {
+    document.addEventListener('readystatechange', function () { if (document.readyState !== 'loading' && document.body) lightSwitch(); });
+    document.addEventListener('DOMContentLoaded', ready);
+  } else ready();
 })();
 // @license-end

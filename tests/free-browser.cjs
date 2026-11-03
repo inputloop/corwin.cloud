@@ -252,7 +252,9 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       return ['#ef-1 .ef-msg', '#ef-1 .ef-mb', '#ef-1 .ef-it .nm', '#ef-1 .ef-ml .ml-b', '#ef-1 .ef-foldb', '#ef-1 .ef-count'].map((s) => { const el = document.querySelector(s); return [s, getComputedStyle(el).color, bg(el)]; });
     });
     for (const [s, c, b] of faces) assert.ok(contrast(c, b) >= 4.5, `${s} contrast ${contrast(c, b).toFixed(2)} below AA at ${tag}`);
-    const moving = await p.evaluate(() => [...document.querySelectorAll('.ef, .ef *')].filter((el) => { const cs = getComputedStyle(el); return cs.transitionDuration.split(',').some((d) => parseFloat(d) > 0) || cs.animationName !== 'none'; }).length);
+    // the one exception (revision 8): the map mode slider's thumb glides to the stop it was set to, as the
+    // layout switch's cross-fade does; it moves only when the reader moves it, and never with Motion off
+    const moving = await p.evaluate(() => [...document.querySelectorAll('.ef, .ef *')].filter((el) => { if (el.classList.contains('ef-sl-thumb')) return false; const cs = getComputedStyle(el); return cs.transitionDuration.split(',').some((d) => parseFloat(d) > 0) || cs.animationName !== 'none'; }).length);
     assert.equal(moving, 0, 'something in a frame animates');
     ok(`the frame's text keeps AA contrast (message, menus, tiles, rows, mode-line, headings) and nothing in it animates, at ${tag}`);
 

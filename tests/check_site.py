@@ -109,6 +109,26 @@ class SiteChecks(unittest.TestCase):
         self.assertIn('href="https://github.com/inputloop/pubs"', page)
         self.assertIn("The reading room", page)
 
+    def test_obsmage_is_public_and_linked(self):
+        # Corwin made both public on 2026-11-02 (17:44); GitHub is their only address (no code.bru.st remote)
+        for name in ("obsmage", "obsmage-corwin"):
+            url = "https://github.com/inputloop/" + name
+            self.assertIn(url, catalog.PUBLIC_URLS)
+            self.assertNotIn(name, catalog.PRIVATE_NAMES)
+            self.assertIn('href="%s"' % url, read("directory.html"), "the directory does not link " + name)
+        page = read("index.html")
+        start = page.index('id="panel-obsmage"')
+        panel = page[start:page.index("</section>", start)]
+        self.assertIn('href="https://github.com/inputloop/obsmage"', panel, "the obsmage tab does not link its repository")
+        self.assertNotIn("not public yet", panel, "the obsmage tab still says it is not public")
+        # its home, once it answered 200 over https: on the allow-list, first on the tab and on its card
+        self.assertIn("https://obsmage.com/", catalog.PUBLIC_URLS)
+        self.assertLess(panel.index('href="https://obsmage.com/"'), panel.index('href="https://github.com/inputloop/obsmage"'), "obsmage.com is not the obsmage tab's first link")
+        d = read("directory.html")
+        c = d[d.index('id="c-obsmage"'):]
+        c = c[:c.index("</article>")]
+        self.assertIn('href="https://obsmage.com/"', c, "the obsmage card does not link its home")
+
     def test_external_links_are_only_public_ones(self):
         allowed = set(catalog.PUBLIC_URLS)
         for rel in PAGES:

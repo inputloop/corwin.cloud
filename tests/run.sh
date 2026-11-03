@@ -45,6 +45,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free6-browser.cjs || fail=1
       step "revision 7: independent lines (grow-together kept as an option), the map mode slider, cards from data, the echo caption (playwright)"
       SITE_OUT=$out "$node" tests/free7-browser.cjs || fail=1
+      step "revision 8: frame 2 below the layout switch at four sizes, the legend on the frames' lines, the slider drawn, Reset layout (playwright)"
+      SITE_OUT=$out "$node" tests/free8-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -88,7 +90,12 @@ prove_red() {
       printf 'STAYED GREEN  %s (browser)\n' "$name"; bad=1
     else printf 'went red      %s (browser)\n' "$name"; fi
   }
-  plant "a private repository linked"       catalog.py   's#ORG + "/vibrobeast-skills",$#ORG + "/obsmage",#'
+  plant "a private repository linked"       catalog.py   's#dict(id="c4", name="c4", kind="platform", public=False, tab=None,#dict(id="c4", name="c4", kind="platform", public=True, url=ORG + "/c4", tab=None,#'
+  plant "obsmage not on the public allow-list" catalog.py '/^    ORG + "\/obsmage",$/d'
+  plant "obsmage-corwin not on the allow-list" catalog.py '/^    ORG + "\/obsmage-corwin",$/d'
+  plant "the obsmage tab still not public"   catalog.py   's#dict(id="obsmage", name="obsmage", kind="app", public=True,#dict(id="obsmage", name="obsmage", kind="app", public=False,#'
+  plant "obsmage.com not on the allow-list"  catalog.py   '/^    "https:\/\/obsmage\.com\/",$/d'
+  plant "obsmage.com not the project's home" catalog.py   's#url=ORG + "/obsmage", home="https://obsmage.com/",#url=ORG + "/obsmage",#'
   plant "an inline script"                  build.py     's#<script src="js/site.js" defer></script>#<script>1</script>#'
   plant "an inline style attribute"         build.py     's#<a class="skip"#<a style="x" class="skip"#'
   plant "a script from another host"        build.py     's#<script src="js/site.js" defer></script>#<script src="https://cdn.example.com/a.js"></script>#'
@@ -100,7 +107,7 @@ prove_red() {
   plant "a script missing from jslicense"   build.py     's#^JS_FILES = .*#JS_FILES = ()#'
   plant "a machine path in the words"       catalog.py   's#Works for its makers#Works at /ho'me'/x for its makers#'
   plant "a broken internal link"            build.py     's#"packages.html")\]#"package.html")]#'
-  plant "a private name with a link"        catalog.py   's#credit="Corwin and Bryant; the drawing app#credit="see github.com/inputloop/obsmage; the drawing app#'
+  plant "a private name with a link"        catalog.py   's#credit="Corwin and Bryant; the drawing app#credit="see github.com/inputloop/c4; the drawing app#'
   plant "End key missing from the tabs"     src/js/site.js "s#ev.key === 'End'#ev.key === 'Ennd'#"
   plant "the script phones home"            src/js/site.js 's#^  var doc = document, html = doc.documentElement;#  var doc = document, html = doc.documentElement; fetch("/x");#'
   plant "the policy allows inline script"   deploy/nginx-corwin.cloud.conf "s#script-src 'self'; style-src 'self'; img-src 'self' data:; font-src#script-src 'self' 'unsafe-inline'; style-src 'self'; img-src 'self' data:; font-src#"
@@ -248,7 +255,7 @@ prove_red() {
     plant_b "the mode-line left out of the lines" src/css/site.css 's#^\.ef \.ef-ml { align-content: flex-start; min-height: calc(var(--ef-lines, 1) \* 24px + 1px); }#.ef .ef-ml { align-content: flex-start; }#' $R
     plant_b "the message area left out of the count" src/js/free.js "s#var parts = \[f.menubar, f.form.hidden ? f.msg : f.form\]#var parts = [f.menubar]#" $R
     plant_b "the navigator put away in free"      src/js/nav.js "s#^  var FREE = doc.documentElement.getAttribute('data-ui') !== 'classic';#  var FREE = doc.documentElement.getAttribute('data-ui') !== 'classic'; if (FREE) return;#" $R
-    plant_b "no second frame for the navigator"   src/js/free.js "s#if (!narrowQ.matches \&\& fstate().navFrame !== false) {#if (false) {#" $R
+    plant_b "no second frame for the navigator"   src/js/free.js "s#if (!narrowQ.matches \&\& fstate().navFrame !== false) navFrame();#if (false) navFrame();#" $R
     plant_b "tool labels back"                    src/js/free.js 's#tabindex: first ? .0. : .-1. }, \[glyph(t.icon)\]);#tabindex: first ? "0" : "-1" }, [glyph(t.icon), t.label]);#' $R
     plant_b "no tooltip on keyboard focus"        src/js/free.js "s#if (el.classList.contains('ef-tool')) showTip(el, ev.type === 'focusin');#if (el.classList.contains('ef-tool') \&\& ev.type !== 'focusin') showTip(el);#" $R
     plant_b "a tool-bar group's rows uneven"      src/js/free.js 's#cols = n <= max ? n : Math.ceil(n / Math.ceil(n / max));#cols = n <= max ? n : max;#' $R
@@ -265,7 +272,7 @@ prove_red() {
     plant_b "the corner changes only the width"   src/js/float.js "s#if (mode !== 'w') f.state.h = #if (mode === 'h') f.state.h = #" $S
     plant_b "the corner marks only the width"     src/js/float.js "s#^    bindResize(o.corner, .wh.);#    bindResize(o.corner, 'w');#" $S
     plant_b "one font for both faces"             src/css/site.css 's#^\.lg-k { font: 300 9px/18px var(--letter-field);#.lg-k { font: 300 9px/18px var(--letter-value);#' $S
-    plant_b "the legend high off the foot"        src/js/float.js 's#H - (el.offsetHeight || 22) - 4) };#H - (el.offsetHeight || 22) - 40) };#' $S
+    plant_b "the legend high off the foot"        src/js/float.js 's#H - (el.offsetHeight || 22) - GUTTER) };#H - (el.offsetHeight || 22) - 40) };#' $S
     plant_b "menus wrap: no overflow"             src/js/free.js 's#for (var i = 0; i < DROP.length \&\& !oneLine(); i++) {#for (var i = 0; i < 0; i++) {#' $S
     plant_b "the lighter opens nothing"           src/js/free.js 's#f.menuOpen(null, ev.detail === 0, md, c);#void md;#' $S
     plant_b "frame 2 not mirrored"                src/js/free.js 's#east = !fl.narrow() \&\& s.x !== null#east = false \&\& s.x !== null#' $S
@@ -305,6 +312,24 @@ prove_red() {
     plant_b "the counts said twice in the echo"   src/js/free.js 's#(PVCAP \&\& r.count !== undefined#(r.count !== undefined#' $V
     plant_b "an item's echo without its counts"   src/js/free.js 's#PVCAP = !!d.caption;#PVCAP = false;#' $V
     plant_b "the map's preview lingers in rings"  src/js/free.js "s#if (mode === 'rings') { try { t10.preview(null); }#if (false) { try { t10.preview(null); }#" tests/free6-browser.cjs
+    # revision 8 (docs/NAV.md): fit it, the legend's lines, the slider drawn, Reset layout
+    E=tests/free8-browser.cjs
+    plant_b "the switch made after the frames"    src/js/ui.js   "s#if (document.readyState !== 'loading' \&\& document.body) lightSwitch();#void 0;#" $E
+    plant_b "a grown switch covers frame 2"       src/js/free.js 's#function fitSwitch() { frames.forEach(#function fitSwitch() { return; frames.forEach(#' $E
+    plant_b "the legend off frame 1's left edge"  src/js/float.js 's#return { x: GUTTER, y:#return { x: GUTTER + 30, y:#' $E
+    plant_b "the legend's foot off the gutter"    src/js/float.js 's#H - (el.offsetHeight || 22) - GUTTER) };#H - (el.offsetHeight || 22) - 4) };#' $E
+    plant_b "the slider's track not drawn"        src/css/site.css 's#top: 8px; height: 12px; box-sizing: border-box; border-radius: 999px;#top: 13px; height: 2px; box-sizing: border-box; border-radius: 999px;#' $E
+    plant_b "the thumb jumps (no glide)"          src/css/site.css '/^html.motion-on .ef-sl-thumb { transition: left 0.25s ease; }$/d' $E
+    plant_b "the thumb glides with Motion off"    src/css/site.css 's#^html.motion-on .ef-sl-thumb { transition#html .ef-sl-thumb { transition#' $E
+    plant_b "a dragged thumb stays put"           src/js/free.js 's#th.style.left = Math.round(Math.max(8#void Math.round(Math.max(8#' $E
+    plant_b "a drop goes to the middle"           src/js/free.js 's#return p < 29 ? 0 : p < 55 ? 1 : 2;#return 1;#' $E
+    plant_b "no Reset layout in Options"          src/js/free.js "s#mine('reset-layout'); if (UNDO) mine('undo-reset');#if (UNDO) mine('undo-reset');#" $E
+    plant_b "a reset keeps the frame's width"     src/js/float.js "s#var p = { mode: 'float', x: null, y: null, h: null, w: o.width || 320 };#var p = { mode: 'float', x: null, y: null, h: null };#" $E
+    plant_b "a reset leaves the navigator closed" src/js/free.js 's#if (!frames.some(function (fr) { return fr.navFrame; })) {#if (false) {#' $E
+    plant_b "a reset leaves the map mode"         src/js/free.js "s#    setMapMode('both', 'reset');#    void 0;#" $E
+    plant_b "Undo reset puts nothing back"        src/js/free.js "s#window.CCFloat.all().forEach(function (fl) { if (u.st\[fl.name\]) fl.set(u.st\[fl.name\], true); });#void 0;#" $E
+    plant_b "Undo reset offered twice"            src/js/free.js 's#var u = UNDO; UNDO = null;#var u = UNDO;#' $E
+    plant_b "a late caption over a newer message" src/js/free.js 's#    if (!pointed) return;#    void pointed;#' $E
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

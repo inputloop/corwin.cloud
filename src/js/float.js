@@ -16,7 +16,7 @@
 // the app only where its panels are, by its own read-only TopoForge.panels(); it changes nothing there.
 (function () {
   'use strict';
-  var doc = document, KEY = 'corwin.cloud.float.v1', STEP = 16, BIG = 64, MINW = 220, MINH = 200;
+  var doc = document, KEY = 'corwin.cloud.float.v1', STEP = 16, BIG = 64, MINW = 220, MINH = 200, GUTTER = 8;   // the frames' first gutter (free.js places them on it)
   var area = doc.getElementById('stage-grid'), frame = doc.getElementById('topology');
   var narrowQ = window.matchMedia ? window.matchMedia('(max-width: 47.5rem)') : { matches: false, addListener: function () {} };
   var all = {}, list = [];
@@ -100,7 +100,9 @@
     f.height = function () { return Math.round(f.state.h ? Math.max(MINH, Math.min(f.maxH(), f.state.h)) : (f.el.offsetHeight || MINH)); };
     f.set = function (patch, quiet) {
       Object.keys(patch).forEach(function (k) { f.state[k] = patch[k]; });
-      if ('x' in patch || 'y' in patch) f.auto = false;
+      // moved or resized by the reader: no longer placed again by itself (revision 8: a width set by the
+      // edge or C-x } survives the app's map moving, which places unmoved frames again)
+      if ('x' in patch || 'y' in patch || 'w' in patch || 'h' in patch) f.auto = false;
       f.apply(); saveAll();
       if (!quiet && o.say) o.say(f.describe());
     };
@@ -124,6 +126,8 @@
       if (f.narrow()) f.set({ hiddenNarrow: !f.state.hiddenNarrow }); else f.set({ hidden: !f.state.hidden });
     };
     f.reset = function () { f.temp = false; f.set({ mode: 'float', x: null, y: null, h: null, hidden: false }); };
+    // revision 8, Reset layout: the first place and the first size (and, unless asked to keep it, shown)
+    f.first = function (keepHidden) { f.temp = false; var p = { mode: 'float', x: null, y: null, h: null, w: o.width || 320 }; if (!keepHidden) p.hidden = false; f.set(p, true); };
     f.retarget = function () { if (f.auto && !f.narrow()) { f.state.x = f.state.y = null; f.apply(); } };
 
     // the grip: drag, or arrow keys. o.drag lists more places that drag it with a pointer only (the
@@ -252,7 +256,7 @@
   var FKEY = 'corwin.cloud.free.v1';
   function freeState() { try { return JSON.parse(window.localStorage.getItem(FKEY) || '{}') || {}; } catch (e) { return {}; } }
   function freeKeep(k, v) { var s = freeState(); s[k] = v; try { window.localStorage.setItem(FKEY, JSON.stringify(s)); } catch (e) { /* refused: for this visit */ } }
-  window.CCFloat = { make: make, relayout: relayout, available: !!area, get: get, freeState: freeState, freeKeep: freeKeep };
+  window.CCFloat = { make: make, relayout: relayout, available: !!area, get: get, all: function () { return list.slice(); }, freeState: freeState, freeKeep: freeKeep };
 
   // ---- the legend ----------------------------------------------------------------------------------
   var lg = doc.getElementById('legend');
@@ -298,11 +302,12 @@
   make({
     name: 'legend', label: 'The legend', el: lg, grip: handle, docks: false, width: 520, hiddenNarrow: false, hidden: false,
     say: function (t) { if (msg) msg.textContent = t; },
-    // one line along the bottom of the canvas, left of the app's overview map
+    // one line along the bottom of the canvas, on the frames' first lines (revision 8, "alignment to initial
+    // placement"): its left edge on frame 1's first left edge, its foot on the same 8-pixel gutter. From
+    // these numbers, never from where the frames are now, so moving a frame does not move it; the app's
+    // overview map keeps the bottom right corner
     place: function (edges, W, H, el) {
-      var w = el.offsetWidth || 520;
-      // hung 4 pixels above the canvas's foot, to leave the drawing the most room (revision 6)
-      return { x: Math.max(12, Math.min(edges.right - w, W - w - 12)), y: Math.max(12, H - (el.offsetHeight || 22) - 4) };
+      return { x: GUTTER, y: Math.max(GUTTER, H - (el.offsetHeight || 22) - GUTTER) };
     }
   });
   lg.setAttribute('data-ready', 'yes');

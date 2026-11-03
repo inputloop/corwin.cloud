@@ -234,6 +234,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.deepEqual(await val(), ['2', 'rings']);
     await p.click('#ef-1 .ef-mb[data-menu="Options"]'); await p.click('#ef-1 .ef-pop [data-act="map-cards"]');
     assert.deepEqual(await val(), ['0', 'cards'], 'Options, Map mode did not set the slider');
+    await p.waitForTimeout(350);   // the thumb glides (revision 8)
     const th = await p.locator('#ef-1 .ef-sl-thumb').boundingBox(), tr = await p.locator(sl).boundingBox();
     assert.ok(th.x + th.width / 2 < tr.x + tr.width / 3, 'the thumb is not at the left in the left position');
     await p.reload(); await ready(p);

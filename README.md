@@ -5,8 +5,8 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 # corwin.cloud
 
 The website at corwin.cloud. Its home page is **topology**, the drawing app, with a tab strip below
-it: one tab of full design detail for each public app (and for obsmage, which has a tab though it is
-not public yet). Two more pages: a **directory** of every inputloop repository we can name, and the
+it: one tab of full design detail for each public app (obsmage among them since it went public on
+2026-11-02). Two more pages: a **directory** of every inputloop repository we can name, and the
 **packages** we curate, each with its state said plainly (today, built, designed).
 
 It reads well with scripts off. The one script is free software, labelled for GNU LibreJS (see

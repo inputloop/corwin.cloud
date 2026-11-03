@@ -204,6 +204,7 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
       await p.fill('#nav-q', ''); await p.dispatchEvent('#nav-q', 'input'); await p.click('#ef-2 .tb[data-facet="show"][data-val="projects"]');
       // C-x 3 in frame 1, then the other window shows *navigator*: both views side by side in one frame
       await p.focus('#ef-1 .ef-edge'); await keys(p, 'End');
+      await p.mouse.move(w / 2, 3);   // the pointer off the frames: a finder that appears under it would preview (rings) and take the echo area
       await p.focus('#ef-1 .ef-tile'); await keys(p, 'Control+x', '3', 'Control+x', 'o', 'Control+x', 'b');
       await p.keyboard.type('*navigator*'); await keys(p, 'Enter');
       assert.deepEqual(await p.evaluate(() => CCFree.navAt()), { frame: 1, win: 2 }, 'C-x b *navigator* did not move it to frame 1\'s other window');

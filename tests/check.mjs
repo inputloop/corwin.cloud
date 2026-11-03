@@ -250,7 +250,8 @@ test('nothing in the navigator animates: its stylesheet section has no transitio
   const css = rd('css/site.css');
   const i = css.indexOf('/* ---- the navigator');
   assert.ok(i > 0, 'no navigator section in site.css');
-  const sec = css.slice(i);
+  // the one exception (revision 8): the map mode slider's thumb glides to the stop the reader set
+  const sec = css.slice(i).replace(/^[^{}\n]*\.ef-sl-thumb[^{}\n]*\{[^}]*\}/gm, '');
   assert.ok(!/\b(transition|animation)\s*:/.test(sec), 'the navigator section animates something');
 });
 
@@ -340,7 +341,9 @@ test('the Emacs frame\'s keys start with Ctrl, Alt, Escape (Emacs\'s ESC prefix)
 test('nothing in an Emacs frame moves by itself: its stylesheet section has no transition or animation', () => {
   const css = rd('css/site.css'), sec = css.slice(css.indexOf('/* ---- page layouts: free and classic'));
   assert.ok(sec.length > 1000, 'the free and classic section is missing');
-  assert.ok(!/transition|animation/.test(sec.replace(/\/\*[\s\S]*?\*\//g, '')), 'an Emacs frame animates');
+  // the one exception (revision 8): rules for the map mode slider's thumb, which glides to the stop the
+  // reader set (with Motion on); nothing else in a frame moves
+  assert.ok(!/transition|animation/.test(sec.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[^{}\n]*\.ef-sl-thumb[^{}\n]*\{[^}]*\}/gm, '')), 'an Emacs frame animates');
 });
 test('ui.js keeps one key inside try, defaults to free, and asks the network for nothing', () => {
   const u = rd('js/ui.js'), body = u.split('\n').slice(1).join('\n');

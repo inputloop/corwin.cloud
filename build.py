@@ -401,6 +401,8 @@ def card(r):
     t = []
     if r.get("tab"):
         t.append(a("index.html#tab-" + next(x for x in C.APPS if x["id"] == r["tab"])["id"], "Design tab", "act primary"))
+    if r.get("home"):
+        t.append(a(r["home"], "Home", "act"))
     if r["public"]:
         t.append(a(r["url"], "Repository", "act"))
     else:

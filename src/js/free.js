@@ -182,6 +182,9 @@
     frames.forEach(function (f) {
       var st = f.fl.state;
       if (st.x === null) return;
+      // a frame never moved is placed again now that the map's real place is known (revision 8: its first
+      // place is the same on a fresh load as after Reset layout, ending 12 above the map)
+      if (f.fl.auto) { f.fl.retarget(); return; }
       var hh = f.fl.height(), r = { x: st.x, y: st.y, w: st.w, h: hh };
       var meets = r.x < m.x + m.w && r.x + r.w > m.x && r.y < m.y + m.h && r.y + r.h > m.y;
       if (meets && m.y - 12 - st.y >= 200) { f.fl.set({ h: Math.round(m.y - 12 - st.y) }, true); f.say('This frame now ends above the overview map.'); }
@@ -341,7 +344,8 @@
     'menu-bar-open': 'Open the menu bar', 'enlarge-frame': 'Wider', 'shrink-frame': 'Narrower', 'toolbar': 'Tool-bar in this frame',
     'taller': 'Taller', 'shorter': 'Shorter', 'mode-menu': 'The mode’s menu', 'lines-together': 'Lines grow together (menu bar, mode-lines, message area)',
     'map-cards': 'Preview shapes (cards)', 'map-both': 'Both (highlight and card)', 'map-rings': 'Highlight matches (rings)',
-    'show-navigator': 'Show *navigator* in this window', 'show-finder': 'Show *finder* in this window', 'nav-narrow': 'The navigator’s Narrow line' };
+    'show-navigator': 'Show *navigator* in this window', 'show-finder': 'Show *finder* in this window', 'nav-narrow': 'The navigator’s Narrow line',
+    'reset-layout': 'Reset layout', 'undo-reset': 'Undo reset' };
   function core(name, f) {
     f = f || cur;
     var fn = {
@@ -363,6 +367,7 @@
       'shorter': function () { f.say('The frame is ' + f.fl.taller(-16) + ' pixels tall, kept in this browser.'); },
       'lines-together': function () { var v = !fstate().linesTogether; fkeep('linesTogether', v); frames.forEach(function (x) { x.lines(); }); f.say(v ? 'The menu bar, the mode-lines and the message area grow together.' : 'The menu bar, the mode-lines and the message area each take the lines they need.'); },
       'map-cards': function () { setMapMode('cards'); }, 'map-both': function () { setMapMode('both'); }, 'map-rings': function () { setMapMode('rings'); },
+      'reset-layout': resetLayout, 'undo-reset': undoReset,
       'mode-menu': function () { var b = f.wins.querySelector('.ef-win.selected .ml-mode'); if (b) b.click(); },
       'toolbar': function () { f.st.toolbar = !f.st.toolbar; f.render(); f.say(f.st.toolbar ? 'The tool-bar is shown in this frame.' : 'The tool-bar is off in this frame (Options, Tool-bar in this frame brings it back).'); },
       'show-navigator': function () { f.show('navigator'); }, 'show-finder': function () { f.show('finder'); },
@@ -487,7 +492,8 @@
       say: function (t) { f.say(t); },
       onApply: function (fl) { f.mirror(fl); },
       place: function (edges, W, H) {
-        var prev = frames[frames.length - 1], h = Math.max(320, Math.min(H - 24, 700));
+        // (revision 8) frame 1's first height ends above the legend's row (8 + one line + 8 at the foot)
+        var prev = frames[frames.length - 1], h = Math.max(320, Math.min(H - 24, H - 56, 700));
         if (n === 1) return { x: 8, y: 8, h: h };
         // the navigator's frame (revision 6, his screenshot): top right, just under the layout switch, shorter,
         // ending above the app's overview map
@@ -709,10 +715,32 @@
       ev.preventDefault(); ev.stopPropagation();
       setMapMode(MAPMODES[Math.max(0, Math.min(2, n))], true);
     });
-    sl.addEventListener('click', function (ev) {
-      var r = sl.getBoundingClientRect();
-      setMapMode(MAPMODES[Math.max(0, Math.min(2, Math.floor((ev.clientX - r.left) / (r.width / 3))))], true);
+    // a press sets the nearest stop; a drag carries the thumb under the pointer and, let go, it glides to the
+    // nearest stop (revision 8). Stops: 16, 42 and 68 pixels in; the thumb is 16 wide
+    var th = sl.querySelector('.ef-sl-thumb'), dr = null;
+    function stopAt(x) { var r = sl.getBoundingClientRect(), p = x - r.left; return p < 29 ? 0 : p < 55 ? 1 : 2; }
+    sl.addEventListener('pointerdown', function (ev) {
+      if (ev.button > 0) return;
+      dr = { x: ev.clientX, moved: false };
+      try { sl.setPointerCapture(ev.pointerId); } catch (e) { /* fine */ }
     });
+    sl.addEventListener('pointermove', function (ev) {
+      if (!dr) return;
+      if (!dr.moved && Math.abs(ev.clientX - dr.x) < 3) return;
+      dr.moved = true; sl.setAttribute('data-drag', '');
+      var r = sl.getBoundingClientRect();
+      th.style.left = Math.round(Math.max(8, Math.min(60, ev.clientX - r.left - 8))) + 'px';
+    });
+    function end(ev) {
+      if (!dr) return;
+      dr = null;
+      var j = stopAt(ev.clientX);
+      void th.offsetWidth;   // the dropped place is where the glide starts
+      sl.removeAttribute('data-drag'); th.style.left = '';
+      setMapMode(MAPMODES[j], true);
+    }
+    sl.addEventListener('pointerup', end);
+    sl.addEventListener('pointercancel', function () { dr = null; sl.removeAttribute('data-drag'); th.style.left = ''; });
     return sl;
   }
   function setMapMode(m, from) {
@@ -860,6 +888,7 @@
     else if (m === 'Options') {
       mine('customize'); head('Page layout');
       out.push({ label: 'Free', act: 'ui-free', radio: true, checked: true }); out.push({ label: 'Classic (menus at the top)', act: 'ui-classic', radio: true, checked: false });
+      mine('reset-layout'); if (UNDO) mine('undo-reset');
       head(''); mine('legend', !window.CCFloat.legendOff); mine('toggle-motion', MOTION); mine('fold', this.st.open); mine('toolbar', this.st.toolbar);
       mine('lines-together', !!fstate().linesTogether);
       head('Map mode'); MAPMODES.forEach(function (m) { out.push({ label: NAMES['map-' + m], act: 'map-' + m, radio: true, checked: MAPMODE === m }); });
@@ -1312,11 +1341,16 @@
     var art = d.kind === 'kind' && d.target ? { shape: d.target.kind } : d.kind === 'selection' && SEL && SHAPE[SEL.kind] ? { shape: SEL.kind } : 'matches';
     return { title: d.title, facts: (d.facts || []).slice(0, 8), statement: d.statement || '', art: art };
   }
-  var PVF = null, PVCAP = false;   // the frame whose pointer made the last preview (its echo area gets the caption); whether the page named it
+  var PVF = null, PVCAP = false, PVEL = null;   // the frame whose pointer made the last preview (its echo area gets the caption); whether the page named it
   // the app's own caption already counts ("Endpoints: 4 shapes · 21 on other pages"); a caption the page
   // gave (an item's name) gets the counts after it, "(4 here, 21 on other pages)"
   function echoPreview(r) {
     if (!r || r.mode !== 'rings' || !r.caption || !PVF) return;
+    // the caption comes back a moment later: said only if what asked is still pointed at or focused (a
+    // finder redrawn under a moved focus would otherwise put a stale caption over a newer message)
+    var pointed = false;
+    try { pointed = !!PVEL && PVEL.isConnected && (PVEL === doc.activeElement || PVEL.matches(':hover')); } catch (e) { pointed = false; }
+    if (!pointed) return;
     PVF.say(r.caption + (PVCAP && r.count !== undefined ? '  (' + r.count + ' here' + (r.other ? ', ' + r.other + ' on other pages' : '') + ')' : ''));
   }
   function preview(el) {
@@ -1327,7 +1361,7 @@
       // the stand-in box is retired. Rings: the app's topoforge:preview brings the caption (echoPreview)
       hud.hidden = true;
       if (!d || d.kind === 'tool' || !d.target) { if (mode === 'rings') { try { t10.preview(null); } catch (e) { /* the app's */ } } else hideCardSoon(); return; }
-      PVF = frameOf(el); PVCAP = !!d.caption;
+      PVF = frameOf(el); PVCAP = !!d.caption; PVEL = el;
       var o = { caption: d.caption };
       if (mode !== 'rings') o.card = cardFor(d);
       try { t10.preview(d.target, o); } catch (e) { /* the app's */ }
@@ -1513,6 +1547,61 @@
     say(SEL ? 'The frame by ' + SEL.name + ': the view is centred on it (View, Zoom to selection).' : 'Nothing is selected; the access settings are here.');
   }
 
+  // fit it (revision 8): a frame whose top row the layout switch covers is put below it whenever the switch
+  // appears, changes size, or the fonts land; a frame never moved is placed again from the start (frame 2's
+  // place is computed from the switch), one moved by the reader is only put below it
+  function underSwitch(fr) {
+    var b = switchBox(), s = fr.fl.state;
+    if (!b || fr.fl.narrow() || s.x === null || s.y === null) return false;
+    var w = fr.root.offsetWidth || s.w;
+    return s.x < b.x + b.w && s.x + w > b.x && s.y < b.y + b.h && s.y + 40 > b.y;
+  }
+  function fitSwitch() { frames.forEach(function (fr) { if (underSwitch(fr)) { if (fr.fl.auto) fr.fl.retarget(); else fr.fl.apply(); } }); }
+  function watchSwitch() {
+    var sw = doc.getElementById('ui-switch');
+    if (sw) { if (window.ResizeObserver) new window.ResizeObserver(fitSwitch).observe(sw); fitSwitch(); }
+    else if (window.MutationObserver) {
+      var mo = new MutationObserver(function () { if (doc.getElementById('ui-switch')) { mo.disconnect(); watchSwitch(); } });
+      mo.observe(doc.body, { childList: true });
+    }
+    if (doc.fonts && doc.fonts.ready && doc.fonts.ready.then) doc.fonts.ready.then(fitSwitch);
+  }
+
+  function navFrame() {
+    var g = new Frame(nextFrame++, { buf: 'navigator', toolbar: false, width: grid.clientWidth >= 1800 ? 500 : 440, east: true });
+    g.navFrame = true; frames.push(g);
+    g.say('*navigator*. C-x b: *finder*.');
+    return g;
+  }
+  // Reset layout (revision 8): every frame and palette back to its first place and size, the navigator's
+  // frame reopened, the map mode back to Both; settings (text size, colours, the watermark, Motion, lines,
+  // tool-bars, what windows show) untouched. One level of Undo reset, for this visit.
+  var UNDO = null;
+  function resetLayout() {
+    if (narrowQ.matches) { say('On a narrow screen nothing floats, so there is no layout to reset.'); return; }
+    var snap = { mode: MAPMODE, nav: false, st: {} };
+    window.CCFloat.all().forEach(function (fl) { snap.st[fl.name] = JSON.parse(JSON.stringify(fl.state)); });
+    if (!frames.some(function (fr) { return fr.navFrame; })) {
+      fkeep('navFrame', true);
+      var g = navFrame(); snap.nav = true;
+      if (!NAVAT) { NAVAT = { f: g, w: g.leaves()[0] }; }
+      g.render();
+    }
+    window.CCFloat.all().forEach(function (fl) { fl.first(/^small-/.test(fl.name)); });
+    frames.forEach(function (fr) { fr.render(); fr.modelines(); });
+    setMapMode('both', 'reset');
+    UNDO = snap;
+    say('Layout reset: the frames, the legend and the map mode are back where they started. Options, Undo reset puts them back.');
+  }
+  function undoReset() {
+    if (!UNDO) { say('There is no reset to undo.'); return; }
+    var u = UNDO; UNDO = null;
+    if (u.nav) { var g = frames.filter(function (fr) { return fr.navFrame; })[0]; if (g && frames.length > 1) deleteFrame(g); }
+    window.CCFloat.all().forEach(function (fl) { if (u.st[fl.name]) fl.set(u.st[fl.name], true); });
+    setMapMode(u.mode, 'reset');
+    say('Undo reset: the frames, the legend and the map mode are back where they were.');
+  }
+
   // ---- start ----------------------------------------------------------------------------------------
   function start() {
     var f = new Frame(nextFrame++);
@@ -1521,11 +1610,7 @@
     window.CCFloat.credits = function () { openSmall('credits'); };
     // yes, and (revision 5): on a wide screen the navigator opens beside the finder in a second frame,
     // until it is closed (C-x 5 0 there), which this browser then remembers
-    if (!narrowQ.matches && fstate().navFrame !== false) {
-      var g = new Frame(nextFrame++, { buf: 'navigator', toolbar: false, width: grid.clientWidth >= 1800 ? 500 : 440, east: true });
-      g.navFrame = true; frames.push(g);
-      g.say('*navigator*. C-x b: *finder*.');
-    }
+    if (!narrowQ.matches && fstate().navFrame !== false) navFrame();
     var mountNav = function () {
       var target = null;
       frames.forEach(function (fr) { fr.leaves().forEach(function (w) { if (!target && fr.st.wins[w].buf === 'navigator') target = { f: fr, w: w }; }); });
@@ -1533,6 +1618,7 @@
       frames.forEach(function (fr) { fr.render(); });
     };
     if (nav()) mountNav(); else doc.addEventListener('ccnav:ready', mountNav);
+    watchSwitch();
     // what stage.js says (about the drawing kept in this browser) is said here too
     var sm = doc.getElementById('stage-msg');
     if (sm && window.MutationObserver) new MutationObserver(function () { if (sm.textContent) say(sm.textContent); }).observe(sm, { childList: true, characterData: true, subtree: true });

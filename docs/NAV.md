@@ -11,6 +11,130 @@ Revisions 4 and earlier, below, stand where revision 5 does not replace them. Co
 this file. Revision 6 (2026-11-02, late morning), next, adds to revision 5 and replaces only what it
 names.
 
+## Revision 8: fit it at 1280, the legend on the frames' lines, a drawn slider, a reset (2026-11-02, evening)
+
+### What Corwin asked (his words, 17:27; c4 `q/2026-11-02-obsmage-and-resume/PROMPT.md`, readings in `READINGS.md` beside it)
+
+"indeed: "fit it" RE 1280"; "reset UI control"; "minimap(free, KEEP menus for classic): (a) bring the
+D-pad gadget, (b) left/right/center: mini-map mode (RESUME; see note later on); (c) as a movable control
+for positioning/calibration"; "for free: look to the positioning of footer per alignment to initial
+placement".
+
+From the resume note: "the original framing was in terms of slider and you even called it a slider on
+the hand-back, but we didn't draw a slider."
+
+This stage builds reading 1 of S2, S5 and S6, and the page's side of S1 and S4 (READINGS.md). The pad
+itself and the app's reset arrive with topology forge 1.11 (stage 2, below when it lands).
+
+### S6, fit it at 1280: frame 2 starts below the layout switch, at every width
+
+What was wrong (observed with a timeline of frame 2's `--fy` and the switch, 1280 by 800): frame 2 was
+first placed before the switch existed (ui.js made it on `DOMContentLoaded`, which comes after the
+deferred scripts that build the frames), so it was put at the top, `y = 8`, under the switch, and moved
+below it only when the app said it was ready. When anything kept it from that second placement, it
+stayed under the switch (the 1280 screenshot of last round).
+
+| Change | Intention |
+|---|---|
+| ui.js makes the switch when the document becomes interactive (before the deferred scripts run), not at `DOMContentLoaded` | the switch exists when frame 2 is first placed: it is placed below it the first time, with no jump |
+| free.js watches for the switch to appear or change size; then a frame never moved is placed again, and every frame is checked against the switch (its top row is put below it) | a late switch, a font that loads later, or a kept place under it from an earlier visit is fixed when it happens, not only at the app's ready |
+
+### S5, the legend on the frames' lines
+
+The frames start out on an 8-pixel gutter: frame 1 at the left edge plus 8, frame 2 at the right edge
+less 8, both 8 below the top (frame 2 below the switch). The legend now starts on the same lines: its
+left edge on frame 1's first left edge (8), its foot 8 above the foot of the drawing (the same gutter;
+revision 6 hung it 4 above), and it ends at least 8 short of the app's overview map, which holds the
+bottom right corner. Frame 1's first height ends above the legend's row (at 700 or less, as before, at
+the heights we test). It is placed from those numbers, not from where the frames are now: moving or
+resizing a frame does not move it. It can still be moved by its own grip, and a reset puts it back.
+
+### S2, the slider drawn
+
+Revision 7's control had the role, the keys and a thumb, but its track was a 2-pixel line with three
+6-pixel dots: it did not read as a slider. Redrawn as one, in the layout switch's own material (it rhymes
+with the switch, which rhymes with the d-pad):
+
+- a **track**: a recessed rounded groove, 64 by 12 pixels, with three small stops (left, centre, right);
+- a **thumb**: the switch's domed knob, 16 pixels, that **glides** to the stop it is set to;
+- the glide uses the same timing as the layout switch's cross-fade (the browser's view transition:
+  0.25 seconds, `ease`); with the page's Motion off, or the system's reduced motion, it jumps;
+- a press anywhere on the track sets the nearest stop; the thumb can be **dragged**, stepping to the
+  nearest stop as it goes; arrows, Home and End as before; Options › Map mode's radios as before;
+- the words are his, unchanged: Preview shapes (left), Both (centre, the default), Highlight matches
+  (right), said in the slider's value text and its tooltip.
+
+### S4, Reset layout (the page's side)
+
+Options › **Reset layout**, and M-x `reset-layout`: every frame back to its first place and first size
+(frame 1 top left; the navigator's frame top right under the switch, reopened if it was closed; frames
+made later, by C-x 5 2, back to their own first places), the small frames' places forgotten (they open
+in their first place next time), the legend back on the frames' lines, and the map mode back to Both (the
+app follows). Untouched: text size and colours (Customize), the legend watermark off, Motion, the lines
+growing together, the tool-bar shown or not, what each window shows. Intention: one press undoes a
+morning of dragging, and nothing that is a setting rather than a place.
+
+**Undo reset** (Options, and M-x `undo-reset`) appears after a reset and puts back what the reset changed,
+once: the places and sizes, the map mode, and the navigator's frame closed again if the reset opened it.
+It is kept for this visit only. With 1.11 the app's own reset will be wired to this one (stage 2).
+
+### obsmage and obsmage-corwin, public (added to this stage)
+
+Corwin made both repositories public at 17:44. Checked again here before linking: GitHub's API answers
+both without a login, `"private": false`. Neither has a code.bru.st remote (both clones' only remote is
+GitHub, and code.bru.st answers 404 for both names under inputloop and corwin), so GitHub is the one
+address. They join the public allow-list (`catalog.py`, `PUBLIC_URLS`) and leave `PRIVATE_NAMES` (c4
+stays); the directory's cards, the obsmage tab (its links and status), the packages page (the healer is in
+`packaging/healer`) and the drawing's project pages stop saying "not public yet" and link them.
+obsmage.com: at first it did not answer over https with a valid certificate (curl failed the TLS
+check), so it was not linked; checked again before the commit, it answered 200 over https with a valid
+certificate (www redirects to it), so it is now the project's home: on the allow-list, the first link
+on the obsmage tab, and a Home link on its directory card.
+`tests/check_site.py` checks both are on the allow-list, off the private list, linked from the directory,
+that the obsmage tab links its repository and no longer says "not public yet", and that obsmage.com is on
+the allow-list, the tab's first link and on the card; each has a planted
+fault, and the old "a private repository linked" plant now links c4.
+
+### QA plan for revision 8 (written before the build)
+
+`tests/free8-browser.cjs`, at 1280×800, 1366×768, 1440×900 and 1920×1080, light and dark:
+
+- frame 2's box never meets the switch's (bounding-box intersection), on a fresh load and after the app
+  is ready; every place frame 2 was given during the load is below the switch (no first placement under
+  it); a frame 2 kept under the switch from an earlier visit is put below it on load;
+- the legend's left edge equals frame 1's first left edge, its foot is 8 above the drawing's foot, it does
+  not meet the map; after frame 1 and frame 2 are moved and resized, the legend has not moved;
+- the slider: its track is drawn (at least 48 by 8 pixels, inside the tool-bar, not hidden), the thumb sits
+  at the left, centre and right stop for the three modes; the thumb's transition is `left` over 0.25 s,
+  `ease`, with motion on; with reduced motion there is no glide; dragging the thumb from the left stop to
+  the right one sets Highlight matches; a press on the track's left end sets Preview shapes;
+- Reset layout: after moving and resizing both frames, closing the navigator's frame and setting the map
+  mode to rings, Reset layout puts both frames at their first boxes (equal to a fresh load's), reopens
+  the navigator, sets the mode to Both in the page and the app, and leaves the text size and the legend
+  watermark setting as they were; Undo reset puts the moved boxes, the closed navigator and rings back;
+  Undo reset is then gone (one level);
+- no sideways scroll, no request to another host, no console errors.
+
+Each promise has a planted fault in `tests/run.sh --prove-red`, proven in shards.
+
+### Built and checked (2026-11-02, revision 8 stage 1, on topology forge 1.10 `e524fe8`)
+
+`sh tests/run.sh`: Python 43 (one new: obsmage public and linked), node 30, browser 33, navigator 31,
+classic 34, free 46, revision 5 30, revision 6 26, revision 7 37, revision 8 **42**. Found while building:
+- The first placement under the switch was the order of scripts (above). Reproduced locally only by a
+  timeline of `--fy`: frame 2 drawn at 8, then at 66 when the app said it was ready.
+- A frame's width or height set by the reader did not stop it being placed again by itself (only a move
+  did), so the app's map moving could throw a chosen width away; now a resize does too.
+- Fresh and after Reset, the navigator's frame ended at different heights at 1366×768 (540, 548): its
+  first place was taken before the app showed its map. A frame never moved is now placed again when the
+  map is known, so both end 12 above the map.
+- In rings, a caption that came back after a finder was redrawn under a moved focus was said over the
+  newer message ("moved here from frame 2" became "Router: not on this page"). The caption is now said
+  only if what asked for it is still pointed at or focused; a check and a planted fault hold it.
+- The rule that nothing in a frame animates (revision 2) now has one written exception, the slider's
+  thumb, which moves only when the reader moves it and never with Motion off; the node and browser
+  checks that hold that rule name the exception.
+
 ## Revision 7: independent lines, map modes, cards (2026-11-02, afternoon)
 
 ### What Corwin asked (his words, 12:48; c4 `q/2026-11-02-minimap-modes/PROMPT.md`)
