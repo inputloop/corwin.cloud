@@ -318,6 +318,32 @@ class SiteChecks(unittest.TestCase):
             for w in ("bare,select,ready," + "select,ready").split(","):
                 self.assertIn("`%s`" % w, s, "the app's spec has no switch " + w)
 
+    def test_free_names_every_switch_it_relies_on(self):
+        """docs/NAV.md, revision 9: free's call to TopoForge.embed() at ready (js/free.js) names every switch
+        the page relies on, topology forge 1.12's bigcard and cardpad among them. In 1.12 cardpad turns
+        bigcard, mappad, preview and map on by itself, but an older app ignores a word it does not know, so
+        each is named rather than left to another's implication. Classic asks for neither 1.12 word: its
+        map keeps 1.10's card (it asks for no preview at all) and its pad stays off."""
+        js = read("js/free.js")
+        m = re.search(r"\bt\.embed\(\{([^}]*)\}\)", js)
+        self.assertTrue(m, "free.js has no call to TopoForge.embed({...}) at ready")
+        said = dict(re.findall(r"([A-Za-z-]+): (true|false)", m.group(1)))
+        for w in ("keys", "context", "pagelist", "view", "map", "preview", "mapwheel", "mappad", "reset", "bigcard", "cardpad"):
+            self.assertEqual(said.get(w), "true", "free does not ask the app for %s by name (it asks: %s)" % (w, m.group(1).strip()))
+        h = read("index.html")
+        f = re.search(r'<iframe id="topology"[^>]*>', h)
+        if f:
+            for a in ("data-embed-free", "data-embed-classic"):
+                v = re.search(a + r'="([^"]*)"', f.group(0)).group(1)
+                for w in ("bigcard", "cardpad"):
+                    self.assertNotIn(w, v.split(","), "%s asks for %s in the address" % (a, w))
+        spec = os.path.join(TOPO, "topoforge", "spec", "EMBED-v1.md")
+        if os.path.isfile(spec):
+            with open(spec, encoding="utf-8") as fh:
+                s = fh.read()
+            for w in said:
+                self.assertIn("`%s`" % w, s, "the app's spec has no switch " + w)
+
     def test_the_layout_is_set_before_the_page_is_drawn(self):
         """docs/NAV.md, revision 4: js/ui.js runs in the head without defer, on every page, before the
         stylesheet's rules can draw the wrong layout; it keeps one key, inside try."""

@@ -9,7 +9,101 @@ free beside the shape finder; the legend is one line; the frame moves, widens an
 lines together; the tool-bar is icons in even groups; a light switch for the layout that never moves.
 Revisions 4 and earlier, below, stand where revision 5 does not replace them. Correct it by editing
 this file. Revision 6 (2026-11-02, late morning), next, adds to revision 5 and replaces only what it
-names.
+names. The newest is revision 9 (2026-11-03), first below; each adds to those before it and replaces
+only what it names.
+
+## Revision 9: topology forge 1.12's card that fills the map, and the pad that pages it (2026-11-03)
+
+### What Corwin asked (his words, 2026-11-03, relayed with the task)
+
+"the text in the mini-map when we show info be LARGER: fill as much space as that gives ... Why no images?
+... baseball or flashcard or scoreboard or boxscore highlights, or several of these paginated ... this
+could be the dpad's function when one is highlighted, changing the color and maybe even rotating the dpad
+45deg".
+
+topology forge 1.12 (topology, branch corwin, `ee1475a`, read-only) answers it with two switch words, off
+unless a page asks: `bigcard` (the card fills the map, its words as large as fit, a large picture, its
+facts a box score or lines, several matches as pages, "2 of 5") and `cardpad` (while a card shows, the
+map's pad turns 45 degrees, takes the accent colour, and its arms page the cards). Its spec,
+`topoforge/spec/EMBED-v1.md`, "Added in 1.12", says the calls.
+
+### What the page does
+
+| Control or call | What the page does | Intention |
+|---|---|---|
+| `bigcard`, `cardpad` | asked for in **free only**, at ready, in the one call that asks for free's other words | the card fills the map and the pad pages it, where he asked for them |
+| every word named | the call names each switch the page relies on (`map`, `preview`, `mappad`, `bigcard` too), though in 1.12 `cardpad` turns those on by itself: an older app ignores a word it does not know | no switch left to another's implication; a check holds each name |
+| classic | unchanged: its address asks `select,ready,reset`, never `preview`, so its map shows no card and no pad | revision 8's words: classic keeps its menus |
+| the card the page sends | as revision 7 made it: a title, up to eight facts, one statement, and art that is only ever the app's own picture (`{ shape }`, or `'matches'`, which with `bigcard` is the matches' pictures side by side). No picture of the page's own (`{ src }`) is sent; a check fails on art from any other origin | the card gets all it can use, and nothing from another host |
+| **a pressed item's card stays** | a press (click or Enter) on an item in the finder or the navigator that opens a page keeps that item's card in the map; when a hover ends, the map shows the kept card again, as it shows the selection's card; it says so in the echo area ("gitcha's card stays in the map, 1 of 3: the map's pad pages it; C-g puts it away.") | without it no pointer could reach the pad while a card shows (found while building, below) |
+| put away by | **C-g** in a frame (also M-x keyboard-quit, and C-g ending a key sequence from the drawing): "Quit (the card kept in the map is put away)."; a shape selected in the drawing; another page in view | Emacs's quit; the selection's card takes the map; a card about another page's shapes is stale |
+| a turned page stays turned | the kept card is not asked for again while it is the one in the map, so a hover's end does not send it back to "1 of N" | a page the person turned is theirs |
+| narrow screens | nothing is kept (the selection's card is not shown there either); 1.12's sheet along the drawing's foot comes and goes with the pointer | the sheet covers 42 % of the drawing; it should not stay unasked |
+| frames end above the turned pad | turned, the pad's grip reaches 28 pixels above the map (half the 132-pixel cross's diagonal, 94, less half the map's 130); a frame's first height, and the height it is given when the map moves, end 12 above that, not above the map | found by the check at 1366x768: frame 2 covered 16 pixels of the grip |
+| with 1.11 or older | none of the above runs: the kept card, the reach and the words the app does not know are each gated on 1.12 | the page works with the app it is given |
+
+### Found while building (2026-11-03)
+
+- **A hover card could never be paged.** The card shows while the pointer is on an item and goes 400 ms
+  after it leaves; a press opens the item's page, and the app's select message for that page cleared the
+  card too. The map's pad is beside the map, far from the frames, so the pad was turned only while nobody
+  could reach it. Hence the kept card, on a press only: passing over other items on the way to the map
+  shows their cards for a moment, and the kept card comes back 400 ms after the last.
+- **At the map's first size an item's card shows no facts.** In a 190 by 130 map 1.12 leaves out every
+  fact before it leaves out the statement, and an item's statement is the catalog's description (one or
+  two sentences). Gitcha's card on the shop's page is its title at 40 pixels and its picture; cards with a
+  short statement do show facts: the Security tile 3 of 3, Firewall 2 of 4, the selection 2 of 3
+  (counted 2026-11-03, 1280x800). A larger map shows more. Left for Corwin (below).
+- **The turned pad reached under frame 2** at 1366x768 (above). At 1280x800 it cleared by 6 pixels.
+- **A map laid out after ready.** The push's own run of the checks failed once: at 1366x768 frame 2's
+  first box (foot at 606) was not its box after Reset layout (585). Under load the app sometimes says it
+  is ready before its map is laid out (it reports the map at 0, not shown); the re-placing at ready then
+  sees no map, and nothing places frame 2 again, so it keeps the height it was given while the map was
+  unknown. Reproduced 3 times in 36 loaded fresh loads (2026-11-03); the commit before this one, 0 in 16,
+  so 1.12's switches may make it likelier, or it was rarely seen. At ready the page now looks again on the
+  next frames (at most 60) until the map shows. A check makes the late map certain and a planted fault
+  holds it.
+
+### For Corwin to decide (forks written, not taken)
+
+1. **Item statements at the map's first size.** Send only the description's first sentence, so the box
+   score shows in a 190 by 130 map, or leave it (today). Falsifier: point at gitcha on the shop's page and
+   count the card's facts shown (0 today, 2026-11-03).
+2. **A picture of the page's own.** Gitcha's four screenshots (Bryant Frankford's, CC BY-SA 4.0) are
+   staged under `/demo/gitcha/shots/` and could be its card's picture (`{ src, alt }`, this origin). Not
+   done: the card would show them without their credit; a fact such as "Picture: Bryant Frankford, CC
+   BY-SA 4.0" could carry it.
+3. **How a card is kept.** On a press (today); other readings: keep any card with pages after a hover, or
+   keep none and page only from the keyboard.
+4. **The match pages' titles** are each shape's first line of text; on gitcha's page the title zone's is a
+   200-character sentence, so its page draws at 1.10's size. Shorter shape names are drawings.py's to give.
+
+### Checks for revision 9
+
+`tests/free9-browser.cjs`, at 1280x800 light, 1366x768 dark, 1440x900 light and 1920x1080 dark: free's
+embed has `bigcard` and `cardpad`; pointing at an item gives a big card that fills the map, its title
+larger than 1.10's 12.5 pixels, with a picture and every fact the page sent; the Security tile's card shows
+its facts as a box score or lines; the card the page sent has a title, one to eight facts and a statement;
+the pad turns 45 degrees while the card shows and is its 1.11 self when it goes (no turn, its slider back,
+no tooltip left); a hover card goes when the pointer leaves; a pressed item's card stays (said, "1 of N")
+while the pointer goes to the pad, whose arms page it (Next, the last, the first; one
+`topoforge:cardpage` per turn; a turned page outlives the hover's end); each visible cell of the turned pad
+meets neither frame 2, the legend nor the layout switch; every card's art is the app's own or of this
+origin; C-g, a selection and another page each put the kept card away; no sideways scroll, no request to
+another host, no console errors. At 1366x768, with the app made to report no map until 150 ms after the
+page's 1.12 call, frame 2 still ends 12 above the turned pad's reach. At 390x844 a pressed item's card is
+not kept. Classic, at 1280 and 1920:
+neither word (nor `mappad` or `preview`), `reset` as before, no big card, no pad. `tests/check_site.py`:
+free's call names each of its eleven words; neither layout's address asks for `bigcard` or `cardpad`.
+Each promise has a planted fault in `tests/run.sh --prove-red`.
+
+Built and checked (2026-11-03, revision 9), against topology `ee1475a` (1.12) read-only: `sh tests/run.sh`
+Python 44 (one new), node 30, browser 33, navigator 31, classic 34, free 46, revision 5 30, revision 6 26,
+revision 7 37, revision 8 68, revision 9 **28**, install 15 and 12. Planted faults: 23 new or changed, 7
+held by `check_site.py` (each word named; neither address asks for the 1.12 words) and 16 in the browser
+(13 new; 3 retargeted because `cardpad` now turns on what they took away: "map and preview not turned on",
+"no pad in free", "no reset switch in free"), each seen red at the assertion written for it; 256 in all,
+run in two shards.
 
 ## Revision 8: fit it at 1280, the legend on the frames' lines, a drawn slider, a reset (2026-11-02, evening)
 

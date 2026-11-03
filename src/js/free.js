@@ -16,7 +16,8 @@
 // preview box says what is pointed at (topology forge 1.9's preview() takes over when it is there). It talks to the app only through its documented calls and messages
 // (topology forge 1.8, spec/EMBED-v1.md), never reaching into its page; it reads one file from this
 // site (nav/index.json) and asks the network for nothing else; it keeps only places (js/float.js) and
-// the watermark's on or off (js/float.js) in this browser.
+// the watermark's on or off (js/float.js) in this browser. Revision 9: topology forge 1.12's card that fills
+// the map and the pad that pages it (bigcard, cardpad), and a pressed item's card kept so the pad can be reached.
 (function () {
   'use strict';
   var doc = document, html = doc.documentElement;
@@ -42,7 +43,12 @@
     var r = sw.getBoundingClientRect(), g = grid.getBoundingClientRect();
     return { x: r.left - g.left - 4, y: r.top - g.top - 4, w: r.width + 8, h: r.height + 8 };
   }
-  function mapTop(H) { var t = tf(), m = null; try { m = t && t.panels && t.panels().map; } catch (e) { m = null; } return m && m.shown ? m.y : H - 150; }
+  function mapTop(H) { var t = tf(), m = null; try { m = t && t.panels && t.panels().map; } catch (e) { m = null; } return m && m.shown ? m.y - padReach(m) : H - 150; }
+  // revision 9: while a card shows, 1.12's pad (a cross of 44-pixel cells hung beside the map, EMBED-v1.md)
+  // turns 45 degrees, and the corner of its grip then reaches half the cross's diagonal (1.5 x 44 x the square
+  // root of 2: 94 pixels) above its middle, the map's middle: above the map's top by that less half the map's
+  // height (28 pixels for the map's first 130). Frames end above that too, so no frame covers the grip.
+  function padReach(m) { return twelve() && m && m.h ? Math.max(0, Math.ceil(66 * Math.SQRT2 - m.h / 2)) : 0; }
   // what free keeps (the navigator's frame closed or not) is kept by js/float.js, under corwin.cloud.free.v1
   function fstate() { return window.CCFloat.freeState ? window.CCFloat.freeState() : {}; }
   function fkeep(k, v) { if (window.CCFloat.freeKeep) window.CCFloat.freeKeep(k, v); }
@@ -70,6 +76,8 @@
   function ten(call) { var t = tf(); return t && vge(t.version, '1.10') && typeof t.mapMode === 'function' && (!call || typeof t[call] === 'function') ? t : null; }
   // and 1.11's (the map's pad, Reset layout)
   function eleven(call) { var t = tf(); return t && vge(t.version, '1.11') && typeof t.resetLayout === 'function' && (!call || typeof t[call] === 'function') ? t : null; }
+  // and 1.12's (the card that fills the map, the pad that pages it): only then does a pressed item's card stay
+  function twelve(call) { var t = tf(); return t && vge(t.version, '1.12') && typeof t.cardPage === 'function' && (!call || typeof t[call] === 'function') ? t : null; }
   function nav() { return window.CCNav || null; }
   function say(t) { if (cur) cur.say(t); }
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -132,6 +140,8 @@
     if (m.type === 'topoforge:ready') { READY = m.detail; PAGE = m.detail.page || ''; takeShapes(); refreshCmds(); hooks19(); }
     else if (m.type === 'topoforge:select') {
       SEL = m.detail.count ? m.detail : null; PAGE = m.detail.page || PAGE; frames.forEach(function (f) { f.renderTools(); f.layoutTools(); });
+      // revision 9: a shape selected, or another page in view, puts a kept card away
+      if (KEPT && (SEL || (KEPT.page && PAGE !== KEPT.page))) dropKept(false);
       // the selection's card (revision 7), in the left and middle map modes
       if (MAPMODE !== 'rings' && SEL && !narrowQ.matches) showSel(); else if (!SEL && ten('preview')) showSel(); else if (!SEL && hud.getAttribute('data-card') === 'selection') hud.hidden = true;
     }
@@ -155,12 +165,15 @@
   function hooks19() {
     var t = nine('embed');
     if (!t) return;
-    // 1.9 B: the map in its own frame (moved and resized by its own door-handle controls) and the preview in it
-    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true, mapwheel: true, mappad: true, reset: true }); } catch (e) { /* an older 1.9 without the words */ }
+    // 1.9 B: the map in its own frame (moved and resized by its own door-handle controls) and the preview in it;
+    // 1.12 (revision 9): bigcard (the card fills the map, its facts a box score, several matches as pages) and
+    // cardpad (while a card shows the pad turns 45 degrees and pages it). cardpad would turn bigcard, mappad,
+    // preview and map on by itself, but an older app ignores words it does not know, so each is named
+    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true, mapwheel: true, mappad: true, reset: true, bigcard: true, cardpad: true }); } catch (e) { /* an older 1.9 without the words */ }
     // 1.11: the pad's arrows, which the app does not keep (Options, Map pad: arrows pan the drawing)
     var t11 = eleven('padArrows'); if (t11) { try { t11.padArrows(fstate().padPan ? 'pan' : 'mode-scale'); } catch (e) { /* the app's */ } }
     modeAtReady();
-    mapCheck();
+    mapCheck(60);
     try { VIEW = t.view || null; } catch (e) { VIEW = null; }
     firstFit();
   }
@@ -181,19 +194,22 @@
   // (topoforge.ui.v1, key minimap), so a move or resize there reaches this page as a storage event; then a
   // frame whose lower part the map now covers ends above it (never shorter than 200 pixels), and an unmoved
   // legend is placed again beside it. No polling.
-  function mapCheck() {
+  // (revision 9) At ready the app's map is sometimes not laid out yet (seen under load: y 0, not shown), and
+  // then no frame was placed again: hooks19 passes `tries`, and the check looks again on the next frames.
+  function mapCheck(tries) {
     var t = tf(), m = null;
     try { m = t && t.panels && t.panels().map; } catch (e) { m = null; }
-    if (!m || !m.shown || narrowQ.matches) return;
+    if (narrowQ.matches) return;
+    if (!m || !m.shown) { if (tries > 0) (window.requestAnimationFrame || setTimeout)(function () { mapCheck(tries - 1); }); return; }
     frames.forEach(function (f) {
       var st = f.fl.state;
       if (st.x === null) return;
       // a frame never moved is placed again now that the map's real place is known (revision 8: its first
       // place is the same on a fresh load as after Reset layout, ending 12 above the map)
       if (f.fl.auto) { f.fl.retarget(); return; }
-      var hh = f.fl.height(), r = { x: st.x, y: st.y, w: st.w, h: hh };
-      var meets = r.x < m.x + m.w && r.x + r.w > m.x && r.y < m.y + m.h && r.y + r.h > m.y;
-      if (meets && m.y - 12 - st.y >= 200) { f.fl.set({ h: Math.round(m.y - 12 - st.y) }, true); f.say('This frame now ends above the overview map.'); }
+      var hh = f.fl.height(), r = { x: st.x, y: st.y, w: st.w, h: hh }, top = m.y - padReach(m);
+      var meets = r.x < m.x + m.w && r.x + r.w > m.x && r.y < m.y + m.h && r.y + r.h > top;
+      if (meets && top - 12 - st.y >= 200) { f.fl.set({ h: Math.round(top - 12 - st.y) }, true); f.say('This frame now ends above the overview map.'); }
     });
     var L = window.CCFloat.get('legend'); if (L && L.auto) L.retarget();
   }
@@ -243,7 +259,7 @@
     }
     if (seq[0] === 'M-x') { end(); core('execute-extended-command', f); return; }
     if (seq[0] === '<f10>') { end(); f.menuOpen(0, true); return; }
-    if (seq[seq.length - 1] === 'C-g' || seq[seq.length - 1] === '<escape>') { end(); f.say('Quit'); return; }
+    if (seq[seq.length - 1] === 'C-g' || seq[seq.length - 1] === '<escape>') { end(); f.say(quitWords()); return; }
     if (KEYSEQ[str]) { end(); run(KEYSEQ[str], f); return; }
     if (Object.keys(KEYSEQ).some(function (k) { return k.indexOf(str + ' ') === 0; })) { f.say(str + '-'); return; }
     end(); f.say(str + ' is undefined');
@@ -383,7 +399,7 @@
       'switch-to-buffer': function () { f.mx('Switch to buffer: ', bufferCands); },
       'execute-extended-command': function () { f.mx('M-x ', allCands); },
       'menu-bar-open': function () { f.menuOpen(0, true); },
-      'keyboard-quit': function () { say('Quit'); }
+      'keyboard-quit': function () { say(quitWords()); }
     }[name];
     if (fn) { fn(); return true; }
     return false;
@@ -763,7 +779,7 @@
       sl.setAttribute('data-tip', 'Map mode: ' + MAPWORDS[m] + '   ←/→');
     });
     if (tip.shown && tip.owner && tip.owner.classList.contains('ef-slider')) showTip(tip.owner);
-    var t9 = nine('preview'); if (t9) { try { t9.preview(null); } catch (e) { /* the app's */ } }
+    var t9 = nine('preview'); if (t9) { SHOWN = ''; try { t9.preview(null); } catch (e) { /* the app's */ } }
     hud.hidden = true;
     if (m !== 'rings') showSel();
     if (from !== 'ready') say('Map mode: ' + MAPWORDS[m] + (from === 'app' ? ' (from the map’s Mode menu).' : '.'));
@@ -1007,7 +1023,7 @@
       var n = ev.target, c, w = n.closest && n.closest('.ef-win');
       if (w && +w.getAttribute('data-win') !== f.st.sel) { f.st.sel = +w.getAttribute('data-win'); each(f.wins.querySelectorAll('.ef-win'), function (b) { b.classList.toggle('selected', b === w); }); f.renderMenubar(); f.renderTools(); f.layoutTools(); f.modelines(); }
       // the navigator's own clicks are its own; its window's mode-line follows them
-      if (n.closest('.navframe')) { setTimeout(function () { f.modelinesOnly(); }, 0); return; }
+      if (n.closest('.navframe')) { setTimeout(function () { f.modelinesOnly(); }, 0); if ((c = n.closest('a.it[data-id]'))) keepCard(c); return; }
       if (n.closest('.ef-msg')) { core('execute-extended-command', f); return; }
       if ((c = n.closest('.ef-mb'))) { var i = f.menus.indexOf(c.getAttribute('data-menu')); if (f.openMenu === i) f.menuClose(true); else f.menuOpen(i, ev.detail === 0); return; }
       if ((c = n.closest('.ef-mi'))) {
@@ -1041,7 +1057,7 @@
       if ((c = n.closest('.ef-shape'))) { f.st.wins[f.st.sel].point = 's:' + c.getAttribute('data-shape'); placeShape(c.getAttribute('data-shape'), false); return; }
       if ((c = n.closest('a.ef-it'))) {
         var it = IX && IX.items.filter(function (x) { return x.id === c.getAttribute('data-item'); })[0];
-        if (it) { f.st.wins[f.st.sel].point = 'i:' + it.id; if (it.page) { ev.preventDefault(); openItem(it); } }
+        if (it) { f.st.wins[f.st.sel].point = 'i:' + it.id; if (it.page) { ev.preventDefault(); openItem(it); keepCard(c); } }
       }
     });
     // pointing at or focusing a mode-line element says what it is (its help-echo)
@@ -1161,7 +1177,7 @@
     if (f.openMenu !== null && f.openMenu !== undefined && k === 'Escape') { ev.preventDefault(); f.menuClose(true); return; }
     if (ev.ctrlKey && !ev.altKey && !ev.metaKey && (k === 'x' || k === 'X')) { ev.preventDefault(); prefix = 'C-x'; f.say('C-x-'); return; }
     if (ev.ctrlKey && !ev.altKey && !ev.metaKey && (k === 'c' || k === 'C') && !String(window.getSelection && window.getSelection())) { ev.preventDefault(); prefix = 'C-c'; f.say('C-c-'); return; }
-    if (ev.ctrlKey && (k === 'g' || k === 'G')) { ev.preventDefault(); f.say('Quit'); return; }
+    if (ev.ctrlKey && (k === 'g' || k === 'G')) { ev.preventDefault(); f.say(quitWords()); return; }
     if (k === 'Escape' && tip.shown) hideTip();   // the tooltip goes (WCAG 1.4.13), and Escape is still Emacs's ESC prefix
     // 1.9: Escape in a frame gives up a shape armed in the drawing, as Escape in the drawing does
     var t9 = k === 'Escape' && nine('place');
@@ -1369,9 +1385,10 @@
       // 1.10: the card is in the map (left and middle); the middle also lights the matches in the drawing;
       // the stand-in box is retired. Rings: the app's topoforge:preview brings the caption (echoPreview)
       hud.hidden = true;
-      if (!d || d.kind === 'tool' || !d.target) { if (mode === 'rings') { try { t10.preview(null); } catch (e) { /* the app's */ } } else hideCardSoon(); return; }
+      if (!d || d.kind === 'tool' || !d.target) { if (mode === 'rings') { try { t10.preview(null); } catch (e) { /* the app's */ } SHOWN = ''; } else hideCardSoon(); return; }
       PVF = frameOf(el); PVCAP = !!d.caption; PVEL = el;
       var o = { caption: d.caption };
+      SHOWN = mode !== 'rings' ? cardKey(d) : '';
       if (mode !== 'rings') o.card = cardFor(d);
       try { t10.preview(d.target, o); } catch (e) { /* the app's */ }
       return;
@@ -1391,9 +1408,44 @@
     if (!d) { hideCardSoon(); return; }
     showCard(d, 'A stand-in until the overview map can show it (topology forge 1.9).');
   }
-  // the selection's card: in the map with 1.10 (its shape, as the preview of its own id), else in the box
+  // the kept card (revision 9, topology forge 1.12's cardpad): a card shown while the pointer is on an item
+  // goes when it leaves, so the pointer could never reach the map's pad to page it. A PRESSED item's card
+  // stays: when a hover ends the map shows it again (as it shows the selection's card), until C-g in a frame,
+  // a shape selected in the drawing, or another page in view puts it away. Wide screens and 1.12 only (the
+  // selection's card is not shown on a narrow screen either); with an older app nothing here runs.
+  var KEPT = null, SHOWN = '';   // the kept card; the key of the card the page last put in the map ('' for none)
+  function cardKey(d) { return d ? d.kind + '|' + d.title + '|' + JSON.stringify(d.target) : ''; }
+  function keepCard(el) {
+    var d = el && describe(el), id = el && (el.getAttribute('data-item') || el.getAttribute('data-id'));
+    var it = id && ((IX && IX.items.filter(function (x) { return x.id === id; })[0]) || (nav() && nav().item(id)));
+    if (!twelve() || !d || !d.target || !it || !it.page || narrowQ.matches || ownDrawing()) return;
+    KEPT = { d: d, key: cardKey(d), page: it.page, said: false };
+    SHOWN = '';
+    showSel();
+  }
+  function dropKept(show) {
+    if (!KEPT) return false;
+    KEPT = null; SHOWN = '';
+    if (show) showSel();
+    return true;
+  }
+  function quitWords() { return dropKept(true) ? 'Quit (the card kept in the map is put away).' : 'Quit'; }
+  // the selection's card: in the map with 1.10 (its shape, as the preview of its own id), else in the box;
+  // a kept card (revision 9) comes first, and is not asked for again while it is the one shown (a turned page stays)
   function showSel() {
     var c = MAPMODE !== 'rings' && selCard(), t10 = ten('preview');
+    if (KEPT && t10 && MAPMODE !== 'rings') {
+      if (SHOWN === KEPT.key) return;
+      SHOWN = KEPT.key;
+      var r = null;
+      try { r = t10.preview(KEPT.d.target, { caption: KEPT.d.caption, card: cardFor(KEPT.d) }); } catch (e) { r = null; }
+      if (!KEPT.said && r) {
+        KEPT.said = true;
+        say(KEPT.d.title + '’s card stays in the map' + (r.pages > 1 ? ', 1 of ' + r.pages + ': the map’s pad pages it;' : ';') + ' C-g puts it away.');
+      }
+      return;
+    }
+    SHOWN = '';
     if (t10) { try { if (c) t10.preview([SEL.id], { card: cardFor(c) }); else t10.preview(null); } catch (e) { /* the app's */ } return; }
     if (c) showCard(c); else hud.hidden = true;
   }

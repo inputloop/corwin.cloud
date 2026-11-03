@@ -47,6 +47,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free7-browser.cjs || fail=1
       step "revision 8: frame 2 below the layout switch at four sizes, the legend on the frames' lines, the slider drawn, Reset layout (playwright)"
       SITE_OUT=$out "$node" tests/free8-browser.cjs || fail=1
+      step "revision 9: topology forge 1.12's big card and card pad in free, a pressed item's card kept for the pad, the turned pad clear of the frames, classic unchanged (playwright)"
+      SITE_OUT=$out "$node" tests/free9-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -191,6 +193,15 @@ prove_red() {
   plant "nav.js reads storage outside try"   src/js/nav.js 's#^  function save() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function save() {#'
   plant "a single-key shortcut in the nav"   src/js/nav.js "s#if (ev.ctrlKey \&\& !ev.altKey \&\& !ev.metaKey \&\& (ev.key === 'x' || ev.key === 'X'))#if ((ev.key === 'x' || ev.key === 'X'))#"
   plant "the navigator animates"             src/css/site.css 's#^\.nf-handle { position: absolute;#.nf-handle { transition: width 1s; position: absolute;#'
+  # revision 9 (docs/NAV.md): free names every switch it relies on (an older app ignores words it does not
+  # know, so none is left to cardpad's implication); classic asks for neither 1.12 word
+  plant "free does not name bigcard"         src/js/free.js 's#reset: true, bigcard: true, cardpad: true })#reset: true, cardpad: true })#'
+  plant "free does not name cardpad"         src/js/free.js 's#reset: true, bigcard: true, cardpad: true })#reset: true, bigcard: true })#'
+  plant "free leaves map to cardpad"         src/js/free.js 's#view: true, map: true,#view: true,#'
+  plant "free leaves preview to cardpad"     src/js/free.js 's#preview: true, mapwheel#mapwheel#'
+  plant "free leaves mappad to cardpad"      src/js/free.js 's#mappad: true, reset#reset#'
+  plant "classic asks for bigcard"           build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,bigcard"#'
+  plant "classic asks for cardpad"           build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,cardpad"#'
   if command -v "$node" >/dev/null 2>&1 && "$node" -e "require('playwright')" >/dev/null 2>&1 && [ "${SKIP_BROWSER:-}" != 1 ]; then
     plant_b "a split without its mode-line"   src/js/nav.js 's#}, \[body, ml\]);#}, [body]);#'
     plant_b "a split with a title bar"        src/js/nav.js "s#}, \[body, ml\]);#}, [mk('div', { cls: 'win-title', text: 'W' }), body, ml]);#"
@@ -283,7 +294,9 @@ prove_red() {
     plant_b "no first fit between the frames"     src/js/free.js 's#if (!t || fitted || !READY#if (true || !t || fitted || !READY#' $S
     plant_b "no CUA cut"                          src/js/free.js "s#if (seq.length === 1 \&\& (str === 'C-x' || str === 'C-c') \&\& SEL) {#if (false) {#" $S
     # stage 2 (docs/NAV.md, revision 6): the map as the preview, frames re-checked when it moves
-    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true, mapwheel: true, mappad#view: true, map: false, preview: false, mapwheel: true, mappad#' $S
+    # (revision 9: with 1.12, mappad turns map on and cardpad turns bigcard, mappad, preview and map on, so the
+    # fault takes the words that imply them too; the words named one by one are held by check_site.py, below)
+    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true, mapwheel: true, mappad: true, reset: true, bigcard: true, cardpad: true#view: true, map: false, preview: false, mapwheel: true, mappad: false, reset: true, bigcard: false, cardpad: false#' $S
     plant_b "a navigator item previews its id only" src/js/free.js 's#^    if (!sl || !t || !t.doc) return out;#    return out;#' $S
     plant_b "a finder shape previews its category" src/js/free.js 's#^        target: { kind: sh.id } };#        target: { category: sh.category } };#' $S
     plant_b "no re-check when the map moves"      src/js/free.js "s#if (ev.key === 'topoforge.ui.v1') mapCheck();#if (false) mapCheck();#" $S
@@ -331,8 +344,9 @@ prove_red() {
     plant_b "Undo reset offered twice"            src/js/free.js 's#var u = UNDO; UNDO = null;#var u = UNDO;#' $E
     plant_b "a late caption over a newer message" src/js/free.js 's#    if (!pointed) return;#    void pointed;#' $E
     # revision 8 stage 2: topology forge 1.11 (the map's pad, Reset layout both ways)
-    plant_b "no pad in free"                      src/js/free.js 's#mapwheel: true, mappad: true, reset: true })#mapwheel: true, reset: true })#' $E
-    plant_b "no reset switch in free"             src/js/free.js 's#mapwheel: true, mappad: true, reset: true })#mapwheel: true, mappad: true })#' $E
+    # (revision 9: cardpad turns mappad on, so "no pad" takes cardpad too)
+    plant_b "no pad in free"                      src/js/free.js 's#mapwheel: true, mappad: true, reset: true, bigcard: true, cardpad: true })#mapwheel: true, reset: true, bigcard: true })#' $E
+    plant_b "no reset switch in free"             src/js/free.js 's#mappad: true, reset: true, bigcard: true#mappad: true, bigcard: true#' $E
     plant_b "the page's reset leaves the app"     src/js/free.js 's#try { if (t.resetLayout()) EXPECT.reset++; }#try { void 0; }#' $E
     plant_b "the app reset twice"                 src/js/free.js 's#try { if (t.resetLayout()) EXPECT.reset++; }#try { if (t.resetLayout() \&\& t.resetLayout()) EXPECT.reset += 2; }#' $E
     plant_b "the page reset twice"                src/js/free.js "s#else if (EXPECT.reset > 0) EXPECT.reset--; else resetLayout('app');#else resetLayout('app');#" $E
@@ -347,6 +361,21 @@ prove_red() {
     plant_b "the legend runs under the pad"       src/css/site.css '/^@media (max-width: 87.5rem) { html\[data-ui="free"\] .legend.watermark .lg-c { padding: 0 0.45em; } }$/d' $E
     plant   "the pad in classic"                  build.py 's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,mappad"#'
     plant   "no reset in classic"                 build.py 's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready"#'
+    # revision 9 (docs/NAV.md): topology forge 1.12's big card and card pad, and the kept card
+    G=tests/free9-browser.cjs
+    plant_b "no big card in free"                 src/js/free.js 's#, bigcard: true, cardpad: true })# })#' $G
+    plant_b "the pad never turns in free"         src/js/free.js 's#bigcard: true, cardpad: true })#bigcard: true })#' $G
+    plant_b "a pressed item's card not kept"      src/js/free.js 's#if (!twelve() || !d#if (true || !d#' $G
+    plant_b "a hover card kept"                   src/js/free.js 's#^      preview(el);$#      preview(el); keepCard(el);#' $G
+    plant_b "the kept card's words not said"      src/js/free.js "s#say(KEPT.d.title + '’s card stays#void (KEPT.d.title + '’s card stays#" $G
+    plant_b "a turned page undone by the leave"   src/js/free.js 's#^      if (SHOWN === KEPT.key) return;$##' $G
+    plant_b "C-g leaves the kept card"            src/js/free.js 's#function quitWords() { return dropKept(true) ?#function quitWords() { return false ?#' $G
+    plant_b "a selection leaves the kept card"    src/js/free.js 's#if (KEPT \&\& (SEL || (KEPT.page \&\& PAGE !== KEPT.page))) dropKept(false);#if (KEPT \&\& ((KEPT.page \&\& PAGE !== KEPT.page))) dropKept(false);#' $G
+    plant_b "another page leaves the kept card"   src/js/free.js 's#if (KEPT \&\& (SEL || (KEPT.page \&\& PAGE !== KEPT.page))) dropKept(false);#if (KEPT \&\& SEL) dropKept(false);#' $G
+    plant_b "a kept card on a narrow screen"      src/js/free.js 's#|| narrowQ.matches || ownDrawing()) return;#|| ownDrawing()) return;#' $G
+    plant_b "a card's art from another host"      src/js/free.js "s#statement: d.statement || '', art: art };#statement: d.statement || '', art: { src: 'https://x.example/a.png' } };#" $G
+    plant_b "a frame over the turned pad's grip"  src/js/free.js 's#function padReach(m) { return twelve() \&\&#function padReach(m) { return false \&\&#' $G
+    plant_b "a map laid out after ready ignored"  src/js/free.js 's#if (tries > 0) (window.requestAnimationFrame || setTimeout)(function () { mapCheck(tries - 1); }); ##' $G
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi
