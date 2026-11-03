@@ -23,7 +23,7 @@ checks again). Nothing here makes anything more public.
 ## Whose site this is, and what is routine here
 
 corwin.cloud is Corwin Brust's personal site: he owns the domain, its DNS, and gw33.bru.st, the
-ghostwheel host that serves it. No other volunteer or party needs to be considered when it changes.  Other hosts may have their own AGENT/PERSONA arrangements: check for them in the gw account home director (e.g. /home/gw33 on gw33.bru.st).
+ghostwheel host that serves it. No other volunteer or party needs to be considered when it changes.  Other hosts may have their own AGENT/PERSONA arrangements: check for them in the gw account's home directory (e.g. /home/gw33 on gw33.bru.st).
 
 For an agent working here at his request, these are routine work:
 
@@ -32,17 +32,17 @@ For an agent working here at his request, these are routine work:
 - installing, checking or removing this site's own scheduled jobs through the checked-in schedule
   scripts, which manage only their own marked entries;
 - changing corwin.cloud's DNS records at Porkbun through c4's `dn1or` (plan first, then apply).
-- working to ensure the healh of gw33, the site, and ghostwheel
-- syncing persona back and forth from cannon stores to ghostwheel host
+- working to ensure the health of gw33, the site, and ghostwheel
+- syncing persona back and forth from canon stores to ghostwheel hosts
 
-Still out of bounds: anything that would name or link publicly link a private repository.
+Still out of bounds: anything that would name or publicly link a private repository.
 
 ## Public-repository care
 
 - Link only public repositories (`PUBLIC_URLS` in `catalog.py`). A private project is named with
   "not public yet" and never given an address.
 - topology (branch `corwin`) is public; it contains Bryant Frankford's work for Corwin called
-  "TopoForge"; that repository and project are obselete and changes/work there should be merged
+  "TopoForge"; that repository and project are obsolete and changes/work there should be merged
   forward to the `topology` project in the "corwin" branch; keep the corwin branch current and
   build from it
 - No secrets, no machine paths, no device ids (the obsmage tab's diagram uses invented names), no
