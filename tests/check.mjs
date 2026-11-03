@@ -311,7 +311,7 @@ test('free.js reads one file from this site, nav/index.json, keeps nothing in st
 test('free.js asks the app only through its documented calls', { skip: !freeSrc }, () => {
   // every name given tf() (the app's window.TopoForge), and every call made on it
   // (also the names given nine() and ten(), which are tf() gated on the version)
-  const names = [...new Set((freeSrc.match(/\b(\w+) = (?:tf\(\)|nine\(|ten\()/g) || []).map((m) => m.split(' ')[0]))];
+  const names = [...new Set((freeSrc.match(/\b(\w+) = (?:tf\(\)|nine\(|ten\(|eleven\(|appReset\()/g) || []).map((m) => m.split(' ')[0]))];
   assert.ok(names.length >= 1);
   const calls = new Set();
   for (const n of names) for (const m of freeSrc.matchAll(new RegExp('\\b' + n + '\\.(\\w+)\\(', 'g'))) calls.add(m[1]);
@@ -319,7 +319,8 @@ test('free.js asks the app only through its documented calls', { skip: !freeSrc 
   // topoforge:key message, which only 1.9 sends, and only when the version says 1.9)
   // and 1.9's (EMBED v1, "Added in 1.9"), each reached only when TopoForge.version says 1.9 (free.js nine())
   // and 1.10's mapMode() ("Added in 1.10"), reached only when the version says 1.10 (free.js ten())
-  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode'];
+  // and 1.11's padArrows(), resetLayout() and undoReset() ("Added in 1.11"), only when the version says 1.11 (eleven())
+  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode', 'padArrows', 'resetLayout', 'undoReset'];
   for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
   for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
 });

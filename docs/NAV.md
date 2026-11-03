@@ -135,6 +135,58 @@ classic 34, free 46, revision 5 30, revision 6 26, revision 7 37, revision 8 **4
   thumb, which moves only when the reader moves it and never with Motion off; the node and browser
   checks that hold that rule name the exception.
 
+### Stage 2: topology forge 1.11, the map's pad and Reset layout (topology, branch corwin, `adff93a`, read-only)
+
+1.11 adds two switch words, `mappad` and `reset` (both off unless a page asks, in neither `all` nor
+`bare`), and three calls: `padArrows`, `resetLayout`, `undoReset`.
+
+| Control or call | What the page does | Intention |
+|---|---|---|
+| `mappad` | turned on in **free only**, with the rest of free's words at ready; classic's address never names it | S1 reading 1: the d-pad hangs on the map's edge in free; classic keeps its menus (his words) |
+| `reset` | turned on in **both**: free at ready, classic in its address (`select,ready,reset`) | the app's View menu and the map's Mode menu offer Reset layout and Undo reset in either layout |
+| the pad's slider and the page's slider | one setting, as in revision 7: the app's `mapMode` is the one source of truth; the pad drives it, `topoforge:mapmode` moves the page's slider and radios; the page's slider calls `mapMode`, which the pad follows; an echo of the page's own change is dropped | S2 reading 1: the pad's horizontal bar is the slider, and the tool-bar's slider rhymes with it; never two answers to "which mode" |
+| `padArrows` | set at ready from Options › **Map pad: arrows pan the drawing** (unchecked: `mode-scale`, the default; checked: `pan`), kept in this browser (`corwin.cloud.free.v1`, `padPan`), because the app does not keep it | S3 reading 1 is the default (the vertical arm calibrates the map's scale, the grip positions it); S1 reading 2 (the arrows pan the drawing) is one switch away, options over removal |
+| Options › Reset layout | the page's reset (revision 8, stage 1) **and** `TopoForge.resetLayout()` (the app's panels, the map's place, size, scale and mode, the pad) | one press puts the whole screen back |
+| Options › Undo reset | the page's undo **and** `TopoForge.undoReset()` | one level, on both sides together |
+| the app's Reset layout or Undo reset (View menu, the map's Mode menu) | `topoforge:reset` resets the page's frames too (`{ undo: true }`), or puts them back (`{ undone: true }`), without calling the app again | either side's control resets both |
+| nothing twice | when the page calls `resetLayout()` or `undoReset()` itself, it expects the one `topoforge:reset` that call sends and drops it (counted, one per call); the map mode follows the app's message without being set back to it | a reset is one reset, wherever it starts |
+
+What Reset layout leaves alone is as in stage 1 (text size, colours, the watermark, Motion, lines,
+tool-bars, windows), and also the pad's arrows (a setting, not a place).
+
+Three choices are the app's, written here for Corwin to revisit:
+
+- **A press on the slider's thumb (without dragging) is The whole drawing** (`mapScale(1)`), while a click
+  on the centre stop sets Both. The same spot does two things depending on whether the thumb is on it.
+- **In pan mode the centre of the cross is Fit.**
+- **The tick labels are short** (Cards, Both, Rings); his words (Preview shapes, Both, Highlight matches)
+  are in the slider's value text and the page's own slider.
+
+QA plan for stage 2 (written before the build), in `tests/free8-browser.cjs`, at 1280×800, 1366×768,
+1440×900 and 1920×1080, light and dark: free has the pad (`#mmPad` shown near the map) and its embed
+words include `mappad` and `reset`; classic has no pad and has `reset`, and the View menu offers Reset
+layout; the page's slider moves the pad's (both ways: a key on the pad's slider moves the page's), with
+no loop (one `topoforge:mapmode` per change); Options › Reset layout resets the app (the map back to
+190 by 130 at 12 from the right and foot, scale 1) and the page, and exactly one `topoforge:reset` is
+seen and nothing is reset twice (the page's undo stays one level deep); the app's Reset layout (its
+View menu command) resets the page's frames; Undo from either side puts both back; Options › Map pad:
+arrows pan sets `padArrows('pan')`, kept across a reload, untouched by a reset; frame 2 never under the
+switch; the pad never meets the legend or frame 2; no console errors, no request to another host. Each
+promise has a planted fault, proven in shards.
+
+Built and checked (2026-11-02, revision 8 stage 2), against topology `adff93a` (1.11) from a read-only
+archive: `sh tests/run.sh` Python 43, node 30, browser 33, navigator 31, classic 34, free 46, revision 5
+30, revision 6 26, revision 7 37, revision 8 **68**. Found while building:
+- At 1280 the pad, shown while the pointer is near the map, hung 18 pixels over the legend's last
+  compartments (the legend's line is about 950 pixels there). Below 1400 pixels the compartments now sit
+  closer (0.45 em each side, from 0.7), so the line ends 30 pixels short of the pad; the check wants 24
+  (three gutters), room for a longer revision string or a wider fallback font. One line, as revision 5 asked.
+- The plant "the switch made after the frames" could stay green: the page's own watch on the switch puts
+  frame 2 below it before the browser paints, so no frame is ever drawn under it either way. The check
+  now also asks the direct question (was the switch there when the first frame was put on the page).
+- With 1.11 the app's reset brings the map mode back to Both itself, so the page's own setting of it only
+  matters with an older app; it is checked by telling the app it is 1.10 for one reset.
+
 ## Revision 7: independent lines, map modes, cards (2026-11-02, afternoon)
 
 ### What Corwin asked (his words, 12:48; c4 `q/2026-11-02-minimap-modes/PROMPT.md`)

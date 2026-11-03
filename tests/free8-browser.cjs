@@ -45,9 +45,12 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
   const meets = (a, b) => !!a && !!b && a.x < b.r && b.x < a.r && a.y < b.b && b.y < a.b;
   const near = (a, b, d = 1.5) => ['x', 'y', 'r', 'b'].every((k) => Math.abs(a[k] - b[k]) <= d);
   const navSel = (p) => p.evaluate(() => { const f = [...document.querySelectorAll('section.ef:not(.ef-small)')].find((e) => e.querySelector('.navframe')); return f ? '#' + f.id : null; });
+  const listen11 = (p) => p.evaluate(() => { window.__mm = []; window.__rs = []; window.addEventListener('message', (e) => { if (!e.data) return; if (e.data.type === 'topoforge:mapmode') window.__mm.push(e.data.detail.mode); if (e.data.type === 'topoforge:reset') window.__rs.push(e.data.detail); }); });
   const opt = async (p, act) => { await p.click('#ef-1 .ef-mb[data-menu="Options"]'); const b = p.locator(`#ef-1 .ef-pop [data-act="${act}"]`); if (!(await b.count())) { await p.keyboard.press('Escape'); return false; } await b.click(); await p.waitForTimeout(250); return true; };
   // every place frame 2 is drawn at while the page loads, against the switch (revision 8: never under it)
-  const recorder = () => { window.__f2 = []; const tick = () => { const e = document.getElementById('ef-2'), s = document.getElementById('ui-switch');
+  // and whether the switch is there when the first frame is put on the page (ui.js makes it first)
+  const recorder = () => { window.__swFirst = null; new MutationObserver((rs, mo) => { if (document.getElementById('ef-1')) { window.__swFirst = !!document.getElementById('ui-switch'); mo.disconnect(); } }).observe(document, { childList: true, subtree: true });
+    window.__f2 = []; const tick = () => { const e = document.getElementById('ef-2'), s = document.getElementById('ui-switch');
     if (e && s && e.offsetWidth && s.offsetWidth) { const a = e.getBoundingClientRect(), b = s.getBoundingClientRect(); window.__f2.push([a.left, a.top, a.right, a.bottom, b.left, b.top, b.right, b.bottom]); }
     if (performance.now() < 6000) requestAnimationFrame(tick); }; requestAnimationFrame(tick); };
 
@@ -65,6 +68,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     const sw = await box(p, '#ui-switch'), f2 = await box(p, '#ef-2'), f1 = await box(p, '#ef-1');
     assert.ok(sw && f2, 'no switch or no frame 2 at ' + tag);
     assert.ok(!meets(sw, f2) && f2.y >= sw.b, 'frame 2 is under the layout switch at ' + tag + ': ' + JSON.stringify([sw, f2]));
+    assert.equal(await p.evaluate(() => window.__swFirst), true, 'the layout switch was not there when the first frame was placed at ' + tag);
     const seen = await p.evaluate(() => window.__f2);
     assert.ok(seen.length > 0, 'frame 2 was never seen while loading');
     const under = seen.filter((q) => q[0] < q[6] && q[4] < q[2] && q[1] < q[7] && q[5] < q[3]);
@@ -164,10 +168,112 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.equal(await opt(p, 'undo-reset'), false, 'Undo reset is still offered after use (one level)');
     ok(`Reset layout puts frame 1, the navigator's frame (reopened), the legend and the map mode back to their first state, leaves the text size alone; Undo reset puts them back, once, at ${tag}`);
 
+    // ---- stage 2 (topology forge 1.11): the map's pad, and Reset layout on both sides ----
+    if (await app(p).evaluate(() => typeof TopoForge.resetLayout === 'function')) {
+      await fresh(p); await p.goto(base + 'index.html'); await ready(p); await listen11(p);
+      const A = () => app(p);
+      const sw11 = await A().evaluate(() => { const e = TopoForge.embed(); return [e.mappad, e.reset]; });
+      assert.deepEqual(sw11, [true, true], 'free did not turn on mappad and reset: ' + sw11);
+      // the pad shows near the map, and meets neither the legend, frame 2 nor the switch
+      const off = await p.evaluate(() => document.getElementById('topology').getBoundingClientRect().toJSON());
+      const mm = await A().evaluate(() => document.getElementById('minimap').getBoundingClientRect().toJSON());
+      await p.mouse.move(off.left + mm.left + 20, off.top + mm.top + 20); await p.waitForTimeout(300);
+      const pad = await A().evaluate(() => { const e = document.getElementById('mmPad'); if (!e || e.hidden || getComputedStyle(e).display === 'none') return null; const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom }; });
+      assert.ok(pad, 'free has no map pad at ' + tag);
+      const padP = { x: pad.x + off.left, y: pad.y + off.top, r: pad.r + off.left, b: pad.b + off.top };
+      for (const sel of ['#legend', '#ef-2', '#ui-switch']) assert.ok(!meets(padP, await box(p, sel)), `the map pad meets ${sel} at ${tag}: ` + JSON.stringify([padP, await box(p, sel)]));
+      // the legend's line ends three gutters (24 pixels) short of the pad: room for a longer revision string or a wider fallback font
+      const lgP = await box(p, '#legend');
+      assert.ok(lgP.r + 24 <= padP.x, `the legend runs to within ${Math.round(padP.x - lgP.r)} pixels of the map pad at ${tag} (24 wanted)`);
+      if (shots) await p.screenshot({ path: path.join(shots, `r8s2-pad-${scheme}-${w}.png`) });
+      // one setting: the page's slider moves the pad's, the pad's moves the page's, one message per change
+      await p.evaluate(() => { window.__mm = []; });
+      await p.focus('#ef-1 .ef-slider'); await keys(p, 'End'); await p.waitForTimeout(200);
+      assert.equal(await A().evaluate(() => document.querySelector('#mmPad .mp-sl').getAttribute('aria-valuenow')), '2', 'the page\'s slider did not move the pad\'s');
+      const mm1 = await p.evaluate(() => window.__mm.slice());
+      assert.deepEqual(mm1, ['rings'], 'one change of the page\'s slider did not send exactly one topoforge:mapmode: ' + JSON.stringify(mm1));
+      assert.doesNotMatch(await p.textContent('#ef-1 .ef-msg'), /from the map/, 'the page took its own change back from the app as the map\'s (an echo)');
+      await A().locator('#mmPad .mp-sl').focus(); await A().locator('#mmPad .mp-sl').press('Home'); await p.waitForTimeout(200);
+      assert.deepEqual(await p.evaluate(() => [document.querySelector('#ef-1 .ef-slider').getAttribute('aria-valuenow'), CCFree.mapMode()]), ['0', 'cards'], 'the pad\'s slider did not move the page\'s');
+      assert.deepEqual(await p.evaluate(() => window.__mm.slice()), ['rings', 'cards'], 'the pad\'s change was echoed back (a loop)');
+      await p.focus('#ef-1 .ef-slider'); await keys(p, 'ArrowRight'); await p.waitForTimeout(150);
+      ok(`the map pad in free (mappad, reset on), clear of the legend, frame 2 and the switch; its slider and the page's are one setting, one message per change, at ${tag}`);
+      // Reset from the page: the app too, once; Undo from the page: both back, once
+      const first1 = await box(p, '#ef-1');
+      const mapFirst = await A().evaluate(() => TopoForge.panels().map);
+      await p.evaluate(() => CCFloat.get('frame1').set({ x: 180, y: 70, w: 500, h: 380 }, true)); await p.waitForTimeout(100);
+      const moved1 = await box(p, '#ef-1');
+      await A().evaluate(() => TopoForge.mapScale(3));
+      await A().locator('#mmPad .mp-grip').focus(); await A().locator('#mmPad .mp-grip').press('Shift+ArrowUp'); await p.waitForTimeout(200);
+      const mapMoved = await A().evaluate(() => TopoForge.panels().map);
+      assert.ok(mapMoved.y < mapFirst.y - 30, 'the pad\'s grip did not move the map');
+      await p.evaluate(() => { window.__rs = []; });
+      assert.ok(await opt(p, 'reset-layout'));
+      await p.waitForTimeout(300);
+      const mapR = await A().evaluate(() => [TopoForge.panels().map, TopoForge.mapScale()]);
+      assert.ok(Math.abs(mapR[0].y - mapFirst.y) <= 1 && mapR[0].w === 190 && mapR[0].h === 130 && mapR[1] === 1, 'Options, Reset layout did not reset the app\'s map: ' + JSON.stringify(mapR));
+      assert.ok(near(await box(p, '#ef-1'), first1), 'Options, Reset layout did not reset frame 1 (with the app)');
+      assert.equal((await p.evaluate(() => window.__rs.slice())).length, 1, 'not exactly one topoforge:reset for one reset');
+      assert.ok(await opt(p, 'undo-reset'));
+      await p.waitForTimeout(300);
+      assert.ok(near(await box(p, '#ef-1'), moved1), 'Undo reset did not put frame 1 back (was the page reset twice?)');
+      const mapU = await A().evaluate(() => [TopoForge.panels().map, TopoForge.mapScale()]);
+      assert.ok(Math.abs(mapU[0].y - mapMoved.y) <= 1 && mapU[1] === 3, 'Undo reset did not put the app\'s map and scale back (was the app reset twice?): ' + JSON.stringify(mapU));
+      // Reset from the app's own menu: the page's frames too; Undo from the page puts both back
+      await p.evaluate(() => { window.__rs = []; });
+      await A().evaluate(() => TopoForge.run('view::reset-layout')); await p.waitForTimeout(300);
+      assert.ok(near(await box(p, '#ef-1'), first1), 'the app\'s Reset layout did not reset the page\'s frames');
+      assert.equal(await A().evaluate(() => TopoForge.mapScale()), 1);
+      assert.ok(await opt(p, 'undo-reset'), 'after the app\'s reset the page offers no Undo reset');
+      await p.waitForTimeout(300);
+      assert.ok(near(await box(p, '#ef-1'), moved1), 'the page\'s Undo did not put frame 1 back after the app\'s reset');
+      assert.equal(await A().evaluate(() => TopoForge.mapScale()), 3, 'the page\'s Undo did not undo the app\'s reset');
+      // Reset from the page, Undo from the app
+      assert.ok(await opt(p, 'reset-layout')); await p.waitForTimeout(300);
+      await A().evaluate(() => TopoForge.run('view::undo-reset')); await p.waitForTimeout(300);
+      assert.ok(near(await box(p, '#ef-1'), moved1), 'the app\'s Undo reset did not put the page\'s frame back');
+      assert.equal(await opt(p, 'undo-reset'), false, 'after the app\'s undo the page still offers Undo reset');
+      ok(`Reset layout both ways: the page's resets the app (map 190x130, scale 1) and the app's resets the page; Undo from either side puts both back; one message each, nothing reset twice, at ${tag}`);
+      // the pad's arrows: a page option (pan), kept, not touched by a reset
+      assert.equal(await A().evaluate(() => TopoForge.padArrows()), 'mode-scale', 'the pad\'s arrows do not start as mode and scale');
+      assert.ok(await opt(p, 'pad-pan'), 'Options has no Map pad: arrows pan the drawing');
+      assert.equal(await A().evaluate(() => TopoForge.padArrows()), 'pan');
+      await p.reload(); await ready(p);
+      assert.equal(await A().evaluate(() => TopoForge.padArrows()), 'pan', 'the pad\'s arrows were not set again after a reload');
+      assert.ok(await opt(p, 'reset-layout')); await p.waitForTimeout(200);
+      assert.equal(await A().evaluate(() => TopoForge.padArrows()), 'pan', 'a reset changed the pad\'s arrows (a setting)');
+      assert.ok(await opt(p, 'pad-pan'));
+      assert.equal(await A().evaluate(() => TopoForge.padArrows()), 'mode-scale');
+      ok(`Options, Map pad: arrows pan the drawing sets padArrows('pan'), kept across a reload, untouched by a reset, at ${tag}`);
+      // an app without reset (1.10): the page's reset still sets the map mode back to Both, in the page and the app
+      await A().evaluate(() => { window.__v = TopoForge.version; TopoForge.version = '1.10'; });
+      await p.focus('#ef-1 .ef-slider'); await keys(p, 'End'); await p.waitForTimeout(150);
+      assert.ok(await opt(p, 'reset-layout')); await p.waitForTimeout(250);
+      assert.deepEqual([await p.evaluate(() => CCFree.mapMode()), await A().evaluate(() => TopoForge.mapMode().mode)], ['both', 'both'], 'with 1.10, Reset layout did not set the map mode back to Both');
+      await A().evaluate(() => { TopoForge.version = window.__v; });
+      const sw3 = await box(p, '#ui-switch');
+      assert.ok(!meets(sw3, await box(p, await navSel(p))), 'after the resets, frame 2 is under the switch at ' + tag);
+    } else ok(`stage 2 checks skipped: the staged app has no resetLayout, at ${tag}`);
+
     assert.ok((await p.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)) <= 0, 'the page scrolls sideways at ' + tag);
     assert.deepEqual(offsite, [], 'requests to other hosts: ' + offsite.join(' | '));
     assert.deepEqual(errors, [], 'console errors: ' + errors.join(' | '));
     ok(`revision 8 at ${tag}: no sideways scroll, no request to another host, no console errors`);
+    await fresh(p); await ctx.close();
+  }
+  // ---- classic keeps its menus: no pad; the app's Reset layout in its View menu (stage 2) ----
+  for (const [w, h] of [[1280, 800], [1920, 1080]]) {
+    const ctx = await browser.newContext({ viewport: { width: w, height: h } }); const p = await ctx.newPage();
+    await fresh(p); await p.evaluate(() => localStorage.setItem('corwin.cloud.ui.v1', 'classic'));
+    await p.goto(base + 'index.html'); await waitDoc(p); await p.waitForTimeout(800);
+    if (await app(p).evaluate(() => typeof TopoForge.resetLayout === 'function')) {
+      assert.equal(await p.evaluate(() => document.documentElement.getAttribute('data-ui')), 'classic');
+      const sw = await app(p).evaluate(() => { const e = TopoForge.embed(); return [!!e.mappad, !!e.reset]; });
+      assert.deepEqual(sw, [false, true], 'classic should have reset and no pad: ' + sw);
+      assert.equal(await app(p).evaluate(() => { const e = document.getElementById('mmPad'); return !!e && !e.hidden && getComputedStyle(e).display !== 'none'; }), false, 'classic shows the map pad');
+      assert.ok(await app(p).evaluate(() => TopoForge.commands().some((c) => c.id === 'view::reset-layout')), 'classic\'s View menu has no Reset layout');
+      ok(`classic at ${w}: no map pad (its menus stay), the app's Reset layout in its View menu`);
+    } else ok(`classic stage 2 checks skipped at ${w}: the staged app has no resetLayout`);
     await fresh(p); await ctx.close();
   }
   // ---- a caption that comes back late is said only if what asked is still pointed at (revision 8) ----

@@ -168,7 +168,7 @@ prove_red() {
   plant "scripts cached for a day again"    deploy/nginx-corwin.cloud.conf 's#^        add_header Cache-Control "no-cache" always;\(.*\)$#        add_header Cache-Control "public, max-age=86400";#'
   plant "topology not revalidated"          deploy/corwin.cloud.interim.conf '/corwin-cloud-topology-csp.conf;/{n;d;}'
   plant "the frame asks for no selection"   build.py     's#^TF_EMBED_FREE = "bare,select,ready"#TF_EMBED_FREE = "bare,ready"#'
-  plant "classic asks the app to hide its chrome" build.py 's#^TF_EMBED_CLASSIC = "select,ready"#TF_EMBED_CLASSIC = "bare,select,ready"#'
+  plant "classic asks the app to hide its chrome" build.py 's#^TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "bare,select,ready,reset"#'
   # revision 4 (docs/NAV.md): free and classic
   plant "long explanatory text back"        build.py     's#<p class="hint">One tab per project. #<p class="hint">The projects in words: one tab each, with the design in full. Every project in the directory also has a page in the drawing above, and this sentence runs on and on. #'
   plant "ui.js missing from jslicense"      build.py     's#^JS_FILES = ("ui.js", #JS_FILES = (#'
@@ -283,7 +283,7 @@ prove_red() {
     plant_b "no first fit between the frames"     src/js/free.js 's#if (!t || fitted || !READY#if (true || !t || fitted || !READY#' $S
     plant_b "no CUA cut"                          src/js/free.js "s#if (seq.length === 1 \&\& (str === 'C-x' || str === 'C-c') \&\& SEL) {#if (false) {#" $S
     # stage 2 (docs/NAV.md, revision 6): the map as the preview, frames re-checked when it moves
-    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true, mapwheel: true })#view: true, map: false, preview: false, mapwheel: true })#' $S
+    plant_b "map and preview not turned on"       src/js/free.js 's#view: true, map: true, preview: true, mapwheel: true, mappad#view: true, map: false, preview: false, mapwheel: true, mappad#' $S
     plant_b "a navigator item previews its id only" src/js/free.js 's#^    if (!sl || !t || !t.doc) return out;#    return out;#' $S
     plant_b "a finder shape previews its category" src/js/free.js 's#^        target: { kind: sh.id } };#        target: { category: sh.category } };#' $S
     plant_b "no re-check when the map moves"      src/js/free.js "s#if (ev.key === 'topoforge.ui.v1') mapCheck();#if (false) mapCheck();#" $S
@@ -326,10 +326,27 @@ prove_red() {
     plant_b "no Reset layout in Options"          src/js/free.js "s#mine('reset-layout'); if (UNDO) mine('undo-reset');#if (UNDO) mine('undo-reset');#" $E
     plant_b "a reset keeps the frame's width"     src/js/float.js "s#var p = { mode: 'float', x: null, y: null, h: null, w: o.width || 320 };#var p = { mode: 'float', x: null, y: null, h: null };#" $E
     plant_b "a reset leaves the navigator closed" src/js/free.js 's#if (!frames.some(function (fr) { return fr.navFrame; })) {#if (false) {#' $E
-    plant_b "a reset leaves the map mode"         src/js/free.js "s#    setMapMode('both', 'reset');#    void 0;#" $E
+    plant_b "a reset leaves the map mode"         src/js/free.js "s#    setMapMode('both', app_ ? 'app' : 'reset');#    void 0;#" $E
     plant_b "Undo reset puts nothing back"        src/js/free.js "s#window.CCFloat.all().forEach(function (fl) { if (u.st\[fl.name\]) fl.set(u.st\[fl.name\], true); });#void 0;#" $E
     plant_b "Undo reset offered twice"            src/js/free.js 's#var u = UNDO; UNDO = null;#var u = UNDO;#' $E
     plant_b "a late caption over a newer message" src/js/free.js 's#    if (!pointed) return;#    void pointed;#' $E
+    # revision 8 stage 2: topology forge 1.11 (the map's pad, Reset layout both ways)
+    plant_b "no pad in free"                      src/js/free.js 's#mapwheel: true, mappad: true, reset: true })#mapwheel: true, reset: true })#' $E
+    plant_b "no reset switch in free"             src/js/free.js 's#mapwheel: true, mappad: true, reset: true })#mapwheel: true, mappad: true })#' $E
+    plant_b "the page's reset leaves the app"     src/js/free.js 's#try { if (t.resetLayout()) EXPECT.reset++; }#try { void 0; }#' $E
+    plant_b "the app reset twice"                 src/js/free.js 's#try { if (t.resetLayout()) EXPECT.reset++; }#try { if (t.resetLayout() \&\& t.resetLayout()) EXPECT.reset += 2; }#' $E
+    plant_b "the page reset twice"                src/js/free.js "s#else if (EXPECT.reset > 0) EXPECT.reset--; else resetLayout('app');#else resetLayout('app');#" $E
+    plant_b "the app's reset leaves the frames"   src/js/free.js "s#else if (EXPECT.reset > 0) EXPECT.reset--; else resetLayout('app');#else if (EXPECT.reset > 0) EXPECT.reset--;#" $E
+    plant_b "the page's undo leaves the app"      src/js/free.js 's#try { if (t.undoReset()) EXPECT.undo++; }#try { void 0; }#' $E
+    plant_b "the app's undo leaves the frames"    src/js/free.js "s#if (EXPECT.undo > 0) EXPECT.undo--; else undoReset('app'); }#if (EXPECT.undo > 0) EXPECT.undo--; }#" $E
+    plant_b "the pad does not move the page's slider" src/js/free.js "s#{ setMapMode(m.detail.mode, 'app'); return; }#{ return; }#" $E
+    plant_b "the page's slider does not move the pad" src/js/free.js "s#if (t10 \&\& from !== 'app' \&\& from !== 'ready') {#if (false) {#" $E
+    plant_b "the pad's change echoed back"        src/js/free.js "s#if (from \&\& from !== true \&\& m === MAPMODE) return;#if (from === 'ready' \&\& m === MAPMODE) return;#" $E
+    plant_b "the pad's arrows not set at ready"   src/js/free.js "s#try { t11.padArrows(fstate().padPan ? 'pan' : 'mode-scale'); }#try { void 0; }#" $E
+    plant_b "no pad arrows option"                src/js/free.js "s#      if (eleven('padArrows')) mine('pad-pan', !!fstate().padPan);##" $E
+    plant_b "the legend runs under the pad"       src/css/site.css '/^@media (max-width: 87.5rem) { html\[data-ui="free"\] .legend.watermark .lg-c { padding: 0 0.45em; } }$/d' $E
+    plant   "the pad in classic"                  build.py 's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,mappad"#'
+    plant   "no reset in classic"                 build.py 's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready"#'
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

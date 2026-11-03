@@ -303,7 +303,7 @@ def topology_area(have, index, navx=None):
 BRYANT_URL = "https://github.com/takushieternal"
 TF_NAME = "topology forge (formerly TopoForge)"   # the app's name since 2026-11-01 (Corwin); Bryant made it
 TF_EMBED_FREE = "bare,select,ready"
-TF_EMBED_CLASSIC = "select,ready"
+TF_EMBED_CLASSIC = "select,ready,reset"   # revision 8 stage 2: the app's Reset layout in its View menu (topology forge 1.11); no pad in classic
 TF_SRC_APP = C.ORG + "/topology/tree/corwin/www/topoforge"
 TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"
 

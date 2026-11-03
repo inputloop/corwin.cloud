@@ -586,6 +586,10 @@ html[data-ui="free"] .legend.watermark { border: 0; background: color-mix(in srg
 html[data-ui="free"] .legend.watermark .lg-bar { background: none; border-bottom: 0; }
 html[data-ui="free"] .legend.watermark { display: flex; align-items: baseline; }
 html[data-ui="free"] .legend.watermark .lg-line { color: var(--text-dim); order: 1; flex: 1 1 auto; min-width: 0; }
+/* revision 8 stage 2: below 1400 pixels the compartments sit closer, so the one line ends before the map's pad
+   (topology forge 1.11), which hangs 132 pixels left of the map while the pointer is near it (at 1280 the
+   line would otherwise run 18 pixels under it) */
+@media (max-width: 87.5rem) { html[data-ui="free"] .legend.watermark .lg-c { padding: 0 0.45em; } }
 html[data-ui="free"] .legend.watermark .lg-bar { order: 2; padding: 0; gap: 0; flex: none; }
 html[data-ui="free"] .legend.watermark .lg-bar .fl-grip { flex: none; padding: 0 4px; min-height: 18px; line-height: 18px; font-size: 11px; color: var(--text-dim); }
 html[data-ui="free"] .legend.watermark .lg-bar .fl-btn { min-height: 18px; line-height: 18px; font-size: 11px; color: var(--text-dim); border-left: 1px solid var(--border); }

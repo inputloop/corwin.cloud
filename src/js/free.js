@@ -68,6 +68,8 @@
   function nine(call) { var t = tf(); return t && vge(t.version, '1.9') && (!call || typeof t[call] === 'function') ? t : null; }
   // and 1.10's (the map's modes, its card): the slider drives the app's mapMode, the card goes into the map
   function ten(call) { var t = tf(); return t && vge(t.version, '1.10') && typeof t.mapMode === 'function' && (!call || typeof t[call] === 'function') ? t : null; }
+  // and 1.11's (the map's pad, Reset layout)
+  function eleven(call) { var t = tf(); return t && vge(t.version, '1.11') && typeof t.resetLayout === 'function' && (!call || typeof t[call] === 'function') ? t : null; }
   function nav() { return window.CCNav || null; }
   function say(t) { if (cur) cur.say(t); }
   function cap(s) { s = String(s || ''); return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -141,6 +143,8 @@
     else if (m.type === 'topoforge:mapmode' && ten()) { setMapMode(m.detail.mode, 'app'); return; }
     // 1.10: each preview's result; in rings mode its caption, with the counts, goes to the echo area
     else if (m.type === 'topoforge:preview' && ten()) { echoPreview(m.detail); return; }
+    // 1.11: the app's Reset layout or Undo reset (View menu, the map's Mode menu), or the echo of the page's own
+    else if (m.type === 'topoforge:reset' && eleven()) { fromAppReset(m.detail); return; }
     else return;
     frames.forEach(function (f) { f.modelines(); });
     if (small.pages && !small.pages.root.hidden) small.pages.fill();
@@ -152,7 +156,9 @@
     var t = nine('embed');
     if (!t) return;
     // 1.9 B: the map in its own frame (moved and resized by its own door-handle controls) and the preview in it
-    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true, mapwheel: true }); } catch (e) { /* an older 1.9 without the words */ }
+    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true, mapwheel: true, mappad: true, reset: true }); } catch (e) { /* an older 1.9 without the words */ }
+    // 1.11: the pad's arrows, which the app does not keep (Options, Map pad: arrows pan the drawing)
+    var t11 = eleven('padArrows'); if (t11) { try { t11.padArrows(fstate().padPan ? 'pan' : 'mode-scale'); } catch (e) { /* the app's */ } }
     modeAtReady();
     mapCheck();
     try { VIEW = t.view || null; } catch (e) { VIEW = null; }
@@ -345,7 +351,7 @@
     'taller': 'Taller', 'shorter': 'Shorter', 'mode-menu': 'The mode’s menu', 'lines-together': 'Lines grow together (menu bar, mode-lines, message area)',
     'map-cards': 'Preview shapes (cards)', 'map-both': 'Both (highlight and card)', 'map-rings': 'Highlight matches (rings)',
     'show-navigator': 'Show *navigator* in this window', 'show-finder': 'Show *finder* in this window', 'nav-narrow': 'The navigator’s Narrow line',
-    'reset-layout': 'Reset layout', 'undo-reset': 'Undo reset' };
+    'reset-layout': 'Reset layout', 'undo-reset': 'Undo reset', 'pad-pan': 'Map pad: arrows pan the drawing' };
   function core(name, f) {
     f = f || cur;
     var fn = {
@@ -367,7 +373,9 @@
       'shorter': function () { f.say('The frame is ' + f.fl.taller(-16) + ' pixels tall, kept in this browser.'); },
       'lines-together': function () { var v = !fstate().linesTogether; fkeep('linesTogether', v); frames.forEach(function (x) { x.lines(); }); f.say(v ? 'The menu bar, the mode-lines and the message area grow together.' : 'The menu bar, the mode-lines and the message area each take the lines they need.'); },
       'map-cards': function () { setMapMode('cards'); }, 'map-both': function () { setMapMode('both'); }, 'map-rings': function () { setMapMode('rings'); },
-      'reset-layout': resetLayout, 'undo-reset': undoReset,
+      'reset-layout': function () { resetLayout(); }, 'undo-reset': function () { undoReset(); },
+      'pad-pan': function () { var v = !fstate().padPan; fkeep('padPan', v); var t = eleven('padArrows'); if (t) { try { t.padArrows(v ? 'pan' : 'mode-scale'); } catch (e) { /* the app's */ } }
+        f.say(v ? 'The map pad’s arrows pan the drawing (north, south, west, east; the centre is Fit), kept in this browser.' : 'The map pad’s arrows set the map’s scale and its slider the mode (the default).'); },
       'mode-menu': function () { var b = f.wins.querySelector('.ef-win.selected .ml-mode'); if (b) b.click(); },
       'toolbar': function () { f.st.toolbar = !f.st.toolbar; f.render(); f.say(f.st.toolbar ? 'The tool-bar is shown in this frame.' : 'The tool-bar is off in this frame (Options, Tool-bar in this frame brings it back).'); },
       'show-navigator': function () { f.show('navigator'); }, 'show-finder': function () { f.show('finder'); },
@@ -892,6 +900,7 @@
       head(''); mine('legend', !window.CCFloat.legendOff); mine('toggle-motion', MOTION); mine('fold', this.st.open); mine('toolbar', this.st.toolbar);
       mine('lines-together', !!fstate().linesTogether);
       head('Map mode'); MAPMODES.forEach(function (m) { out.push({ label: NAMES['map-' + m], act: 'map-' + m, radio: true, checked: MAPMODE === m }); });
+      if (eleven('padArrows')) mine('pad-pan', !!fstate().padPan);
       head('Buffers'); mine('show-finder'); mine('show-navigator');
       head('Palettes'); mine('properties'); mine('pages'); mine('here');
       if (!this.fl.narrow()) {
@@ -1575,10 +1584,15 @@
   }
   // Reset layout (revision 8): every frame and palette back to its first place and size, the navigator's
   // frame reopened, the map mode back to Both; settings (text size, colours, the watermark, Motion, lines,
-  // tool-bars, what windows show) untouched. One level of Undo reset, for this visit.
-  var UNDO = null;
-  function resetLayout() {
-    if (narrowQ.matches) { say('On a narrow screen nothing floats, so there is no layout to reset.'); return; }
+  // tool-bars, what windows show, the pad's arrows) untouched. One level of Undo reset, for this visit.
+  // Stage 2 (topology forge 1.11): one reset on both sides. From the page (from: undefined) it also calls
+  // the app's resetLayout() / undoReset() and drops the one topoforge:reset that call sends (EXPECT); from
+  // the app (from: 'app', its View or Mode menu) it resets or restores the page's side only.
+  var UNDO = null, EXPECT = { reset: 0, undo: 0 };
+  function appReset(call) { var t = eleven(call), e = null; try { e = t && t.embed(); } catch (er) { e = null; } return t && e && e.reset ? t : null; }
+  function resetLayout(from) {
+    var app_ = from === 'app';
+    if (narrowQ.matches) { if (!app_) say('On a narrow screen nothing floats, so there is no layout to reset.'); return; }
     var snap = { mode: MAPMODE, nav: false, st: {} };
     window.CCFloat.all().forEach(function (fl) { snap.st[fl.name] = JSON.parse(JSON.stringify(fl.state)); });
     if (!frames.some(function (fr) { return fr.navFrame; })) {
@@ -1589,17 +1603,25 @@
     }
     window.CCFloat.all().forEach(function (fl) { fl.first(/^small-/.test(fl.name)); });
     frames.forEach(function (fr) { fr.render(); fr.modelines(); });
-    setMapMode('both', 'reset');
+    if (!app_) { var t = appReset('resetLayout'); if (t) { try { if (t.resetLayout()) EXPECT.reset++; } catch (e) { /* the app's */ } } }
+    setMapMode('both', app_ ? 'app' : 'reset');
     UNDO = snap;
-    say('Layout reset: the frames, the legend and the map mode are back where they started. Options, Undo reset puts them back.');
+    say(app_ ? 'Layout reset from the map’s menu: the frames, the legend, the map and its mode are back where they started. Options, Undo reset puts them back.'
+      : 'Layout reset: the frames, the legend, the map and its mode are back where they started. Options, Undo reset puts them back.');
   }
-  function undoReset() {
-    if (!UNDO) { say('There is no reset to undo.'); return; }
+  function undoReset(from) {
+    var app_ = from === 'app';
+    if (!UNDO) { if (!app_) say('There is no reset to undo.'); return; }
     var u = UNDO; UNDO = null;
     if (u.nav) { var g = frames.filter(function (fr) { return fr.navFrame; })[0]; if (g && frames.length > 1) deleteFrame(g); }
     window.CCFloat.all().forEach(function (fl) { if (u.st[fl.name]) fl.set(u.st[fl.name], true); });
-    setMapMode(u.mode, 'reset');
-    say('Undo reset: the frames, the legend and the map mode are back where they were.');
+    if (!app_) { var t = appReset('undoReset'); if (t) { try { if (t.undoReset()) EXPECT.undo++; } catch (e) { /* the app's */ } } }
+    setMapMode(u.mode, app_ ? 'app' : 'reset');
+    say('Undo reset: the frames, the legend, the map and its mode are back where they were.');
+  }
+  function fromAppReset(d) {
+    if (d.undone) { if (EXPECT.undo > 0) EXPECT.undo--; else undoReset('app'); }
+    else if (EXPECT.reset > 0) EXPECT.reset--; else resetLayout('app');
   }
 
   // ---- start ----------------------------------------------------------------------------------------

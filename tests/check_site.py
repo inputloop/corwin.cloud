@@ -301,7 +301,10 @@ class SiteChecks(unittest.TestCase):
         self.assertTrue(m)
         attr = lambda a: re.search(a + r'="([^"]*)"', m.group(0)).group(1).replace("&amp;", "&")
         self.assertEqual(attr("data-embed-free"), "bare,select,ready", "free does not ask for bare and the messages")
-        self.assertEqual(attr("data-embed-classic"), "select,ready", "classic asks for more than the messages")
+        # revision 8 stage 2: classic also asks for reset (the app's Reset layout in its View menu), never
+        # for the pad (classic keeps its menus)
+        self.assertEqual(attr("data-embed-classic"), "select,ready,reset", "classic asks for other than the messages and reset")
+        self.assertNotIn("mappad", attr("data-embed-classic"), "classic asks for the map's pad")
         for a in ("data-first", "data-resume"):
             self.assertTrue(attr(a).endswith("embed="), a + " is not ready for stage.js to add the switches")
         st = read("js/stage.js")
