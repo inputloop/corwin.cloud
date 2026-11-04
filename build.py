@@ -31,7 +31,7 @@ import navindex as NV
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("ui.js", "site.js", "stage.js", "badges.js", "float.js", "nav.js", "free.js")
+JS_FILES = ("ui.js", "site.js", "stage.js", "badges.js", "float.js", "nav.js", "free.js", "privacy.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
@@ -158,7 +158,8 @@ def nav(here):
 
 def everywhere():
     pages = [("Home", "index.html"), ("Directory", "directory.html"), ("Demos", "demo/index.html"),
-             ("Packages", "packages.html"), ("JavaScript licences", "jslicense.html")]
+             ("Packages", "packages.html"), ("JavaScript licences", "jslicense.html"),
+             ("What this site keeps in your browser", "privacy.html")]
     li = ['<li><a href="%s">%s</a></li>' % (h, l) for l, h in pages]
     li += ['<li><a href="index.html#tab-%s">Tab: %s</a></li>' % (x["id"], e(x["name"])) for x in C.APPS]
     li += ['<li><a href="demo/%s/">Demo: %s</a></li>' % (d["id"], e(d["name"])) for d in C.DEMOS]
@@ -182,11 +183,11 @@ def foot(buf):
   </form>
   <nav aria-label="Everywhere on this site"><ul class="goto" id="goto">%s</ul></nav>
   <p id="echo" class="echo" role="status">End of buffer. <span class="js-only-inline">Press Alt+x anywhere to come here.</span></p>
-  <p class="colophon">%s. %s By %s. <a href="jslicense.html" rel="jslicense">JavaScript licences</a>.</p>
+  <p class="colophon">%s. %s By %s. <a href="jslicense.html" rel="jslicense">JavaScript licences</a>. <a href="privacy.html" rel="privacy-policy"%s>What this site keeps in your browser</a>.</p>
 </footer>
 </body>
 </html>
-""" % (e(buf), everywhere(), YEAR_LINE, LICENCE_LINE, e(AUTHOR_LINE))
+""" % (e(buf), everywhere(), YEAR_LINE, LICENCE_LINE, e(AUTHOR_LINE), "" if buf == "privacy" else ' id="privacy"')
 
 
 # ---- the tabs --------------------------------------------------------------------------------
@@ -350,7 +351,8 @@ def legend(index, first):
          'Attribution-ShareAlike 4.0 International</a>. As its README.org says. There is no warranty, to the extent the law allows.'),
         ("lg-src", "Its source", 'topology, branch corwin: <a href="%s">www/topoforge/</a>, the app served here; '
          '<a href="%s">topoforge/</a>, its README, AUTHORS and licences.' % (TF_SRC_APP, TF_SRC_PROJECT)),
-        ("lg-you", "Your drawing", '<span class="lg-keep">Stays in this browser until you save it (File, Export). </span>'
+        ("lg-you", "Your drawing", '<span class="lg-keep">Stays in this browser until you save it (File, Export): '
+         '<a href="privacy.html#drawing" id="stage-kept">what is kept, and how to forget it</a>. </span>'
          '<a href="%s" id="stage-full">The app full size</a> · <a href="%s" download id="stage-file">the shop\'s drawings as a file</a> · '
          '<a href="topology/" id="stage-door">topology\'s own front door</a> · '
          '<button type="button" class="js-only-inline linkish" id="stage-fresh">Start again from the shop\'s drawings</button>'
@@ -464,7 +466,8 @@ def page_packages():
 
 def page_404():
     return (head("Not found", "Nothing at this address.", "404").replace('href="css/', 'href="/css/').replace('src="js/', 'src="/js/').replace('href="favicon', 'href="/favicon')
-            + '<main id="main" class="wrap"><h1>Not found</h1><p class="lede">There is nothing at this address. <a href="/">Home</a>, <a href="/directory.html">the directory</a> or <a href="/packages.html">the packages</a> may have what you were after.</p></main>\n'
+            + '<main id="main" class="wrap"><h1>Not found</h1><p class="lede">There is nothing at this address. <a href="/">Home</a>, <a href="/directory.html">the directory</a> or <a href="/packages.html">the packages</a> may have what you were after.</p>'
+            '<p class="colophon"><a href="/privacy.html" rel="privacy-policy" id="privacy">What this site keeps in your browser</a>.</p></main>\n'
             '<div class="modeline"><span class="ml-link"><span class="ml-buf">corwin.cloud</span> <span>[No match]</span></span></div>\n</body>\n</html>\n')
 
 
@@ -500,6 +503,94 @@ def page_jslicense(staged):
 <p>topology, staged under /topology/ from its own checkout, carries its own scripts and its own licence notices. customize.js (the Customize control) and taxonomy.js (the word matching of the navigator beside the drawing) are about-corwin's, staged from its checkout when this site was built, unchanged.</p>
 </main>
 """ % "".join(rows) + foot("jslicense"))
+
+
+# ---- what this site keeps in the browser (docs/NAV.md, revision 11) ---------------------------
+# Corwin, 2026-11-04: "Keep it, disclose it": keep the remembering on the device, say so in a note every
+# page links, with a one-press "forget my settings". Every name any script served from this site writes
+# into the browser's storage, by the part of the site that writes it: (section, name, "key" or "prefix",
+# "local" or "session", what it is for). tests/check_site.py reads the served code for every write and
+# fails when this list and the code differ either way; js/privacy.js forgets exactly what the page lists.
+KEPT_SECTIONS = [
+    ("layout", "This site's pages", "The home page, the directory and the rest, and Customize on every page."),
+    ("drawing", "The drawing", "topology forge, the drawing app on the home page and full size."),
+    ("topology", "topology's front door and board", 'topology\'s own pages: <a href="topology/">its front door</a> and <a href="topology/board/">its board</a>. '
+     "The front door asks a server for a graph only when you press Load or Go, and only the address in use: this site's, unless you add another."),
+    ("demos", "The demos", 'Only <a href="demo/quantum3d5/">Quantum 3D5</a> keeps anything.'),
+]
+KEPT = [
+    ("layout", "corwin.cloud.ui.v1", "key", "local", "Free or classic: the layout you chose for the home page."),
+    ("layout", "corwin.cloud.float.v1", "key", "local", "Where you moved the home page's frames, and their sizes."),
+    ("layout", "corwin.cloud.free.v1", "key", "local", "The free page's options: the map mode, the legend, how the lines grow, the navigator's frame, the pad's arrows."),
+    ("layout", "corwin.cloud.nav.v1", "key", "local", "The navigator's buffers and what each one shows."),
+    ("layout", "aboutcorwin.customize", "key", "local", "Customize: text size, line length, line spacing, light or dark, calm."),
+    ("layout", "corwin.cloud.blink", "key", "session", "For this tab only, gone when you close it: that you reached classic by the layout switch, so the switch stays."),
+    ("drawing", "topoforge.autosave.v1", "key", "local", "Your drawing as you work on it, until you save it to a file (File, Export)."),
+    ("drawing", "topoforge.ui.v1", "key", "local", "The app's panels: where they sit, which are hidden, the map's size."),
+    ("drawing", "topoforge.theme", "key", "local", "The app's light or dark."),
+    ("drawing", "topoforge.palcollapsed", "key", "local", "Whether the app's shape palette is folded."),
+    ("drawing", "topoforge.story.lastExport", "key", "local", "The facts of your last Story export, so the next one can say what changed."),
+    ("topology", "topology.state", "key", "local", "The front door's settings: the addresses you added, the notation, what to show."),
+    ("topology", "topology.look", "key", "local", "The front door's palette, and light or dark."),
+    ("topology", "topology-board:", "prefix", "local", "Each board you drew, under its name."),
+    ("topology", "topology-board:last", "key", "local", "Which board you had open."),
+    ("topology", "tb:look", "key", "local", "The board's look, free or classic."),
+    ("topology", "tb:theme", "key", "local", "The board's light or dark."),
+    ("topology", "tb:loop", "key", "local", "What a stroke that closes round things does on the board."),
+    ("topology", "tb:inkover", "key", "local", "Whether the board draws ink over the cards."),
+    ("topology", "tb:soft", "key", "local", "The board's pressure curve for the pen."),
+    ("topology", "tb:show:", "prefix", "local", "Which of the board's panels are shown, one name each."),
+    ("topology", "tb:pos:", "prefix", "local", "Where you moved the board's frames, one name each."),
+    ("demos", "quantum_theme", "key", "local", "Quantum 3D5's light or dark."),
+    ("demos", "quantum_tour_completed", "key", "local", "Whether you finished Quantum 3D5's tour."),
+    ("demos", "quantum_achievements_v1", "key", "local", "The achievements you earned in Quantum 3D5."),
+]
+# a demo page that runs something which keeps names above says so, and links its section of the note
+DEMO_KEEPS = {"quantum3d5": ("demos", "Its light or dark, whether you finished its tour, and its achievements"),
+              "topology": ("topology", "Its front door's settings and look, and its board's boards and options")}
+KEPT_NOW = {"sections": set()}   # the note's sections in this build (set by main(): a part not staged keeps nothing)
+
+
+def kept_here(have, staged):
+    """The names this build's served code keeps: topology's when it was staged, about-corwin's Customize
+    when its palette was, Quantum 3D5's when that demo was."""
+    def on(sec, k):
+        if k == "aboutcorwin.customize":
+            return SHARED["staged"]
+        if sec in ("drawing", "topology"):
+            return bool(have)
+        if sec == "demos":
+            return bool((staged.get("quantum3d5") or {}).get("staged"))
+        return True
+    return [x for x in KEPT if on(x[0], x[1])]
+
+
+def page_privacy(index, kept):
+    secs = []
+    for sid, title, intro in KEPT_SECTIONS:
+        items = ['<li data-key="%s" data-kind="%s" data-store="%s"><code>%s%s</code> %s</li>'
+                 % (e(k, quote=True), kind, store, e(k), "&lt;name&gt;" if kind == "prefix" else "", e(what))
+                 for s, k, kind, store, what in kept if s == sid]
+        if items:
+            secs.append('<section id="%s" aria-labelledby="%s-h"><h2 id="%s-h">%s</h2><p>%s</p><ul class="kept-list">%s</ul></section>'
+                        % (sid, sid, sid, e(title), intro, "".join(items)))
+    return (head("What this site keeps in your browser", "The names this site keeps in your browser, what each is for, and one press to forget them all. It collects nothing.",
+                 "privacy", '<script src="js/privacy.js" defer></script>\n')
+            + nav("") + """<main id="main" class="wrap privacy">
+<h1 id="privacy" tabindex="-1">What this site keeps in your browser</h1>
+<p class="lede">These pages collect nothing: no cookies, no counters, nothing loaded from another host. What they remember for you, such as a layout, where you put a frame, or your drawing, stays in this browser under the names below, and no script here sends it anywhere.</p>
+<p>The web server keeps its usual log of requests: the address that asked, the time, and the page. That log is on the server, not in your browser, and forgetting here does not touch it.</p>
+<section class="forget" aria-labelledby="forget-h">
+<h2 id="forget-h">Forget my settings</h2>
+<p class="js-only-flex"><button type="button" class="act primary" id="forget" data-doc="%s" data-drawing="%s">Forget my settings</button></p>
+<p class="js-only-flex">One press removes every name below from this browser. If your drawing or a board holds work that is kept only here, it asks first.</p>
+<p id="forget-said" class="forget-said"></p>
+<noscript><p>With scripts off this page cannot remove them; your browser's own settings for this site can (its site data).</p></noscript>
+</section>
+<div id="kept">%s</div>
+<p class="hint">This list is checked against the site's code at every build: the checks fail if the code keeps a name this page does not list, or this page lists one the code never keeps.</p>
+</main>
+""" % (e(index["doc"], quote=True), e(index["file"], quote=True), "".join(secs)) + foot("privacy"))
 
 
 # ---- demos -----------------------------------------------------------------------------------
@@ -566,6 +657,10 @@ def demo_page(d, res, idir):
     src_line = ""
     if res and res.get("commit"):
         src_line = '<div><dt>Staged from</dt><dd>%s at commit %s, when this site was built.</dd></div>' % (e(d["repo"]), e(res["commit"]))
+    if d["id"] in DEMO_KEEPS and DEMO_KEEPS[d["id"]][0] in KEPT_NOW["sections"]:
+        sec, what = DEMO_KEEPS[d["id"]]
+        src_line += ('<div class="demo-kept"><dt>In your browser</dt><dd>%s, kept here only: <a href="privacy.html#%s">what is kept, and how to forget it</a>.</dd></div>'
+                     % (e(what), sec))
     links = "".join("<li>%s</li>" % a(u, e(l)) for l, u in d.get("links", []))
     html_ = (head("%s: demo" % d["name"], d["what"], "demos", extra) + nav("demos") + """<main id="main" class="wrap">
 <p class="crumbs"><a href="demo/index.html">Demos</a></p>
@@ -745,6 +840,8 @@ def main():
         if any(src for _, _, src in res.get("scripts", [])):
             print("build: WARN demo %s serves a minified script (its full source is linked in jslicense.html)" % did, file=sys.stderr)
     write_demo_csp(staged)
+    kept = kept_here(have, staged)
+    KEPT_NOW["sections"] = set(x[0] for x in kept)
     write(out, "index.html", page_index(have, index, navx))
     write(out, "demo/index.html", page_demos(staged))
     for d in C.DEMOS:
@@ -752,6 +849,7 @@ def main():
     write(out, "directory.html", page_directory())
     write(out, "packages.html", page_packages())
     write(out, "jslicense.html", page_jslicense(staged))
+    write(out, "privacy.html", page_privacy(index, kept))
     write(out, "404.html", page_404())
     print("build: wrote %s (topology %s; about-corwin's palette %s; %d drawing pages; demos staged: %s)" % (
         out, "staged" if have else "PLACEHOLDER", "staged" if SHARED["staged"] else "left out", len(index["pages"]), ", ".join(k for k, v in staged.items() if v["staged"]) or "none"))

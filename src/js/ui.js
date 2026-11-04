@@ -10,6 +10,7 @@
 // there; choosing the other value keeps it and reloads, because the drawing app is asked for other
 // switches in each. window.CCUI.set(v) does the same for the free frame's Options menu. On the home page
 // it adds the layout switch (revision 5): a light switch that never moves. It asks the network for nothing.
+// The row links privacy.html#layout (revision 11), where what it keeps is named and can be forgotten.
 (function () {
   'use strict';
   var KEY = 'corwin.cloud.ui.v1', VALUES = ['free', 'classic'], html = document.documentElement;
@@ -57,6 +58,13 @@
       r.addEventListener('change', function () { if (r.checked) set(v); });
       fs.appendChild(lb);
     });
+    // revision 11: what Customize, the layout and the frames keep in this browser, and how to forget it,
+    // by the colophon's own link to the note (so it is right from a page in a sub-folder too)
+    var note = document.querySelector('a[rel="privacy-policy"]'), kept = document.createElement('a'), kp = document.createElement('p');
+    kept.id = 'c-ui-kept';
+    kept.href = (note ? note.getAttribute('href') : 'privacy.html').split('#')[0] + '#layout';
+    kept.textContent = 'What these settings keep in this browser, and how to forget them';
+    kp.className = 'c-kept'; kp.appendChild(kept); fs.appendChild(kp);
     var act = panel.querySelector('.c-actions');
     panel.insertBefore(fs, act || null);
   }

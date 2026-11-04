@@ -260,8 +260,9 @@ const ratio = (a, b, tol = 0.015) => Math.abs(a / b - 1) <= tol;
     }
     assert.ok(hit, 'Shift over a placed shape sent no topoforge:peek at ' + tag);
     const name = hit.pk[hit.pk.length - 1].name, echo = await p.textContent('#ef-1 .ef-msg');
-    assert.match(echo, /’s card: let go of Shift to put it away\.$/, 'the echo area does not say the peek in words: ' + echo);
-    assert.ok(echo.length <= 49 + 40 && echo.startsWith(name.split('\n')[0].slice(0, 24)), 'the echo does not name the shape (shortly): ' + echo);
+    // (revision 11, his rewording: "The card for <name>: let go of Shift to put it away.")
+    assert.match(echo, /^The card for .+: let go of Shift to put it away\.$/, 'the echo area does not say the peek in words: ' + echo);
+    assert.ok(echo.length <= 'The card for '.length + 49 + ': let go of Shift to put it away.'.length && echo.startsWith('The card for ' + name.split('\n')[0].slice(0, 24)), 'the echo does not name the shape (shortly): ' + echo);
     const peeked = await mapCard(p);
     assert.ok(peeked && peeked !== 'Security', 'the peek shows no card of its own in the map: ' + peeked);
     // the card's 400 ms timer (the pointer left the tile on the way) runs in the peek and does not end it
@@ -281,7 +282,7 @@ const ratio = (a, b, tol = 0.015) => Math.abs(a / b - 1) <= tol;
     const longName = 'The shop, drawn: what inputloop makes, where it runs, how work moves and who answers for it.';
     const m0 = await p.textContent('#ef-1 .ef-msg');
     await app(p).evaluate((nm) => { window.parent.postMessage({ type: 'topoforge:peek', detail: { id: 'x-long', name: nm } }, location.origin); }, longName); await p.waitForTimeout(200);
-    const said = await p.textContent('#ef-1 .ef-msg'), shortName = said.replace(/’s card: let go of Shift to put it away\.$/, '');
+    const said = await p.textContent('#ef-1 .ef-msg'), shortName = said.replace(/^The card for /, '').replace(/: let go of Shift to put it away\.$/, '');
     await app(p).evaluate(() => { window.parent.postMessage({ type: 'topoforge:peek', detail: { id: null } }, location.origin); }); await p.waitForTimeout(200);
     assert.ok(shortName !== said && shortName.length <= 49 && shortName.endsWith('…') && longName.startsWith(shortName.slice(0, -1)), 'a long name is not shortened in the echo (48 characters, cut at a word, with …): ' + said);
     assert.equal(await p.textContent('#ef-1 .ef-msg'), m0, 'the echo was not put back after the long name\'s peek');

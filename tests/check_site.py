@@ -18,7 +18,7 @@ sys.path.insert(0, ROOT)
 import catalog  # noqa: E402
 
 OUT = os.environ.get("SITE_OUT", os.path.join(ROOT, "public"))
-PAGES = ["index.html", "directory.html", "packages.html", "jslicense.html", "404.html", "demo/index.html"] + \
+PAGES = ["index.html", "directory.html", "packages.html", "jslicense.html", "privacy.html", "404.html", "demo/index.html"] + \
     ["demo/%s/index.html" % d["id"] for d in catalog.DEMOS]
 # Written in pieces so that this file does not itself contain what it forbids.
 FORBIDDEN = re.compile(r"F" r":\\|/ho" r"me/|clau" r"de\.ai|anthro" r"pic\.com|Co-Auth" r"ored")
@@ -730,6 +730,214 @@ class NavChecks(unittest.TestCase):
         self.assertLess(home.index('src="js/taxonomy.js"'), home.index('src="js/nav.js"'), "taxonomy.js must load before nav.js")
 
 
+# ---- what the site keeps in the browser (docs/NAV.md, revision 11) ----------------------------------
+# Every write into the browser's storage in the code this site serves, read from the code itself: each
+# X.setItem(name, ...) in a served .js, .mjs or .html file, its name read as written ('a' is the name a,
+# 'a' + b the names starting a, NAME the string NAME is set to in that file, or exported from another).
+# A write whose name is a variable the reading cannot follow is named here by hand, with what makes it true.
+WRAPPERS = {   # file (relative to the site) -> (the wrapper's own setItem argument, the wrapper's calls)
+    "topology/board/index.html": ("k", r"\bLS\.set\("),
+}
+
+
+def _never_vue_router(t, out):
+    # the router's devtools plugin is set up without enableEarlyProxy, so the ApiProxy that keeps its
+    # settings is never made (setupDevtoolsPlugin reads the flag; nothing sets it)
+    return t.count("enableEarlyProxy") == 1
+
+
+def _never_maplibre_dev(t, out):
+    # the unminified twins of the files the demo loads: storageAvailable is defined there and never called
+    app = os.path.join(out, "demo", "NextTime-Dev", "app", "index.html")
+    loads_dev = os.path.isfile(app) and "-dev.js" in _slurp(app)
+    return t.count("storageAvailable(") == 1 and not loads_dev
+
+
+def _never_p5_storeitem(t, out):
+    # p5's storeItem, which no script of the demo calls
+    app = os.path.join(out, "demo", "quantum3d5", "app")
+    for dp, _, fs in os.walk(app):
+        for f in fs:
+            if f.endswith((".js", ".html")) and not f.startswith("p5"):
+                if "storeItem(" in _slurp(os.path.join(dp, f)):
+                    return False
+    return True
+
+
+NEVER = [   # (file pattern, argument as written, why it never runs here, the check that it does not)
+    (r"/vue-router\.global\.js$", "localSettingsSaveId", "Vue devtools' settings: the proxy that writes them is never made", _never_vue_router),
+    (r"/maplibre-gl-csp(-worker)?-dev\.js$", "'_mapbox_test_'", "a storage test in the map library's unminified twin, never called", _never_maplibre_dev),
+    (r"/p5(\.min)?\.js$", "e", "p5's storeItem, which the demo never calls", _never_p5_storeitem),
+]
+SET_ITEM = re.compile(r"([\w$.]*)\.setItem\(")
+
+
+def _argument(t, i):
+    """The first argument of a call whose '(' ends at i: up to the comma at depth 0, quotes respected."""
+    depth, j, q = 0, i, None
+    while j < len(t):
+        c = t[j]
+        if q:
+            if c == "\\":
+                j += 2
+                continue
+            if c == q:
+                q = None
+        elif c in "'\"`":
+            q = c
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                return t[i:j].strip()
+            depth -= 1
+        elif c == "," and depth == 0:
+            return t[i:j].strip()
+        j += 1
+    return t[i:].strip()
+
+
+def _top_plus(a):
+    parts, depth, q, cur = [], 0, None, ""
+    for c in a:
+        if q:
+            cur += c
+            if c == q:
+                q = None
+            continue
+        if c in "'\"`":
+            q = c
+        elif c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+        if c == "+" and depth == 0:
+            parts.append(cur.strip())
+            cur = ""
+            continue
+        cur += c
+    parts.append(cur.strip())
+    return parts
+
+
+def _name_of(arg, t, out):
+    """(name, "key" or "prefix") for a storage write's first argument, or None if it cannot be read."""
+    m = re.fullmatch(r"(['\"])([^'\"]*)\1", arg)
+    if m:
+        return m.group(2), "key"
+    m = re.fullmatch(r"`([^`$]*)\$\{.*`", arg, re.S)
+    if m:
+        return m.group(1), "prefix"
+    parts = _top_plus(arg)
+    if len(parts) == 2:
+        a = _name_of(parts[0], t, out)
+        if not a or a[1] != "key":
+            return None
+        b = re.fullmatch(r"(['\"])([^'\"]*)\1", parts[1])
+        return (a[0] + b.group(2), "key") if b else (a[0], "prefix")
+    m = re.fullmatch(r"(?:[\w$]+\.)?([A-Za-z_$][\w$]*)", arg)
+    if not m:
+        return None
+    vals = {v for _, v in re.findall(r"\b%s\s*=\s*(['\"])([^'\"]*)\1" % re.escape(m.group(1)), t)}
+    if not vals:   # exported from a module beside it (topology's front door: T.STORAGE_KEY)
+        for dp, _, fs in os.walk(out):
+            for f in fs:
+                if f.endswith((".js", ".mjs")):
+                    vals |= {v for _, v in re.findall(r"export\s+const\s+%s\s*=\s*(['\"])([^'\"]*)\1" % re.escape(m.group(1)), _slurp(os.path.join(dp, f)))}
+    return (vals.pop(), "key") if len(vals) == 1 else None
+
+
+def kept_by_code(out):
+    """{(name, kind, store)} every served script writes, and [problems] the reading could not settle."""
+    got, bad = set(), []
+    for dp, _, fs in os.walk(out):
+        for f in fs:
+            if not f.endswith((".js", ".mjs", ".html")):
+                continue
+            p = os.path.join(dp, f)
+            rel = os.path.relpath(p, out).replace(os.sep, "/")
+            try:
+                t = _slurp(p)
+            except (UnicodeDecodeError, OSError):
+                continue
+            for m in SET_ITEM.finditer(t):
+                recv, arg = m.group(1), _argument(t, m.end())
+                store = "session" if recv.endswith("sessionStorage") else "local" if recv.endswith("localStorage") else None
+                if rel in WRAPPERS and arg == WRAPPERS[rel][0]:
+                    for w in re.finditer(WRAPPERS[rel][1], t):
+                        n = _name_of(_argument(t, w.end()), t, out)
+                        if n:
+                            got.add(n + ("local",))
+                        else:
+                            bad.append("%s: a write through its wrapper whose name cannot be read: %s" % (rel, _argument(t, w.end())))
+                    continue
+                never = [x for x in NEVER if re.search(x[0], "/" + rel) and x[1] == arg]
+                if never:
+                    if not never[0][3](t, out):
+                        bad.append("%s: %s no longer holds" % (rel, never[0][2]))
+                    continue
+                n = _name_of(arg, t, out) if store else None
+                if n:
+                    got.add(n + (store,))
+                else:
+                    bad.append("%s: a storage write this check cannot read: %s.setItem(%s" % (rel, recv, arg[:60]))
+    return got, bad
+
+
+def kept_by_note(out):
+    p = Page()
+    p.feed(_slurp(os.path.join(out, "privacy.html")))
+    return {(d["data-key"], d.get("data-kind", "key"), d.get("data-store", "local")) for t, d in p.tags if "data-key" in d}
+
+
+class PrivacyChecks(unittest.TestCase):
+    """privacy.html (docs/NAV.md, revision 11; Corwin, 2026-11-04: "Keep it, disclose it"): it lists exactly
+    the names the served code keeps in the browser, every page links it, and what it names links back."""
+
+    def test_the_note_lists_exactly_the_names_the_code_keeps(self):
+        code, bad = kept_by_code(OUT)
+        self.assertEqual(bad, [], "storage writes the check cannot settle:\n  " + "\n  ".join(bad))
+        note = kept_by_note(OUT)
+        self.assertTrue(code, "no storage write found in the served code: the reading is broken")
+        self.assertEqual(sorted(code - note), [], "the code keeps names privacy.html does not list")
+        self.assertEqual(sorted(note - code), [], "privacy.html lists names no served code keeps")
+        for k in ("corwin.cloud.ui.v1", "corwin.cloud.blink"):   # the reading reaches this site's own two stores
+            self.assertTrue([x for x in code if x[0] == k], k)
+        self.assertIn(("corwin.cloud.blink", "key", "session"), code)
+
+    def test_every_page_links_the_note(self):
+        for rel in PAGES:
+            here = os.path.dirname(rel)
+            links = [d.get("href", "") for t, d in parse(rel).tags if t == "a" and "privacy-policy" in d.get("rel", "").split()]
+            self.assertTrue(links, rel + " does not link the note on what the site keeps")
+            for h in links:
+                target = h.lstrip("/") if h.startswith("/") else os.path.normpath(os.path.join(here, h.split("#")[0]))
+                self.assertEqual(target, "privacy.html", "%s links the note as %s" % (rel, h))
+            # about-corwin's Customize block links #privacy ("What this site remembers") on the page it is on:
+            # here that is the note's link (on the note itself, its heading)
+            tgt = [(t, d) for t, d in parse(rel).tags if d.get("id") == "privacy"]
+            self.assertEqual(len(tgt), 1, rel + " has no single #privacy for Customize's link")
+            self.assertTrue(tgt[0][0] == "h1" if rel == "privacy.html" else "privacy-policy" in tgt[0][1].get("rel", ""), rel + ": #privacy is not the note")
+        self.assertIn('href="privacy.html"', read("index.html").split('id="goto"')[1].split("</ul>")[0], "the list of everywhere lacks the note")
+
+    def test_what_the_note_names_links_back_to_it(self):
+        note = parse("privacy.html")
+        secs = {d["id"] for t, d in note.tags if t == "section" and "id" in d}
+        if os.path.isdir(os.path.join(OUT, "topology")):
+            self.assertIn("drawing", secs)
+            self.assertRegex(read("index.html"), r'<a href="privacy\.html#drawing" id="stage-kept">', "the legend's Your drawing does not link the note")
+            self.assertRegex(read("demo/topology/index.html"), r'href="\.\./\.\./privacy\.html#topology"', "topology's demo page does not link the note")
+        if os.path.isdir(os.path.join(OUT, "demo", "quantum3d5", "app")):
+            self.assertIn("demos", secs)
+            self.assertRegex(read("demo/quantum3d5/index.html"), r'href="\.\./\.\./privacy\.html#demos"', "Quantum 3D5's demo page does not link the note")
+        b = [d for t, d in note.tags if d.get("id") == "forget"]
+        self.assertTrue(b and b[0].get("data-doc") and b[0].get("data-drawing"), "the note has no Forget button that knows the shop's drawing")
+        self.assertIn('src="js/privacy.js"', read("privacy.html"))
+        for rel in PAGES:
+            if rel != "privacy.html":
+                self.assertNotIn('src="js/privacy.js"', read(rel), rel + " loads privacy.js; only the note does")
+
+
 def html_unescape(t):
     import html
     return html.unescape(t)
@@ -755,6 +963,10 @@ class PlaceholderBuild(unittest.TestCase):
             self.assertIn("placeholder", r.stderr.lower())
             self.assertIn("placeholder", open(os.path.join(t, "index.html"), encoding="utf-8").read())  # noqa
             self.assertFalse(os.path.exists(os.path.join(t, "topology")))
+            # revision 11: the note lists what this build's code keeps, and no more (no drawing app here)
+            code, bad = kept_by_code(t)
+            self.assertEqual((bad, sorted(code ^ kept_by_note(t))), ([], []), "the placeholder build's note and code differ")
+            self.assertFalse([k for k in code if k[0].startswith("topoforge.")])
 
 
 if __name__ == "__main__":

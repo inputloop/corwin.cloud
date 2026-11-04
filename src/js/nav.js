@@ -213,6 +213,7 @@
     });
     var lic = doc.querySelector('a[rel="jslicense"]');
     if (lic) out.push(['link', 'JavaScript licences', '', lic.getAttribute('href')]);
+    if (kept('')) out.push(['link', 'What this site keeps in your browser', '', kept('')]);
     if (doc.getElementById('custom-btn')) out.push(['customize', 'Customize reading\u2026', '']);
     return out;
   }
@@ -229,8 +230,12 @@
     Buffers: function () { return [['newbuf', 'New buffer', 'C-x t 2'], ['closebuf', 'Close buffer', 'C-x t 0'], ['nextbuf', 'Next buffer', 'C-x t o'], ['pinbuf', 'Pin results to a new buffer', 'Ctrl+Enter']]; },
     Window: windowItems,
     Filter: function () { return [['setmode', 'Keep this filter in this buffer', 'C-c m'], ['clearmode', 'Drop the kept filter', 'C-c k'], ['pinbuf', 'Pin results to a new buffer', 'Ctrl+Enter']]; },
-    Help: function () { return [['keys', 'Keys', ''], ['about', 'About the navigator', '']]; }
+    Help: function () { return [['keys', 'Keys', ''], ['about', 'About the navigator', '']].concat(kept('') ? [['link', KEPT_LABEL, '', kept('#layout')]] : []); }
   };
+  // revision 11: the note on what this site keeps in the browser (this buffer keeps its buffers under
+  // corwin.cloud.nav.v1), by the colophon's own link to it
+  var KEPT_LABEL = 'What the navigator keeps in this browser';
+  function kept(frag) { var a = doc.querySelector('a[rel="privacy-policy"]'); return a ? a.getAttribute('href').split('#')[0] + frag : ''; }
   var openMenu = null;
   function menuShow(m) {
     openMenu = m === openMenu ? null : m;
@@ -736,6 +741,7 @@
           var out = [];
           ['Buffers', 'Window', 'Filter'].forEach(function (m) { out.push({ header: m === 'Window' ? 'Its own windows (inside the navigator)' : m }); MENUS[m]().forEach(function (c) { out.push({ cmd: c[0], label: c[1], key: c[2] }); }); });
           out.push({ header: '' }); out.push({ cmd: 'keys', label: 'Its keys', key: '' }); out.push({ cmd: 'about', label: 'About the navigator', key: '' });
+          if (kept('')) out.push({ label: KEPT_LABEL, href: kept('#layout') });
           return out;
         },
         run: function (c) { if (c === 'pin') { pinPoint(); return true; } if (COMMANDS[c]) { COMMANDS[c](); return true; } return false; },

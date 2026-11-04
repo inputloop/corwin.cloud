@@ -454,12 +454,15 @@
     var out = [];
     each(doc.querySelectorAll('header.top nav a'), function (a) { out.push({ label: a.textContent, href: a.getAttribute('href') }); });
     var lic = doc.querySelector('a[rel="jslicense"]'); if (lic) out.push({ label: 'JavaScript licences', href: lic.getAttribute('href') });
+    if (keptHref('')) out.push({ label: 'What this site keeps in your browser', href: keptHref('') });   // revision 11: the note
     [['stage-full', 'The drawing app, full size'], ['stage-file', 'The shop’s drawings as a file'], ['stage-door', 'topology’s own front door']].forEach(function (x) {
       var a = doc.getElementById(x[0]); if (a) out.push({ label: x[1], href: a.getAttribute('href'), download: a.hasAttribute('download') });
     });
     if (doc.getElementById('stage-fresh')) out.push({ label: 'Start again from the shop’s drawings', press: 'stage-fresh' });
     return out;
   }
+  // revision 11: the note on what this site keeps in the browser, by the colophon's own link to it
+  function keptHref(frag) { var a = doc.querySelector('a[rel="privacy-policy"]'); return a ? a.getAttribute('href').split('#')[0] + frag : ''; }
   function follow(l) {
     if (l.press) { var b = doc.getElementById(l.press); if (b) b.click(); return; }
     if (l.download) { var a = mk('a', { href: l.href, download: '' }); doc.body.appendChild(a); a.click(); a.remove(); return; }
@@ -852,7 +855,7 @@
     if (!f || !d) return;
     if (d.id) {
       if (!PEEK) PEEK = { f: f, before: f.msg.textContent };
-      PEEK.said = peekName(d.name) + '’s card: let go of Shift to put it away.';
+      PEEK.said = 'The card for ' + peekName(d.name) + ': let go of Shift to put it away.';   // revision 11: his rewording
       f.say(PEEK.said);
       return;
     }
@@ -860,14 +863,37 @@
     PEEK = null;
     if (PVWAIT) { PVWAIT = false; showSel(); }   // the page's own card, held while the peek showed
   }
-  // the app hears Shift go up only when the focus is in it; with the focus in this page (a frame was just used) it
-  // would keep the card until the pointer moved. So Shift let go here ends the peek through the documented call
-  // (EMBED v1, 1.13: embed({ peek: false }) ends a peek at once and tells the page), and peek is turned on again
-  window.addEventListener('keyup', function (ev) {
-    if (ev.key !== 'Shift' || !PEEK) return;
-    var t = tf();
-    try { if (t) { t.embed({ peek: false }); t.embed({ peek: true }); } } catch (e) { /* the app's */ }
+  // The app hears its own keys only while the focus is in it. With the focus in this page (a frame was just used):
+  // revision 11, with topology forge 1.14, Shift here is passed on (TopoForge.peekKey: down shows the card of the shape
+  // under the pointer, which rests on the drawing; up ends it), so a still pointer peeks too. Only while the pointer
+  // is on the drawing (not on a frame over it: Shift+Tab among the frames shows nothing) and never while a field here
+  // takes typing (Shift makes capitals). With 1.13 a still pointer waits for a move, and Shift let go here ends the
+  // peek through embed({ peek: false }) (which ends one at once), with peek turned on again.
+  var ONDRAW = false, KEYDOWN = false;
+  app.addEventListener('mouseenter', function () { ONDRAW = true; });
+  app.addEventListener('mouseleave', function () { ONDRAW = false; });
+  function typing(el) { return !!el && (el.isContentEditable || /^(input|textarea|select)$/i.test(el.tagName)); }
+  function fourteen() { var t = tf(); return t && vge(t.version, '1.14') && typeof t.peekKey === 'function' ? t : null; }
+  window.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Shift' || ev.repeat || ev.ctrlKey || ev.altKey || ev.metaKey) return;
+    var t = fourteen();
+    if (!t || !ONDRAW || typing(doc.activeElement)) return;
+    KEYDOWN = true;
+    try { t.peekKey(true); } catch (e) { /* the app's */ }
   });
+  function shiftUp() {
+    var t = fourteen();
+    KEYDOWN = false;
+    if (t) { try { t.peekKey(false); } catch (e) { /* the app's */ } return; }
+    if (!PEEK) return;
+    t = tf();
+    try { if (t) { t.embed({ peek: false }); t.embed({ peek: true }); } } catch (e) { /* the app's */ }
+  }
+  window.addEventListener('keyup', function (ev) {
+    if (ev.key !== 'Shift' || (!PEEK && !KEYDOWN)) return;
+    shiftUp();
+  });
+  window.addEventListener('blur', function () { if (KEYDOWN) shiftUp(); });
   // the undo and redo pill tilts a few degrees toward the half pressed, as a rocker does (with Motion on only:
   // the stylesheet tilts it under html.motion-on, so reduced motion or Motion off leaves it still)
   // the pill's halves, from the same state the old buttons used (the app's commands(): Undo and Redo enabled or not).
@@ -1083,7 +1109,8 @@
     if (m === 'Site') siteLinks().forEach(function (l, i) { if (i === 5 || (l.press && i)) head(''); out.push({ label: l.label, link: l }); });
     else if (m === 'File') { app_('File'); head('Frames and windows'); ['make-frame', 'delete-frame', 'other-frame', 'split-window-below', 'split-window-right', 'delete-window', 'delete-other-windows', 'other-window'].forEach(function (n) { mine(n); }); }
     else if (m === 'Options') {
-      mine('customize'); head('Page layout');
+      mine('customize'); if (keptHref('')) out.push({ label: 'What these options keep in this browser', link: { href: keptHref('#layout') } });
+      head('Page layout');
       out.push({ label: 'Free', act: 'ui-free', radio: true, checked: true }); out.push({ label: 'Classic (menus at the top)', act: 'ui-classic', radio: true, checked: false });
       mine('reset-layout'); if (UNDO) mine('undo-reset');
       head(''); mine('legend', !window.CCFloat.legendOff); mine('toggle-motion', MOTION); mine('fold', this.st.open); mine('toolbar', this.st.toolbar);
@@ -1102,7 +1129,7 @@
     } else if (m === 'Finder') {
       mine('describe-mode'); mine('filter-clear'); mine('fold', this.st.open); mine('toolbar', this.st.toolbar); head(''); mine('show-navigator'); mine('keys');
     } else if (m === 'Navigator') {
-      (nav() ? nav().menus() : []).forEach(function (it) { if (it.header !== undefined) head(it.header); else out.push({ label: it.label, key: it.key, act: 'nav:' + it.cmd }); });
+      (nav() ? nav().menus() : []).forEach(function (it) { if (it.header !== undefined) head(it.header); else if (it.href) out.push({ label: it.label, link: { href: it.href } }); else out.push({ label: it.label, key: it.key, act: 'nav:' + it.cmd }); });
     } else if (m === 'Help') { mine('keys'); mine('credits'); mine('describe-mode'); head('The drawing app'); app_('Help'); }
     else app_(m);
     return out;

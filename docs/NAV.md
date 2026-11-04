@@ -9,8 +9,108 @@ free beside the shape finder; the legend is one line; the frame moves, widens an
 lines together; the tool-bar is icons in even groups; a light switch for the layout that never moves.
 Revisions 4 and earlier, below, stand where revision 5 does not replace them. Correct it by editing
 this file. Revision 6 (2026-11-02, late morning), next, adds to revision 5 and replaces only what it
-names. The newest is revision 10 (2026-11-03), first below; each adds to those before it and replaces
+names. The newest is revision 11 (2026-11-04), first below; each adds to those before it and replaces
 only what it names.
+
+## Revision 11: Shift with the focus here, the echo's words, the opening zoom, and the note on what the site keeps (2026-11-04)
+
+### What Corwin asked (his words, 2026-11-04 04:36, relayed with the task)
+
+"No don't open the page at fit. Yes, reword the awkwardly phrase "Part: what.." Please do work the change to
+toplogy forge for Shift and the text cut off on later pages."
+
+His choice the same morning, among the options put to him for what the pages remember: "Keep it, disclose it
+— keep on-device remembering, and say so in each page's privacy note with a one-press 'forget my settings'".
+
+The two app changes are topology forge 1.14 (topology, branch corwin, read-only here): `TopoForge.peekKey(down)`,
+for a page whose own keys hear Shift, and a big card's title too long to fit shortened at a word with an ellipsis,
+no longer cut off by the card ("... for people and their agents:"; the cause, in 1.12's fitter: a title that could
+not fit at 1.10's sizes even alone left nothing to fit, so everything was drawn at the floor and the box cut it).
+
+### What the page does
+
+| Control | What it does | Intention |
+|---|---|---|
+| **Shift here** | with 1.14, Shift pressed in this page calls `peekKey(true)` and let go calls `peekKey(false)` (and so does the window losing the focus), so the shape under a still pointer shows its card, no move needed | revision 10's fork 2: the gap closed in the app, as he asked |
+| only on the drawing | Shift is passed on only while the pointer is on the drawing (not on a frame over it) | the app's own fallback, the one selected shape when the pointer is off the drawing, would flash a card at every Shift+Tab among the frames |
+| not while typing | nor while a field here takes typing (the M-x prompt, Narrow) | Shift makes capitals there |
+| the echo's words | "The card for Part: what is made: let go of Shift to put it away." (the name shortened to 48 characters as before) | his rewording of "Part: what is made’s card" |
+| the opening zoom | unchanged: the page's own first fit, between the frames, smaller than Fit | his answer: "No don't open the page at fit" |
+| with 1.13 | a still pointer waits for a move, and Shift let go here ends the peek through `embed({ peek: false })`, as in revision 10 | the page works with the app it is given |
+
+### The note on what the site keeps (privacy.html)
+
+| Part | What it does | Intention |
+|---|---|---|
+| **the note** | one page, `privacy.html`: these pages collect nothing (no cookies, no counters, nothing from another host); what they remember stays in this browser, and no script sends it anywhere; the web server's own request log is said plainly; then every name the code keeps, by part (this site's pages, the drawing, topology's front door and board, the demos), each with what it is for and its store (this tab's one says so) | his choice: keep it, disclose it |
+| **the list is the code's** | `build.py`'s `KEPT` is the list; `tests/check_site.py` reads every `setItem` in every served script, follows its name (a string, a constant in the file, one exported beside it, a string and a variable as a prefix, the board's `LS.set` wrapper) and fails when the note and the code differ either way, or when it meets a write it cannot read | "the note lists exactly the keys the code writes", from the code, not from memory |
+| **Forget my settings** | one press removes every listed name (prefixes too: each board, each panel) from local storage and from this tab's session storage, and says in the echo area (and under the button) how many and which; `js/privacy.js` forgets the page's own list, never one of its own | one press, and it says what it removed |
+| **asks only for work kept nowhere else** | it asks first only when topology forge's autosave holds a drawing that is neither the app's sample, nor empty, nor the shop's drawing as this site serves it (read from this site only then and compared shape by shape), or when a board is kept; Cancel keeps everything and says so | a confirmation only if the drawing has unsaved work |
+| **reachable from every page** | the colophon's link (`rel="privacy-policy"`) on every page the build makes, the 404 page included, and the list of everywhere; in free, Site and Options; in M-x, Site: | reachable from every page |
+| **what it names links back** | Options ("What these options keep in this browser"), the navigator's Help (classic) and its menu (free), Customize's layout row, the legend's Your drawing (to `#drawing`), and the demo pages of topology and Quantum 3D5 (to `#topology`, `#demos`) | every remembered feature the note names links back to it |
+| **`#privacy` on every page** | about-corwin's Customize block, staged unchanged, now links `#privacy` ("What this site remembers") on the page it sits on; here that is the colophon's link to the note (on the note, its heading) | its link lands, here as on aboutcorwin.com |
+
+### Found while building (2026-11-04)
+
+- A check aimed at a zone's middle, at the first fit (21 %), found the app peeking the project box 2 screen
+  pixels away. The app was right; the check now picks a point at least 8 pixels from every other shape but the
+  ones around it.
+- Reading the code for the note found names a first list from memory had missed: topology's board keeps seven
+  `tb:` options and panels besides its boards. Three library writers never run here and are named by hand in the
+  check, each with a test that keeps it true: Vue Router's devtools settings (its proxy is never made, nothing sets
+  `enableEarlyProxy`), MapLibre's storage test (only in the unminified twins, defined and never called), and p5's
+  `storeItem` (Quantum 3D5 never calls it).
+- topology forge does not write its autosave when it opens a drawing, only when the drawing changes or its page is
+  turned; a page turn keeps the shop's drawing unchanged, so Forget compares shapes, not the mere presence of an
+  autosave.
+
+### For Corwin to decide (forks written, not taken)
+
+1. **Shift with the pointer off the drawing.** The app can show the one selected shape's card then (1.14's
+   keyboard fallback); the page does not pass Shift on there, so Shift+Tab never flashes a card. Falsifier: select
+   a shape, point at a frame, press Shift: nothing shows.
+2. **The web server's request log.** The deploy configuration names no `access_log`, so nginx keeps its default
+   log of requests (address, time, page). The note says so plainly rather than claim nothing is kept anywhere.
+   Turning it off, or shortening it, is a change to `deploy/` (left alone in this revision). Falsifier: the note's
+   second paragraph names the log.
+3. **topology's own pages and the demo apps** keep names the note lists but do not link the note themselves: they
+   are other projects' programs, staged unchanged. Their pages here (the demo pages, the legend) link it.
+   Falsifier: `topology/app.html` has no link to `privacy.html`.
+4. **Other tabs.** Forget clears this tab's session name; another open tab keeps its own until closed, and a page
+   still open elsewhere may write its names again. The note says the tab's name is for this tab only.
+
+### Checks for revision 11
+
+`tests/free11-browser.cjs`, at 1280x800 light and 1920x1080 dark: the staged app is 1.14; the page opens at its own
+first fit, not at Fit (k at most 95 % of `fitScale()`); with the focus in a frame and the pointer resting on a shape
+(at least 8 pixels from any other), Shift alone sends `topoforge:peek` for that shape, shows its card and says "The
+card for <name>: let go of Shift to put it away.", and Shift let go ends it and puts the echo back; the words, for his
+example, exactly; no peek from Shift in the Narrow field, nor with the pointer on a frame and a shape selected
+(Shift+Tab); with an app that says 1.13, a still pointer waits for a move and Shift let go here ends the peek, the map
+showing again what it showed before; no sideways scroll, no request to another host, no console errors. Changed
+because the old expectation is now wrong: `free10-browser.cjs` reads the echo in the new words; `check.mjs` allows
+`peekKey()` among the documented calls. Each new promise has a planted fault; revision 10's "Shift let go here leaves
+the card" is retargeted (its line now names KEYDOWN).
+
+For the note: `tests/check_site.py` (`PrivacyChecks`): the note lists exactly the names the served code keeps,
+read from the code (and in the build without topology, exactly that build's, none of the drawing app's); every page
+links the note and has one `#privacy`, the note's link or heading; the list of everywhere has it; the legend, the
+demo pages of topology and Quantum 3D5 link their sections; only the note loads `privacy.js`. `tests/check.mjs`:
+`privacy.js` never writes, fetches one thing (the drawing file, from this site), names no host and no name of its
+own. `tests/privacy-browser.cjs`, at 1280x800 (and the note at 390 wide): in use (free, its options, a page turned,
+the switch to classic, an edit) the pages keep only names the note lists; with work kept only here Forget asks,
+Cancel keeps everything, OK leaves both stores empty and the echo area names each name removed; the shop's drawing
+unchanged and the app's sample ask nothing, a board asks; every listed name, prefixes and this tab's, goes in one
+press; with nothing kept it says so; free's Options, Site and Navigator menus, classic's navigator Help, Customize's
+row and the legend reach the note; no errors, nothing from another host. Each promise has a planted fault (14 in the
+static checks, 14 in the browser).
+
+Built and checked (counted 2026-11-04): `sh tests/run.sh` ends ALL CHECKS PASSED: Python 47, node 31, browser 33,
+navigator 31, classic 34, free 46, revision 5 30, revision 6 26, revision 7 37, revision 8 68, revision 9 28,
+revision 10 40, revision 11 14, the note 8, the two install kits 15 and 12. `sh tests/run.sh --prove-red`, run in
+two shards from scratch, ends PROVE-RED OK: 326 planted faults, every one turned a check red (37 new in this
+revision: 8 for Shift, the words and the zoom, 29 for the note, among them "privacy.js missing from jslicense";
+2 retargeted: "Shift let go here leaves the card", "free.js missing from jslicense"), and the install kits' 5 and 4.
 
 ## Revision 10: the zoom slider, the undo and redo pill, and the peek (2026-11-03, evening)
 

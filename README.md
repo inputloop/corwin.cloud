@@ -113,12 +113,15 @@ category, carries no private name, and answers Projects + BPMN + "topology" the 
 reader in Python (`tests/nav_expect.py`) works it out from the sources; Bryant's drawing is his, byte for byte; every demo page names who made
 it, its licence and how to run it; no staged demo page keeps an inline script; the ARIA tab pattern; no inline script or style; LibreJS
 labels and the `jslicense.html` row; no machine paths or vendor strings; the deploy policy stays
-strict. `tests/browser.cjs` drives the built site in Chromium at 1280 and 390 pixels, under the
+strict; `privacy.html` lists exactly the names the served code keeps in the browser, read from the code
+(`KEPT` in `build.py` is the list), and every page links it. `tests/browser.cjs` drives the built site in Chromium at 1280 and 390 pixels, under the
 deploy policies, with scripts on and off; it runs when the `playwright` package is installed. `tests/nav-browser.cjs` does the same for the
 navigator (splits, pins, drag, buffers, the context light, the width, storage refused, scripts off),
 `tests/home-browser.cjs` drives the home page in classic, and `tests/free-browser.cjs` the free layout
 and the switch (the frame's tool-bar, finder, mode-line, message line, frames, small frames and
-watermark, light and dark, at both widths); `--prove-red` plants a fault for each of those promises
+watermark, light and dark, at both widths), and `tests/privacy-browser.cjs` the note's one press (Forget
+my settings empties the browser of the site's names, asks only for work kept nowhere else, and says what it
+removed) and the links that reach it; `--prove-red` plants a fault for each of those promises
 and runs it in the browser too.
 Node 18 or later for the node checks.
 

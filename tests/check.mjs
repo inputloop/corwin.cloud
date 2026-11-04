@@ -312,7 +312,7 @@ test('free.js reads one file from this site, nav/index.json, keeps nothing in st
 test('free.js asks the app only through its documented calls', { skip: !freeSrc }, () => {
   // every name given tf() (the app's window.TopoForge), and every call made on it
   // (also the names given nine() and ten(), which are tf() gated on the version)
-  const names = [...new Set((freeSrc.match(/\b(\w+) = (?:tf\(\)|nine\(|ten\(|eleven\(|appReset\()/g) || []).map((m) => m.split(' ')[0]))];
+  const names = [...new Set((freeSrc.match(/\b(\w+) = (?:tf\(\)|nine\(|ten\(|eleven\(|twelve\(|fourteen\(|appReset\()/g) || []).map((m) => m.split(' ')[0]))];
   assert.ok(names.length >= 1);
   const calls = new Set();
   for (const n of names) for (const m of freeSrc.matchAll(new RegExp('\\b' + n + '\\.(\\w+)\\(', 'g'))) calls.add(m[1]);
@@ -322,7 +322,8 @@ test('free.js asks the app only through its documented calls', { skip: !freeSrc 
   // and 1.10's mapMode() ("Added in 1.10"), reached only when the version says 1.10 (free.js ten())
   // and 1.11's padArrows(), resetLayout() and undoReset() ("Added in 1.11"), only when the version says 1.11 (eleven())
   // and 1.13's fitScale() ("Added in 1.13"), read only, and called only when the app has it (revision 10's zoom slider)
-  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode', 'padArrows', 'resetLayout', 'undoReset', 'fitScale'];
+  // and 1.14's peekKey() ("Added in 1.14"), only when the version says 1.14 (fourteen(); revision 11's Shift)
+  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode', 'padArrows', 'resetLayout', 'undoReset', 'fitScale', 'peekKey'];
   for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
   for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
 });
@@ -354,4 +355,17 @@ test('ui.js keeps one key inside try, defaults to free, and asks the network for
   assert.ok(!/\bfetch\(|XMLHttpRequest|sendBeacon|https?:\/\//.test(body));
   for (const l of u.split('\n').filter((x) => /localStorage/.test(x))) assert.match(l, /try \{.*localStorage\.(get|set)Item\(KEY/, 'storage outside try: ' + l.trim());
   assert.match(u, /: 'free';/);
+});
+// ---- revision 11: the note on what the site keeps, and its one press ---------------------------------
+const privSrc = existsSync(join(out, 'js', 'privacy.js')) ? rd('js/privacy.js') : null;
+test('privacy.js removes and never writes, asks this site for the drawing file only, and never another host', { skip: !privSrc }, () => {
+  const body = privSrc.split('\n').slice(1).join('\n');
+  for (const bad of ['setItem', '.clear()', 'XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource', 'document.cookie', 'eval(', 'innerHTML']) assert.ok(!body.includes(bad), 'privacy.js uses ' + bad);
+  assert.ok(!/https?:\/\//.test(body.replace(/^\/\/.*$/gm, '')), 'privacy.js names an address on another host');
+  assert.equal((body.match(/\bfetch\(/g) || []).length, 1, 'privacy.js fetches more than one thing');
+  assert.match(body, /fetch\(btn\.getAttribute\('data-drawing'\)/);
+  assert.match(body, /removeItem\(h\.name\)/);
+  // it forgets the page's own list, nothing it carries itself: the names come from #kept
+  assert.match(body, /querySelectorAll\('#kept \[data-key\]'\)/);
+  assert.ok(!/'corwin\.cloud\.|'tb:|'quantum_/.test(body), 'privacy.js names keys of its own; it must forget the list on the page');
 });

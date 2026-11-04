@@ -51,6 +51,10 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free9-browser.cjs || fail=1
       step "revision 10: the zoom slider (Fit in the middle), the undo and redo pill, topology forge 1.13's peek in free, classic unchanged (playwright)"
       SITE_OUT=$out "$node" tests/free10-browser.cjs || fail=1
+      step "revision 11: topology forge 1.14's peekKey (Shift here, the pointer still), his wording, not while typing or on a frame, the opening zoom not Fit (playwright)"
+      SITE_OUT=$out "$node" tests/free11-browser.cjs || fail=1
+      step "revision 11: the note on what the site keeps in the browser: only its names kept in use, one press forgets them all and says so, asks only for work kept nowhere else, the menus and the legend reach it (playwright)"
+      SITE_OUT=$out "$node" tests/privacy-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -152,7 +156,8 @@ prove_red() {
   plant "taxonomy.js staged altered"         share.py     's#        f.write(t)$#        f.write(t + "//x\\n")#'
   plant "the nav has no plain list"          build.py     's#NV.render(navx) if navx else ""#""#'
   plant "nav.js missing from jslicense"      build.py     's#"float.js", "nav.js", #"float.js", #'
-  plant "free.js missing from jslicense"     build.py     's#, "nav.js", "free.js")#, "nav.js")#'
+  plant "free.js missing from jslicense"     build.py     's#, "nav.js", "free.js", #, "nav.js", #'
+  plant "privacy.js missing from jslicense"  build.py     's#, "free.js", "privacy.js")#, "free.js")#'
   plant "float.js missing from jslicense"    build.py     's#"badges.js", "float.js"#"badges.js"#'
   plant "float.js reads storage outside try" src/js/float.js 's#^  function saveAll() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function saveAll() {#'
   plant "float.js asks another host"         src/js/float.js 's#^  var all = {}, list = \[\];#  var all = {}, list = []; fetch("https://x.example/");#'
@@ -207,6 +212,21 @@ prove_red() {
   # revision 10 (docs/NAV.md): free names topology forge 1.13's peek; classic does not ask for it
   plant "free does not name peek"            src/js/free.js 's#pagelist: true, peek: true, view#pagelist: true, view#'
   plant "classic asks for peek"              build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,peek"#'
+  # revision 11 (docs/NAV.md): the note on what the site keeps in the browser; every page links it; the forget button
+  plant "the note misses a name the code keeps" build.py   '/^    ("drawing", "topoforge.theme", "key", "local",/d'
+  plant "the note lists a name nothing keeps"  build.py     '/^    ("drawing", "topoforge.theme", "key", "local",/a    ("drawing", "topoforge.nothing", "key", "local", "Nothing."),'
+  plant "a script keeps a name the note lacks" src/js/free.js "s|^  function keptHref(frag) {|  try { localStorage.setItem('corwin.cloud.extra', '1'); } catch (e) {}\n  function keptHref(frag) {|"
+  plant "a write the check cannot read"        src/js/free.js "s|^  function keptHref(frag) {|  try { var w = location.hash; localStorage.setItem(w, '1'); } catch (e) {}\n  function keptHref(frag) {|"
+  plant "this tab's name listed as kept for good" build.py  's|"corwin.cloud.blink", "key", "session"|"corwin.cloud.blink", "key", "local"|'
+  plant "a page does not link the note"        build.py     's| <a href="privacy.html" rel="privacy-policy"%s>What this site keeps in your browser</a>.| <span%s></span>|'
+  plant "the 404 page does not link the note"  build.py     's|<p class="colophon"><a href="/privacy.html" rel="privacy-policy" id="privacy">What this site keeps in your browser</a>.</p>||'
+  plant "everywhere's list lacks the note"     build.py     's|^             ("What this site keeps in your browser", "privacy.html")\]|             ]|'
+  plant "the legend does not link the note"    build.py     's|<a href="privacy.html#drawing" id="stage-kept">what is kept, and how to forget it</a>|what is kept|'
+  plant "a demo that keeps names says nothing" build.py     's|"quantum3d5": ("demos",|"quantum3d5-not": ("demos",|'
+  plant "Customize's #privacy lands nowhere"   build.py     "s|\"\" if buf == \"privacy\" else ' id=\\\"privacy\\\"'|\"\"|"
+  plant "privacy.js writes a name"             src/js/privacy.js "s|^  function say(t) {|  try { localStorage.setItem('privacy.extra', '1'); } catch (e) {}\n  function say(t) {|"
+  plant "privacy.js carries its own names"     src/js/privacy.js "s|var AUTOSAVE = 'topoforge.autosave.v1',|var AUTOSAVE = 'topoforge.autosave.v1', MINE = ['corwin.cloud.ui.v1'],|"
+  plant "the note does not load privacy.js"    build.py     "s|'<script src=\"js/privacy.js\" defer></script>\\\\n'|''|"
   if command -v "$node" >/dev/null 2>&1 && "$node" -e "require('playwright')" >/dev/null 2>&1 && [ "${SKIP_BROWSER:-}" != 1 ]; then
     plant_b "a split without its mode-line"   src/js/nav.js 's#}, \[body, ml\]);#}, [body]);#'
     plant_b "a split with a title bar"        src/js/nav.js "s#}, \[body, ml\]);#}, [mk('div', { cls: 'win-title', text: 'W' }), body, ml]);#"
@@ -413,7 +433,33 @@ prove_red() {
     plant_b "a long name not shortened"           src/js/free.js 's#if (n.length <= 48) return n;#return n;#' $X
     plant_b "the card's timer ends a peek"        src/js/free.js 's#    if (PEEK \&\& t10) { PVWAIT = true; return; }##' $X
     plant_b "a stale card after a peek"           src/js/free.js 's#    if (PVWAIT) { PVWAIT = false; showSel(); }#    void 0;#' $X
-    plant_b "Shift let go here leaves the card"   src/js/free.js "s#if (ev.key !== 'Shift' || !PEEK) return;#if (true) return;#" $X
+    plant_b "Shift let go here leaves the card"   src/js/free.js "s#if (ev.key !== 'Shift' || (!PEEK \&\& !KEYDOWN)) return;#if (true) return;#" $X
+    # revision 11 (docs/NAV.md): topology forge 1.14's peekKey, his wording, the opening zoom (retargeted above: the keyup line names KEYDOWN)
+    Y=tests/free11-browser.cjs
+    plant_b "a still pointer waits for a move"    src/js/free.js "s#    try { t.peekKey(true); }.*##" $Y
+    plant_b "the page's Shift up leaves the card" src/js/free.js "s#    if (t) { try { t.peekKey(false); }.*#    if (t) { return; }#" $Y
+    plant_b "Shift passed on while typing"        src/js/free.js "s#if (!t || !ONDRAW || typing(doc.activeElement)) return;#if (!t || !ONDRAW) return;#" $Y
+    plant_b "Shift passed on over a frame"        src/js/free.js "s#if (!t || !ONDRAW || typing(doc.activeElement)) return;#if (!t || typing(doc.activeElement)) return;#" $Y
+    plant_b "the pointer on the drawing not seen" src/js/free.js "s#app.addEventListener('mouseenter', function () { ONDRAW = true; });##" $Y
+    plant_b "the echo in the old words"           src/js/free.js "s#'The card for ' + peekName(d.name) + ': let go of Shift to put it away.'#peekName(d.name) + '’s card: let go of Shift to put it away.'#" $Y
+    plant_b "1.13's Shift up leaves the card"     src/js/free.js '/^    try { if (t) { t.embed({ peek: false }); t.embed({ peek: true }); } }/d' $Y
+    plant_b "the page opens at Fit"               src/js/free.js 's#if (!t || fitted || !READY#if (true || !t || fitted || !READY#' $Y
+    # revision 11: the note's one press, and the links that reach the note
+    Z=tests/privacy-browser.cjs
+    plant_b "Forget leaves this tab's name"       src/js/privacy.js "s|store: li.getAttribute('data-store') === 'session' ? 'session' : 'local'|store: 'local'|" $Z
+    plant_b "Forget leaves the drawing app's names" src/js/privacy.js "s|      try { area(h.store).removeItem(h.name); gone.push(h.name); }|      if (h.name.indexOf('topoforge.') === 0) return; try { area(h.store).removeItem(h.name); gone.push(h.name); }|" $Z
+    plant_b "Forget leaves the prefixed names"    src/js/privacy.js "s|if (!(k.prefix ? n.indexOf(k.key) === 0 : n === k.key)|if (!(n === k.key)|" $Z
+    plant_b "Forget never asks"                   src/js/privacy.js "s|      if (work \&\& !window.confirm(|      if (false \&\& !window.confirm(|" $Z
+    plant_b "Forget always asks"                  src/js/privacy.js "s|      if (work \&\& !window.confirm(|      if (!window.confirm(|" $Z
+    plant_b "the shop's drawing unchanged asks"   src/js/privacy.js "s|with_(sig(f) === sig(d) ? '' : changed)|with_(changed)|" $Z
+    plant_b "a board does not ask"                src/js/privacy.js "s|var more = boards ?|var more = false ?|" $Z
+    plant_b "the echo area not told"              src/js/privacy.js "s|if (echo) echo.textContent = t;||" $Z
+    plant_b "Options has no link to the note"     src/js/free.js "s|if (keptHref('')) out.push({ label: 'What these options keep in this browser'|if (false) out.push({ label: 'What these options keep in this browser'|" $Z
+    plant_b "the Site menu has no link to the note" src/js/free.js "s|^    if (keptHref('')) out.push({ label: 'What this site keeps in your browser', href: keptHref('') });.*||" $Z
+    plant_b "the Navigator menu has no link to the note" src/js/nav.js "s|^          if (kept('')) out.push({ label: KEPT_LABEL, href: kept('#layout') });||" $Z
+    plant_b "the navigator's Help has no link to the note" src/js/nav.js "s|.concat(kept('') ? \[\['link', KEPT_LABEL, '', kept('#layout')\]\] : \[\])||" $Z
+    plant_b "Customize's row has no link to the note" src/js/ui.js "s|kp.className = 'c-kept'; kp.appendChild(kept); fs.appendChild(kp);|void kp;|" $Z
+    plant_b "the frame reads the navigator's link as a command" src/js/free.js "s|else if (it.href) out.push({ label: it.label, link: { href: it.href } }); ||" $Z
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

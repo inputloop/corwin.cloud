@@ -135,6 +135,14 @@ figcaption h3, figcaption h4 { margin: 0 0 var(--s1); }
 .act.off { border-color: var(--border); color: var(--text-dim); font-family: var(--mono); font-size: 12px; }
 .act:hover:not(.off) { background: var(--canvas-line); color: var(--text); }
 .act.primary:hover { background: var(--text); color: var(--canvas); }
+/* privacy.html (docs/NAV.md, revision 11): the names kept in this browser, and the one press that forgets them */
+button.act { font: inherit; font-size: 14px; cursor: pointer; }
+button.act:disabled { opacity: 0.6; cursor: progress; }
+.kept-list { padding-left: var(--s4); }
+.kept-list li { margin: var(--s1) 0; }
+.kept-list code { font-family: var(--mono); font-size: 13px; margin-right: var(--s2); overflow-wrap: anywhere; }
+.forget-said { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+.c-kept { margin: var(--s1) 0 0; font-size: 13px; }
 .meter { list-style: none; display: flex; gap: var(--s1); padding: 0; margin: 0 0 var(--s3); font: 12px/18px var(--mono); }
 .meter li { flex: 1; text-align: center; border: 1px solid var(--border); color: var(--text-dim); padding: 0 var(--s1); }
 .meter li.on { background: var(--text); color: var(--canvas); border-color: var(--text); }
