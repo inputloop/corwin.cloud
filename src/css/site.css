@@ -722,11 +722,11 @@ html[data-ui="free"] .ef .navframe .tb[aria-pressed="true"] { background: var(--
    switch's domed knob, which glides to its stop with the layout switch's own timing (the browser's view
    transition, 0.25 s and ease); with Motion off or reduced motion it jumps: html.motion-on is set only when
    neither is asked for, and the reduced-motion rule above stills every transition */
-.ef-sl-track { position: absolute; left: 10px; right: 10px; top: 8px; height: 12px; box-sizing: border-box; border-radius: 999px;
+.ef-sl-track, .ef-zs-track { position: absolute; left: 10px; right: 10px; top: 8px; height: 12px; box-sizing: border-box; border-radius: 999px;
   border: 1px solid var(--border); background: radial-gradient(circle at 40% 30%, var(--canvas) 0, var(--canvas-dim) 70%, var(--canvas-line) 100%);
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.18); display: flex; justify-content: space-between; align-items: center; padding: 0 3px; }
-.ef-sl-n { width: 4px; height: 4px; border-radius: 50%; background: var(--control); opacity: 0.55; }
-.ef-sl-thumb { position: absolute; top: 6px; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 1px solid var(--control);
+.ef-sl-n, .ef-zs-n { width: 4px; height: 4px; border-radius: 50%; background: var(--control); opacity: 0.55; }
+.ef-sl-thumb, .ef-zs-thumb { position: absolute; top: 6px; width: 16px; height: 16px; box-sizing: border-box; border-radius: 50%; border: 1px solid var(--control);
   background: radial-gradient(circle at 38% 30%, var(--canvas) 0, var(--canvas-dim) 60%, var(--control) 140%);
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.45); left: 8px; }
 html.motion-on .ef-sl-thumb { transition: left 0.25s ease; }
@@ -734,6 +734,30 @@ html.motion-on .ef-sl-thumb { transition: left 0.25s ease; }
 .ef-slider[data-pos="1"] .ef-sl-thumb { left: 34px; }
 .ef-slider[data-pos="2"] .ef-sl-thumb { left: 60px; }
 .ef-slider:hover .ef-sl-thumb { border-color: var(--link); }
+/* ---- revision 10 (docs/NAV.md): the zoom slider, and the undo and redo pill ------------------------- */
+/* the zoom slider, drawn as the map mode slider is (the groove, knob, hover and focus ring above are shared):
+   three marks, the ends and Fit in the middle; the knob sits anywhere along it (a log scale about Fit) and
+   glides as the map's knob does, with Motion on only; dragged, it follows the pointer */
+.ef-tg[data-group="zoom"] { grid-template-columns: 84px; }
+.ef-zoom { position: relative; width: 84px; height: 28px; cursor: pointer; touch-action: none; }
+.ef-zoom:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ef-zs-n.ef-zs-fit { width: 2px; height: 8px; border-radius: 1px; opacity: 0.8; }
+.ef-zs-thumb { left: 34px; }
+html.motion-on .ef-zs-thumb { transition: left 0.25s ease; }
+.ef-zoom[data-drag] .ef-zs-thumb { transition: none; }
+.ef-zoom:hover .ef-zs-thumb { border-color: var(--link); }
+/* the pill: one pill, two halves (two buttons), a hairline between. Pressed, it tilts a few degrees toward the
+   half pressed, as a rocker does, for a moment, with Motion on only (html.motion-on); at rest nothing in it
+   moves. Each part turns about the pill's middle, so the pill turns whole */
+.ef-tg.ef-pill { position: relative; }
+.ef-tg.ef-pill::before { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; right: 4px; box-sizing: border-box; border: 1px solid var(--border);
+  border-radius: 999px; background: var(--canvas-dim); pointer-events: none; }
+.ef-tg.ef-pill::after { content: ""; position: absolute; top: 6px; bottom: 6px; left: calc(50% - 0.5px); width: 1px; background: var(--border); pointer-events: none; }
+.ef .ef-pill .ef-pill-b { position: relative; z-index: 1; border-radius: 999px 0 0 999px; transform-origin: calc(100% + 1px) 50%; }
+.ef .ef-pill .ef-pill-b + .ef-pill-b { border-radius: 0 999px 999px 0; transform-origin: -1px 50%; }
+html.motion-on .ef-pill[data-tilt]::before, html.motion-on .ef-pill[data-tilt]::after, html.motion-on .ef-pill[data-tilt] .ef-pill-b { transition: transform 0.12s ease; }
+html.motion-on .ef-pill[data-tilt="undo"]::before, html.motion-on .ef-pill[data-tilt="undo"]::after, html.motion-on .ef-pill[data-tilt="undo"] .ef-pill-b { transform: rotate(-4deg); }
+html.motion-on .ef-pill[data-tilt="redo"]::before, html.motion-on .ef-pill[data-tilt="redo"]::after, html.motion-on .ef-pill[data-tilt="redo"] .ef-pill-b { transform: rotate(4deg); }
 /* the card: title top left, the visualization, clusters of facts, one statement; the drawing behind it
    fades (less background), no card lines and no frame */
 .ef-hud { border: 0; background: color-mix(in srgb, var(--canvas) 90%, transparent); width: 18rem; padding: 6px 8px; z-index: 8; }

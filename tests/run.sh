@@ -49,6 +49,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free8-browser.cjs || fail=1
       step "revision 9: topology forge 1.12's big card and card pad in free, a pressed item's card kept for the pad, the turned pad clear of the frames, classic unchanged (playwright)"
       SITE_OUT=$out "$node" tests/free9-browser.cjs || fail=1
+      step "revision 10: the zoom slider (Fit in the middle), the undo and redo pill, topology forge 1.13's peek in free, classic unchanged (playwright)"
+      SITE_OUT=$out "$node" tests/free10-browser.cjs || fail=1
     else
       step "browser checks skipped (SKIP_BROWSER=1, or playwright is not installed)"
     fi
@@ -202,6 +204,9 @@ prove_red() {
   plant "free leaves mappad to cardpad"      src/js/free.js 's#mappad: true, reset#reset#'
   plant "classic asks for bigcard"           build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,bigcard"#'
   plant "classic asks for cardpad"           build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,cardpad"#'
+  # revision 10 (docs/NAV.md): free names topology forge 1.13's peek; classic does not ask for it
+  plant "free does not name peek"            src/js/free.js 's#pagelist: true, peek: true, view#pagelist: true, view#'
+  plant "classic asks for peek"              build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,peek"#'
   if command -v "$node" >/dev/null 2>&1 && "$node" -e "require('playwright')" >/dev/null 2>&1 && [ "${SKIP_BROWSER:-}" != 1 ]; then
     plant_b "a split without its mode-line"   src/js/nav.js 's#}, \[body, ml\]);#}, [body]);#'
     plant_b "a split with a title bar"        src/js/nav.js "s#}, \[body, ml\]);#}, [mk('div', { cls: 'win-title', text: 'W' }), body, ml]);#"
@@ -376,6 +381,39 @@ prove_red() {
     plant_b "a card's art from another host"      src/js/free.js "s#statement: d.statement || '', art: art };#statement: d.statement || '', art: { src: 'https://x.example/a.png' } };#" $G
     plant_b "a frame over the turned pad's grip"  src/js/free.js 's#function padReach(m) { return twelve() \&\&#function padReach(m) { return false \&\&#' $G
     plant_b "a map laid out after ready ignored"  src/js/free.js 's#if (tries > 0) (window.requestAnimationFrame || setTimeout)(function () { mapCheck(tries - 1); }); ##' $G
+    # revision 10 (docs/NAV.md): the zoom slider, the undo and redo pill, topology forge 1.13's peek
+    X=tests/free10-browser.cjs
+    plant_b "the zoom buttons back"               src/js/free.js "s#if (!zoomable()) gs.push({ id: 'view'#if (true) gs.push({ id: 'view'#" $X
+    plant_b "no zoom slider"                      src/js/free.js "s#if (app_ \&\& zoomable()) gs.push({ id: 'zoom'#if (false) gs.push({ id: 'zoom'#" $X
+    plant_b "an old app loses its zoom buttons"   src/js/free.js "s#if (!zoomable()) gs.push({ id: 'view'#if (false) gs.push({ id: 'view'#" $X
+    plant_b "the zoom slider drawn otherwise"     src/css/site.css 's#^\.ef-sl-track, \.ef-zs-track {#.ef-sl-track {#' $X
+    plant_b "the zoom's middle is not Fit"        src/js/free.js 's#var own = fitK(), fit = own || 1,#var own = fitK(), fit = 1,#' $X
+    plant_b "the zoom on a straight scale"        src/js/free.js 's#Math.log(k / fit) / Math.log(ZSPAN)#(k / fit - 1) / (ZSPAN - 1)#' $X
+    plant_b "the knob runs off the slider's ends" src/js/free.js 's#Math.max(-1, Math.min(1, Math.log(k / fit) / Math.log(ZSPAN)))#(Math.log(k / fit) / Math.log(ZSPAN))#' $X
+    plant_b "the arrow keys do not nudge"         src/js/free.js "s#k === 'ArrowRight' || k === 'ArrowUp' ? 'in'#false ? 'in'#" $X
+    plant_b "PageUp does not double"              src/js/free.js "s#k === 'PageUp' ? 'x2'#k === 'PageUp' ? 'in'#" $X
+    plant_b "Enter does not fit"                  src/js/free.js "s#k === 'Home' || k === 'Enter' ? 'fit'#k === 'Home' ? 'fit'#" $X
+    plant_b "a press beside the knob does nothing" src/js/free.js "/^      else if (px < knob - 8) zoomAct('out');\$/d" $X
+    plant_b "the middle mark does not fit"        src/js/free.js "s#if (Math.abs(px - 42) <= 6) zoomAct('fit');#if (false) zoomAct('fit');#" $X
+    plant_b "a drag zooms only when let go"       src/js/free.js 's#if (dr) dr.raf = 0; zoomTo((fitK() || 1) \* Math.pow(ZSPAN, pAt(queued)));#if (dr) dr.raf = 0;#' $X
+    plant_b "the zoom slider does not follow"     src/js/free.js 's#f.modelinesOnly(); }); zoomSync(); }); }#f.modelinesOnly(); }); }); }#' $X
+    plant_b "an older app's middle not said"      src/js/free.js "s#'the middle is 100% (this copy of the drawing app cannot say what Fit would set)'#'fit is 100%'#" $X
+    plant_b "the zoom's value text not in words"  src/js/free.js "/^      z.setAttribute('aria-valuetext', words);\$/d" $X
+    plant_b "undo and redo not one pill"          src/js/free.js "s#label: 'Undo and redo', pill: true,#label: 'Undo and redo',#" $X
+    plant_b "the pill's group not named"          src/js/free.js "s#label: 'Undo and redo', pill: true,#label: 'Edit', pill: true,#" $X
+    plant_b "the pill's halves never disabled"    src/js/free.js "s#if (c.enabled) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true');#b.removeAttribute('aria-disabled');#" $X
+    plant_b "the pill stale after an undo"        src/js/free.js '/^    pillSync();$/d' $X
+    plant_b "a pressed half loses the focus"      src/js/free.js 's#^      nf.focus({ preventScroll: true });$#      void nf;#' $X
+    plant_b "the pill pointed at reads nothing"   src/js/free.js "s#root.addEventListener('pointerover', function (ev) { if (ev.target.closest \&\& ev.target.closest('.ef-pill')) pillSync(); });##" $X
+    plant_b "a disabled half tilts the pill"      src/js/free.js "s#if (!pill || b.getAttribute('aria-disabled') === 'true') return;#if (!pill) return;#" $X
+    plant_b "the pill does not tilt"              src/css/site.css '/^html.motion-on .ef-pill\[data-tilt="undo"\]::before/d' $X
+    plant_b "the pill tilts with reduced motion"  src/css/site.css 's#^html.motion-on .ef-pill\[data-tilt="undo"\]::before, html.motion-on .ef-pill\[data-tilt="undo"\]::after, html.motion-on .ef-pill\[data-tilt="undo"\] .ef-pill-b {#.ef-pill[data-tilt="undo"]::before, .ef-pill[data-tilt="undo"]::after, .ef-pill[data-tilt="undo"] .ef-pill-b {#' $X
+    plant_b "the peek not said"                   src/js/free.js '/^      f.say(PEEK.said);$/d' $X
+    plant_b "the echo not put back after a peek"  src/js/free.js 's#if (PEEK \&\& f.msg.textContent === PEEK.said) f.say(PEEK.before);#void 0;#' $X
+    plant_b "a long name not shortened"           src/js/free.js 's#if (n.length <= 48) return n;#return n;#' $X
+    plant_b "the card's timer ends a peek"        src/js/free.js 's#    if (PEEK \&\& t10) { PVWAIT = true; return; }##' $X
+    plant_b "a stale card after a peek"           src/js/free.js 's#    if (PVWAIT) { PVWAIT = false; showSel(); }#    void 0;#' $X
+    plant_b "Shift let go here leaves the card"   src/js/free.js "s#if (ev.key !== 'Shift' || !PEEK) return;#if (true) return;#" $X
   else
     echo "browser plants skipped (SKIP_BROWSER=1, or playwright is not installed)"
   fi

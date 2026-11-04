@@ -323,19 +323,20 @@ class SiteChecks(unittest.TestCase):
         the page relies on, topology forge 1.12's bigcard and cardpad among them. In 1.12 cardpad turns
         bigcard, mappad, preview and map on by itself, but an older app ignores a word it does not know, so
         each is named rather than left to another's implication. Classic asks for neither 1.12 word: its
-        map keeps 1.10's card (it asks for no preview at all) and its pad stays off."""
+        map keeps 1.10's card (it asks for no preview at all) and its pad stays off. Revision 10: free names
+        topology forge 1.13's peek too (Shift over a placed shape shows its card); classic does not ask for it."""
         js = read("js/free.js")
         m = re.search(r"\bt\.embed\(\{([^}]*)\}\)", js)
         self.assertTrue(m, "free.js has no call to TopoForge.embed({...}) at ready")
         said = dict(re.findall(r"([A-Za-z-]+): (true|false)", m.group(1)))
-        for w in ("keys", "context", "pagelist", "view", "map", "preview", "mapwheel", "mappad", "reset", "bigcard", "cardpad"):
+        for w in ("keys", "context", "pagelist", "peek", "view", "map", "preview", "mapwheel", "mappad", "reset", "bigcard", "cardpad"):
             self.assertEqual(said.get(w), "true", "free does not ask the app for %s by name (it asks: %s)" % (w, m.group(1).strip()))
         h = read("index.html")
         f = re.search(r'<iframe id="topology"[^>]*>', h)
         if f:
             for a in ("data-embed-free", "data-embed-classic"):
                 v = re.search(a + r'="([^"]*)"', f.group(0)).group(1)
-                for w in ("bigcard", "cardpad"):
+                for w in ("bigcard", "cardpad", "peek"):
                     self.assertNotIn(w, v.split(","), "%s asks for %s in the address" % (a, w))
         spec = os.path.join(TOPO, "topoforge", "spec", "EMBED-v1.md")
         if os.path.isfile(spec):

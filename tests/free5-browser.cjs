@@ -76,7 +76,9 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
 
     // ---- 2. no tool labels: names, tooltips on hover and focus, Escape ----
     const tools = await p.$$eval('#ef-1 .ef-tool', (b) => b.map((x) => ({ text: x.textContent.trim(), name: (x.getAttribute('aria-label') || '').trim(), tip: x.getAttribute('data-tip') || '' })));
-    assert.ok(tools.length >= 12, 'only ' + tools.length + ' tools');
+    // (revision 10: Zoom out, Fit and Zoom in became the zoom slider, three buttons fewer: 12 in a wide frame, 11 at
+    // 390, where there is no second frame to make)
+    assert.ok(tools.length >= 11, 'only ' + tools.length + ' tools');
     assert.deepEqual(tools.filter((t) => t.text), [], 'a tool shows a label');
     assert.deepEqual(tools.filter((t) => !t.name || !t.tip), [], 'a tool has no accessible name or no tooltip');
     if (!wide) await p.click('#ef-1 .ef-fold');
@@ -102,9 +104,10 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
     await p.mouse.move(w / 2, 5); await p.waitForTimeout(500);
     assert.equal(await p.isVisible('#ef-tip'), false, 'the tooltip stays after the pointer leaves');
     assert.equal(await p.isVisible('#ef-hud'), false, 'the preview box stays after the pointer leaves');
-    await p.focus('#ef-1 .ef-tool[data-act="view::zoom-in"]'); await p.waitForTimeout(60);
+    // (revision 10: Zoom in is now the zoom slider; the undo half of the undo and redo pill is a tool button still)
+    await p.focus('#ef-1 .ef-tool[data-act="edit::undo"]'); await p.waitForTimeout(60);
     assert.ok(await p.isVisible('#ef-tip'), 'no tooltip on keyboard focus');
-    assert.match(await p.textContent('#ef-tip'), /Zoom in/);
+    assert.match(await p.textContent('#ef-tip'), /Undo/);
     await keys(p, 'Escape');
     assert.equal(await p.isVisible('#ef-tip'), false, 'Escape did not dismiss the tooltip');
     // whatever is staged, an app that says 1.8 gets none of 1.9's hooks

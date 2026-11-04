@@ -9,8 +9,102 @@ free beside the shape finder; the legend is one line; the frame moves, widens an
 lines together; the tool-bar is icons in even groups; a light switch for the layout that never moves.
 Revisions 4 and earlier, below, stand where revision 5 does not replace them. Correct it by editing
 this file. Revision 6 (2026-11-02, late morning), next, adds to revision 5 and replaces only what it
-names. The newest is revision 9 (2026-11-03), first below; each adds to those before it and replaces
+names. The newest is revision 10 (2026-11-03), first below; each adds to those before it and replaces
 only what it names.
+
+## Revision 10: the zoom slider, the undo and redo pill, and the peek (2026-11-03, evening)
+
+### What Corwin asked (his words, 2026-11-03 17:01, relayed with the task)
+
+"For topology forge: i love the slider on the toolbar, we could do the zoom nudge controls this way with fit
+to window in the middel and free up three toolbar buttons; if we then made a split-pill left/right (two
+position only) switch we get two more; Also: when hovering a shape on the main stage area it would be good to
+have a modifer key that shows the flash-card/trading-card like we get with no modifier".
+
+topology forge 1.13 (topology, branch corwin, `a997073`, read-only) adds the switch `peek` (Shift over a
+placed shape shows its card in the map; `topoforge:peek` tells the page) and the read-only call
+`TopoForge.fitScale()`, the zoom Fit would set (`topoforge/spec/EMBED-v1.md`, "Added in 1.13").
+
+### What the page does
+
+| Control | What it does | Intention |
+|---|---|---|
+| **the zoom slider** | in place of Zoom out, Fit and Zoom in, beside the map mode slider and drawn as it is (the same groove, knob, size, hover and focus ring). Its middle mark is Fit: the knob shows the zoom against `fitScale()` on a log scale, k = fit × 4^p, p from −1 (the left end) to +1 (the right end); past either end the knob rests there. A press beside the knob is one step toward the press (the app's own Zoom out and Zoom in, × 1.2, as the buttons were); a press on the middle mark fits; a drag zooms as it goes, about the view's middle. Keys: ← and → a step, PageUp and PageDown × 2, Home or Enter fits. `role="slider"`, value the zoom in percent, value text "74%, fit is 74%" | his words: the zoom nudges as a slider, Fit in the middle |
+| it follows the view | whatever moved the view (the wheel, the mode-line's %zoom, the app's menus), its value and knob move with it (`topoforge:view`) | never two answers to "what is the zoom" |
+| an older app | with no `fitScale()` the middle is 100%, and the value text and tooltip say so; an app that cannot set the view (before 1.9) keeps the three buttons | the page works with the app it is given |
+| **the undo and redo pill** | one pill, two halves: two real buttons in a group named "Undo and redo". Held down, it tilts 4 degrees toward the half pressed and rights itself when let go (220 ms after a key), with Motion on only: never with reduced motion or Motion off. Each half is disabled when there is nothing to undo or redo, from the app's `commands()` as the buttons were, read again after every command the page runs and when the pill is pointed at or focused; a half pressed with Enter keeps the focus | his words: a split pill, two positions |
+| **the peek** | `peek` asked for in free, at ready, with free's other words; classic does not ask for it. While it shows, the echo area says "Router’s card: let go of Shift to put it away." (the shape's first line, at most 48 characters, cut at a word with …), and when it ends puts back what it said before, unless something newer was said | his words: a modifier key shows the card hovering gives |
+| the freed places | left empty: nothing is added to the tool-bar in place of the five buttons | his to fill |
+| classic | unchanged: the app's own bars, its own zoom buttons, no peek | revision 8's words: classic keeps its menus |
+
+### Found while building (2026-11-03)
+
+- **The undo and redo state went stale.** The tool-bar is drawn again only on a selection message, which
+  comes only when the selection changes, so after an Undo with nothing selected the undo half stayed enabled
+  and redo disabled. The old buttons had the same fault. The pill now reads both again after every command
+  the page runs, and when pointed at or focused (an undo made in the drawing tells the page nothing).
+- **A key press on the pill lost the focus.** When the selection message did come, the tool-bar was drawn
+  again and the focused half replaced, so the focus fell to the page's body (the old buttons too). The
+  tool-bar now puts the focus back on the control that had it.
+- **The page ended its own peeks.** 400 ms after the pointer left a frame, the card's timer called
+  `preview()`, and in 1.13 the page's own preview ends a peek, so a Shift-hover begun straight after using
+  a frame lasted under half a second (a selection message would do the same). While a peek shows, the
+  page's own card now waits, and is put right when the peek ends (so a card left from before it does not
+  come back).
+- **Shift let go in this page.** The app hears Shift go up only when the focus is in it. With the focus in
+  this page (a frame was just used), the card stayed until the pointer moved, so "let go of Shift" was not
+  true. Shift let go here now ends the peek through the documented call (`embed({ peek: false })`, which
+  ends one at once, then `peek: true` again).
+- **A restart of the build's container** stopped this work part way; the working tree came back whole (read
+  by its own diff), and every check and planted fault was run again from the start before the push.
+
+### For Corwin to decide (forks written, not taken)
+
+1. **What fills the freed places.** Five buttons' worth (the slider sits on the second row beside the map
+   mode slider, the pill takes two cells). Left empty, as asked.
+2. **Shift pressed in this page.** With the focus in this page and the pointer still over a shape, pressing
+   Shift shows nothing until the pointer moves: the app reads Shift from its own keys, or from a pointer move
+   over the drawing. A call for the page to pass Shift on (say `TopoForge.peekKey(down)`) would close it;
+   that is topology forge's to add.
+3. **The pill's tilt** holds while the pointer is down (a rocker), not for a fixed moment. Falsifier: hold
+   the undo half down and watch the pill stay tilted.
+4. **The zoom slider's span**, Fit ÷ 4 to Fit × 4, is the house's 4, picked, not measured. A wider span
+   makes each pixel of drag a bigger zoom.
+
+### Checks for revision 10
+
+`tests/free10-browser.cjs`, at 1280x800 light and dark and 1920x1080 dark: the tool-bar has no Zoom out, Fit
+or Zoom in button, its groups are the shapes, the pill, windows, the zoom slider and the map mode slider, and
+no button was added; the zoom slider's groove, knob, size and focus ring are the map mode slider's; Home fits
+(k equals `fitScale()`, the knob in the middle, the value text "N%, fit is F%"); the knob at Fit × 2, × 0.5,
+× 4 and ÷ 4 sits where k = fit × 4^p puts it, and past either end at that end; the range stays within the
+app's 8 % to 500 %; ← → PageUp PageDown Home Enter; a press left and right of the knob, and on the middle mark;
+a drag zooms mid-drag and stays where let go; the slider follows the app's Zoom in and the wheel; with no
+`fitScale()` the middle is 100% and the words say so; an app that says 1.8 keeps the three buttons; the pill is
+a group named "Undo and redo" of two buttons, both disabled on a fresh drawing, undo enabled after a shape is
+placed, each half following each undo and redo (also a redo with nothing selected, after which the app sends
+no message, and an undo made in the drawing, once pointed at); held down it
+tilts toward the half (−4 and +4 degrees) and rights itself, a disabled half does not tilt; Enter on the undo
+half undoes and keeps the focus when the tool-bar is drawn again; free has `peek`; after a card shown by the Security tile, Shift over a
+placed shape sends `topoforge:peek`, shows that shape's card and says so, the card outlives the card's timer,
+Shift let go in this page ends it, puts the echo back with `peek` still on, and the tile's card does not come
+back; a long name is shortened; no sideways scroll, no request to another host, no console errors. With reduced motion the pill
+does not tilt and the knob does not glide; at 390 the slider and the pill are in the tool-bar; classic, at
+1280 and 1920, has no `peek` (nor 1.12's words), no slider or pill of this page's, and the app's own zoom
+buttons. `tests/check_site.py`: free's call names `peek`; neither address asks for it. Changed because their
+old expectation is now wrong: `free5-browser.cjs` tested a tooltip on keyboard focus on the Zoom in button,
+now on the undo half, and wanted at least 12 tool buttons, now 11 (three became the slider: 12 in a wide
+frame, 11 at 390); the two checks that nothing in a frame moves by itself (`check.mjs`, twice, and
+`free-browser.cjs`) name the zoom knob and the pill's tilt as exceptions beside the map mode slider's thumb;
+`check.mjs` allows `fitScale()` among the documented calls.
+
+Built and checked (2026-11-03, revision 10), against topology `a997073` (1.13) read-only: `sh tests/run.sh`
+Python 44, node 30, browser 33, navigator 31, classic 34, free 46, revision 5 30, revision 6 26, revision 7
+37, revision 8 68, revision 9 28, revision 10 **40**, install 15 and 12. Planted faults: 33 new (2 held by
+`check_site.py`, 31 in the browser), each seen red at the assertion written for it; 289 in all, run in two
+shards. Two faults that first stayed green showed checks that did not test what they said (a peek begun
+with no card timer running; an undo that changed the selection, so the tool-bar's redraw hid a stale pill),
+and a third (the focus kept) a check whose press drew nothing again; each check now builds the case it names.
 
 ## Revision 9: topology forge 1.12's card that fills the map, and the pad that pages it (2026-11-03)
 

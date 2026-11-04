@@ -250,8 +250,9 @@ test('nothing in the navigator animates: its stylesheet section has no transitio
   const css = rd('css/site.css');
   const i = css.indexOf('/* ---- the navigator');
   assert.ok(i > 0, 'no navigator section in site.css');
-  // the one exception (revision 8): the map mode slider's thumb glides to the stop the reader set
-  const sec = css.slice(i).replace(/^[^{}\n]*\.ef-sl-thumb[^{}\n]*\{[^}]*\}/gm, '');
+  // the exceptions: the map mode slider's thumb glides to the stop the reader set (revision 8); the zoom
+  // slider's knob, drawn the same way, and the undo and redo pill's tilt while pressed (revision 10)
+  const sec = css.slice(i).replace(/^[^{}\n]*(\.ef-sl-thumb|\.ef-zs-thumb|\.ef-pill\[data-tilt)[^{}\n]*\{[^}]*\}/gm, '');
   assert.ok(!/\b(transition|animation)\s*:/.test(sec), 'the navigator section animates something');
 });
 
@@ -320,7 +321,8 @@ test('free.js asks the app only through its documented calls', { skip: !freeSrc 
   // and 1.9's (EMBED v1, "Added in 1.9"), each reached only when TopoForge.version says 1.9 (free.js nine())
   // and 1.10's mapMode() ("Added in 1.10"), reached only when the version says 1.10 (free.js ten())
   // and 1.11's padArrows(), resetLayout() and undoReset() ("Added in 1.11"), only when the version says 1.11 (eleven())
-  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode', 'padArrows', 'resetLayout', 'undoReset'];
+  // and 1.13's fitScale() ("Added in 1.13"), read only, and called only when the app has it (revision 10's zoom slider)
+  const allowed = ['commands', 'run', 'shapes', 'place', 'showPage', 'embed', 'ready', 'panels', 'endKeys', 'setView', 'selectionRect', 'setProps', 'preview', 'mapMode', 'padArrows', 'resetLayout', 'undoReset', 'fitScale'];
   for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
   for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
 });
@@ -342,9 +344,10 @@ test('the Emacs frame\'s keys start with Ctrl, Alt, Escape (Emacs\'s ESC prefix)
 test('nothing in an Emacs frame moves by itself: its stylesheet section has no transition or animation', () => {
   const css = rd('css/site.css'), sec = css.slice(css.indexOf('/* ---- page layouts: free and classic'));
   assert.ok(sec.length > 1000, 'the free and classic section is missing');
-  // the one exception (revision 8): rules for the map mode slider's thumb, which glides to the stop the
-  // reader set (with Motion on); nothing else in a frame moves
-  assert.ok(!/transition|animation/.test(sec.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[^{}\n]*\.ef-sl-thumb[^{}\n]*\{[^}]*\}/gm, '')), 'an Emacs frame animates');
+  // the exceptions: rules for the map mode slider's thumb (revision 8), which glides to the stop the reader
+  // set, and (revision 10, his words) the zoom slider's knob, drawn the same way, and the undo and redo pill,
+  // which tilts toward the half pressed while it is pressed (each with Motion on only); nothing else moves
+  assert.ok(!/transition|animation/.test(sec.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^[^{}\n]*(\.ef-sl-thumb|\.ef-zs-thumb|\.ef-pill\[data-tilt)[^{}\n]*\{[^}]*\}/gm, '')), 'an Emacs frame animates');
 });
 test('ui.js keeps one key inside try, defaults to free, and asks the network for nothing', () => {
   const u = rd('js/ui.js'), body = u.split('\n').slice(1).join('\n');

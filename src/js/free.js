@@ -124,6 +124,7 @@
     if (!t || !c) { say('The drawing app is not ready yet.'); return false; }
     if (!c.enabled) { say(cap(c.menu) + ', ' + c.label + ' cannot run now (nothing it applies to is selected).'); return false; }
     t.run(id); say(cap(c.menu) + ', ' + c.label + '.');
+    pillSync();
     return true;
   }
   function takeShapes() {
@@ -155,6 +156,8 @@
     else if (m.type === 'topoforge:preview' && ten()) { echoPreview(m.detail); return; }
     // 1.11: the app's Reset layout or Undo reset (View menu, the map's Mode menu), or the echo of the page's own
     else if (m.type === 'topoforge:reset' && eleven()) { fromAppReset(m.detail); return; }
+    // 1.13: a peek began, moved to another shape, or ended
+    else if (m.type === 'topoforge:peek') { peekEcho(m.detail); return; }
     else return;
     frames.forEach(function (f) { f.modelines(); });
     if (small.pages && !small.pages.root.hidden) small.pages.fill();
@@ -169,7 +172,8 @@
     // 1.12 (revision 9): bigcard (the card fills the map, its facts a box score, several matches as pages) and
     // cardpad (while a card shows the pad turns 45 degrees and pages it). cardpad would turn bigcard, mappad,
     // preview and map on by itself, but an older app ignores words it does not know, so each is named
-    try { t.embed({ keys: true, context: true, pagelist: true, view: true, map: true, preview: true, mapwheel: true, mappad: true, reset: true, bigcard: true, cardpad: true }); } catch (e) { /* an older 1.9 without the words */ }
+    // 1.13 (revision 10): peek, Shift over a placed shape shows its card in the map (the echo area says so)
+    try { t.embed({ keys: true, context: true, pagelist: true, peek: true, view: true, map: true, preview: true, mapwheel: true, mappad: true, reset: true, bigcard: true, cardpad: true }); } catch (e) { /* an older 1.9 without the words */ }
     // 1.11: the pad's arrows, which the app does not keep (Options, Map pad: arrows pan the drawing)
     var t11 = eleven('padArrows'); if (t11) { try { t11.padArrows(fstate().padPan ? 'pan' : 'mode-scale'); } catch (e) { /* the app's */ } }
     modeAtReady();
@@ -215,7 +219,7 @@
   }
   window.addEventListener('storage', function (ev) { if (ev.key === 'topoforge.ui.v1') mapCheck(); });
   var viewQ = false;
-  function viewSoon() { if (viewQ) return; viewQ = true; (window.requestAnimationFrame || setTimeout)(function () { viewQ = false; frames.forEach(function (f) { f.modelinesOnly(); }); }); }
+  function viewSoon() { if (viewQ) return; viewQ = true; (window.requestAnimationFrame || setTimeout)(function () { viewQ = false; frames.forEach(function (f) { f.modelinesOnly(); }); zoomSync(); }); }
   // the first fit leaves room for the frames (revision 6): the app fits the drawing to the whole canvas;
   // setView scales and moves that fit into the space between the frames and above the legend
   var fitted = false;
@@ -692,41 +696,210 @@
       var on = s.tiles.indexOf(c.id) >= 0;
       return { cat: c, label: c.label + ' shapes (' + c.shapes.length + ')', name: c.label + ' shapes (' + c.shapes.length + '): ' + (on ? 'pressed; press again to show every category' : 'press to show only these'), pressed: on };
     }) });
-    if (refreshCmds().length) {
-      gs.push({ id: 'edit', label: 'Edit', tools: [appT('edit::undo', 'undo'), appT('edit::redo', 'redo')] });
+    var app_ = refreshCmds().length > 0;
+    if (app_) {
+      // revision 10: undo and redo are one split pill (the group is the pill: two halves, two real buttons)
+      gs.push({ id: 'edit', label: 'Undo and redo', pill: true, tools: [appT('edit::undo', 'undo'), appT('edit::redo', 'redo')] });
       if (SEL) gs.push({ id: 'sel', label: 'The selection', tools: [appT('edit::duplicate', 'dup'), appT('edit::delete', 'del'), appT('arrange::bring-to-front', 'front'),
         appT('arrange::send-to-back', 'back'), appT('view::zoom-to-selection', 'zsel'), coreT('here', 'here')] });
-      gs.push({ id: 'view', label: 'View', tools: [appT('view::zoom-out', 'zout'), appT('view::fit-to-window', 'fit'), appT('view::zoom-in', 'zin')] });
+      // an app that cannot set the view (before topology forge 1.9) keeps the three buttons the slider replaced
+      if (!zoomable()) gs.push({ id: 'view', label: 'View', tools: [appT('view::zoom-out', 'zout'), appT('view::fit-to-window', 'fit'), appT('view::zoom-in', 'zin')] });
     }
     var win = [coreT('split-window-right', 'split')];
     if (!narrowQ.matches) win.push(coreT('make-frame', 'frame'));
     if (nav()) win.push(w.buf === 'navigator' ? coreT('show-finder', 'finder') : coreT('show-navigator', 'nav'));
     if (f.leaves().length > 1) win.push(coreT('delete-other-windows', 'one'));
     gs.push({ id: 'win', label: 'Windows and frames', tools: win });
+    // revision 10: the zoom slider, beside the map mode slider it is drawn after (two sliders, side by side)
+    if (app_ && zoomable()) gs.push({ id: 'zoom', label: 'Zoom', zoom: true, tools: [{}] });
     gs.push({ id: 'map', label: 'Map mode', slider: true, tools: [{}] });
     gs.forEach(function (g) { g.tools = g.tools.filter(Boolean); });
     return gs.filter(function (g) { return g.tools.length; });
   };
   Frame.prototype.renderTools = function () {
     var f = this, first = true;
+    // (revision 10) the control that had the focus keeps it when the tool-bar is drawn again (an Undo pressed with
+    // Enter makes the app send a selection message, which draws it again; the focus went to the page's body)
+    var fa = doc.activeElement, refocus = fa && f.toolbar.contains(fa) ? (fa.getAttribute('data-act') ? '[data-act="' + fa.getAttribute('data-act') + '"]' :
+      fa.getAttribute('data-cat') ? '[data-cat="' + fa.getAttribute('data-cat') + '"]' : fa.classList.contains('ef-zoom') ? '.ef-zoom' : fa.classList.contains('ef-slider') ? '.ef-slider' : null) : null;
     f.toolbar.textContent = '';
     if (!f.st.toolbar) return;
     if (!CATS.length) { f.toolbar.appendChild(mk('span', { cls: 'ef-wait', text: 'The shapes arrive when the drawing app is ready.' })); return; }
     f.toolbar.setAttribute('aria-label', 'Tool bar: shape categories, then the drawing’s and the frame’s commands. Arrow keys move along it.');
+    var zs = false;
     f.toolGroups().forEach(function (g) {
-      var box = mk('div', { cls: 'ef-tg', role: 'group', 'aria-label': g.label, 'data-group': g.id });
+      var box = mk('div', { cls: 'ef-tg' + (g.pill ? ' ef-pill' : ''), role: 'group', 'aria-label': g.label, 'data-group': g.id, 'data-tilt': g.pill ? TILT : null });
       if (g.slider) { box.appendChild(mapSlider()); f.toolbar.appendChild(box); return; }
+      if (g.zoom) { box.appendChild(zoomSlider()); f.toolbar.appendChild(box); zs = true; return; }
       g.tools.forEach(function (t) {
         var b;
         if (t.cat) b = mk('button', { type: 'button', cls: 'ef-tool ef-tile', 'data-cat': t.cat.id, 'aria-pressed': String(t.pressed), 'aria-label': t.name, 'data-tip': t.label, tabindex: first ? '0' : '-1' }, [icon(t.cat.shapes[0].id)]);
-        else b = mk('button', { type: 'button', cls: 'ef-tool', 'data-act': t.act, 'aria-label': t.label + (t.key ? ' (' + t.key + ')' : ''), 'aria-disabled': t.off ? 'true' : null,
+        else b = mk('button', { type: 'button', cls: 'ef-tool' + (g.pill ? ' ef-pill-b' : ''), 'data-act': t.act, 'data-half': g.pill ? t.icon : null, 'aria-label': t.label + (t.key ? ' (' + t.key + ')' : ''), 'aria-disabled': t.off ? 'true' : null,
           'data-tip': t.label + (t.key ? '   ' + t.key : '') + (t.off ? ' (cannot run now)' : ''), tabindex: first ? '0' : '-1' }, [glyph(t.icon)]);
         first = false;
         box.appendChild(b);
       });
       f.toolbar.appendChild(box);
     });
+    if (zs) zoomSync();
+    var nf = refocus && f.toolbar.querySelector(refocus);
+    if (nf) {
+      if (nf.classList.contains('ef-tool')) each(f.toolbar.querySelectorAll('.ef-tool'), function (x) { x.setAttribute('tabindex', x === nf ? '0' : '-1'); });
+      nf.focus({ preventScroll: true });
+    }
   };
+  // ---- the zoom slider (revision 10; his words, 2026-11-03 17:01: "we could do the zoom nudge controls this way
+  // with fit to window in the middel and free up three toolbar buttons"). In place of Zoom out, Fit and Zoom in,
+  // drawn as the map mode slider is. Its middle is Fit to window: the knob shows the zoom against the zoom Fit
+  // would set (topology forge 1.13's fitScale(); 100 % with an older app, and its tooltip says so), on a log
+  // scale, k = fit x 4^p for p from -1 (the left end) to +1 (the right end), held to the app's own limits (0.08 to
+  // 5). A press beside the knob nudges one step, as the buttons did (the app's own Zoom in and Zoom out, x 1.2);
+  // a drag zooms smoothly about the view's middle; a press on the middle mark fits. Keys: Left and Right a step,
+  // PageUp and PageDown x 2, Home or Enter fits. It follows the view, whatever moved it (topoforge:view).
+  var ZMIN = 0.08, ZMAX = 5, ZSPAN = 4;
+  function zoomable() { return !!nine('setView'); }
+  function fitK() { var t = tf(), k = null; if (t && typeof t.fitScale === 'function') { try { k = t.fitScale(); } catch (e) { k = null; } } return k > 0 ? k : null; }
+  function viewNow() { var t = tf(), v = null; try { v = t && t.view; } catch (e) { v = null; } return v && v.k > 0 ? v : null; }
+  function zoomP(k, fit) { return Math.max(-1, Math.min(1, Math.log(k / fit) / Math.log(ZSPAN))); }
+  function zoomLeft(p) { return 8 + (p + 1) / 2 * 52; }   // the knob's left edge: 8 (the left end) to 60 (the right end), 34 the middle
+  function zoomWords(k, fit, own) { return Math.round(k * 100) + '%, ' + (own ? 'fit is ' + Math.round(fit * 100) + '%' : 'the middle is 100% (this copy of the drawing app cannot say what Fit would set)'); }
+  function zoomSync() {
+    var v = viewNow();
+    if (!v) return;
+    var own = fitK(), fit = own || 1, lo = Math.max(ZMIN, fit / ZSPAN), hi = Math.min(ZMAX, fit * ZSPAN), words = zoomWords(v.k, fit, !!own);
+    each(doc.querySelectorAll('.ef-zoom'), function (z) {
+      z.setAttribute('aria-valuenow', String(Math.round(v.k * 100)));
+      z.setAttribute('aria-valuemin', String(Math.round(lo * 100))); z.setAttribute('aria-valuemax', String(Math.round(hi * 100)));
+      z.setAttribute('aria-valuetext', words);
+      z.setAttribute('data-tip', 'Zoom: ' + words + '   ←/→ a step, PgUp/PgDn ×2, Home or Enter fits (the middle mark)');
+      if (!z.hasAttribute('data-drag')) z.querySelector('.ef-zs-thumb').style.left = zoomLeft(zoomP(v.k, fit)) + 'px';
+    });
+    if (tip.shown && tip.owner && tip.owner.classList.contains('ef-zoom')) showTip(tip.owner);
+  }
+  // a zoom about the middle of the view, held to the app's limits
+  function zoomTo(k) {
+    var t = nine('setView'), v = viewNow();
+    if (!t || !v) return;
+    k = Math.max(ZMIN, Math.min(ZMAX, k));
+    var cx = v.width / 2, cy = v.height / 2;
+    try { t.setView({ k: k, x: cx - (cx - v.x) / v.k * k, y: cy - (cy - v.y) / v.k * k }); } catch (e) { /* the app's */ }
+  }
+  function zoomAct(a) {
+    var v = viewNow();
+    if (a === 'in') runApp('view::zoom-in');
+    else if (a === 'out') runApp('view::zoom-out');
+    else if (a === 'fit') runApp('view::fit-to-window');
+    else if (v) { zoomTo(a === 'x2' ? v.k * 2 : v.k / 2); var w = viewNow(); if (w) say('Zoom: ' + zoomWords(w.k, fitK() || 1, !!fitK()) + '.'); }
+    zoomSync();
+  }
+  function zoomSlider() {
+    var z = mk('div', { cls: 'ef-zoom', role: 'slider', tabindex: '0', 'aria-label': 'Zoom', 'aria-valuemin': '8', 'aria-valuemax': '500', 'aria-valuenow': '100', 'data-tip': 'Zoom' },
+      [mk('span', { cls: 'ef-zs-track', 'aria-hidden': 'true' }, [mk('span', { cls: 'ef-zs-n' }), mk('span', { cls: 'ef-zs-n ef-zs-fit' }), mk('span', { cls: 'ef-zs-n' })]), mk('span', { cls: 'ef-zs-thumb', 'aria-hidden': 'true' })]);
+    z.addEventListener('keydown', function (ev) {
+      var k = ev.key, a = k === 'ArrowLeft' || k === 'ArrowDown' ? 'out' : k === 'ArrowRight' || k === 'ArrowUp' ? 'in' : k === 'PageUp' ? 'x2' : k === 'PageDown' ? 'half' : k === 'Home' || k === 'Enter' ? 'fit' : null;
+      if (!a) return;
+      ev.preventDefault(); ev.stopPropagation();
+      zoomAct(a);
+    });
+    var th = z.querySelector('.ef-zs-thumb'), dr = null, queued = null;
+    function pAt(x) { var r = z.getBoundingClientRect(); return Math.max(-1, Math.min(1, ((x - r.left) - 16) / 52 * 2 - 1)); }
+    function dragTo(x) { queued = x; if (dr && !dr.raf) dr.raf = (window.requestAnimationFrame || setTimeout)(function () { if (dr) dr.raf = 0; zoomTo((fitK() || 1) * Math.pow(ZSPAN, pAt(queued))); }); }
+    z.addEventListener('pointerdown', function (ev) {
+      if (ev.button > 0) return;
+      dr = { x: ev.clientX, moved: false, raf: 0 };
+      try { z.setPointerCapture(ev.pointerId); } catch (e) { /* fine */ }
+    });
+    z.addEventListener('pointermove', function (ev) {
+      if (!dr) return;
+      if (!dr.moved && Math.abs(ev.clientX - dr.x) < 3) return;
+      dr.moved = true; z.setAttribute('data-drag', '');
+      var r = z.getBoundingClientRect();
+      th.style.left = Math.max(8, Math.min(60, ev.clientX - r.left - 8)) + 'px';
+      dragTo(ev.clientX);
+    });
+    z.addEventListener('pointerup', function (ev) {
+      if (!dr) return;
+      var d = dr, r = z.getBoundingClientRect(), px = ev.clientX - r.left, knob = parseFloat(th.style.left) + 8;
+      dr = null;
+      if (d.moved) {
+        zoomTo((fitK() || 1) * Math.pow(ZSPAN, pAt(ev.clientX)));
+        z.removeAttribute('data-drag'); zoomSync();
+        var v = viewNow(); if (v) say('Zoom: ' + zoomWords(v.k, fitK() || 1, !!fitK()) + '.');
+        return;
+      }
+      // a press: the middle mark fits; beside the knob, one step toward the press; on the knob, nothing
+      if (Math.abs(px - 42) <= 6) zoomAct('fit');
+      else if (px < knob - 8) zoomAct('out');
+      else if (px > knob + 8) zoomAct('in');
+    });
+    z.addEventListener('pointercancel', function () { dr = null; z.removeAttribute('data-drag'); zoomSync(); });
+    return z;
+  }
+  // topology forge 1.13's peek (revision 10; his words: "a modifer key that shows the flash-card/trading-card like we
+  // get with no modifier"): Shift over a placed shape shows its card in the map. The echo area says so in words, and
+  // when the peek ends puts back what it said before, unless something else has been said since
+  var PEEK = null, PVWAIT = false;   // the peek shown (with the echo's words), and whether the page's own card waits for it
+  // a shape's name for the echo: its first line, no closing stop, and at most 48 characters (cut at a word, with …)
+  function peekName(n) {
+    n = String(n || '').split('\n')[0].replace(/[\s.]+$/, '');
+    if (!n) return 'The shape';
+    if (n.length <= 48) return n;
+    var c = n.slice(0, 48), sp = c.lastIndexOf(' ');
+    return (sp > 24 ? c.slice(0, sp) : c).replace(/[\s,;:.]+$/, '') + '…';
+  }
+  function peekEcho(d) {
+    var f = (PEEK && PEEK.f) || cur || frames[0];
+    if (!f || !d) return;
+    if (d.id) {
+      if (!PEEK) PEEK = { f: f, before: f.msg.textContent };
+      PEEK.said = peekName(d.name) + '’s card: let go of Shift to put it away.';
+      f.say(PEEK.said);
+      return;
+    }
+    if (PEEK && f.msg.textContent === PEEK.said) f.say(PEEK.before);
+    PEEK = null;
+    if (PVWAIT) { PVWAIT = false; showSel(); }   // the page's own card, held while the peek showed
+  }
+  // the app hears Shift go up only when the focus is in it; with the focus in this page (a frame was just used) it
+  // would keep the card until the pointer moved. So Shift let go here ends the peek through the documented call
+  // (EMBED v1, 1.13: embed({ peek: false }) ends a peek at once and tells the page), and peek is turned on again
+  window.addEventListener('keyup', function (ev) {
+    if (ev.key !== 'Shift' || !PEEK) return;
+    var t = tf();
+    try { if (t) { t.embed({ peek: false }); t.embed({ peek: true }); } } catch (e) { /* the app's */ }
+  });
+  // the undo and redo pill tilts a few degrees toward the half pressed, as a rocker does (with Motion on only:
+  // the stylesheet tilts it under html.motion-on, so reduced motion or Motion off leaves it still)
+  // the pill's halves, from the same state the old buttons used (the app's commands(): Undo and Redo enabled or not).
+  // The tool-bar is drawn again on a selection message, but one comes only when the selection changes, so the pill
+  // reads both again after every command the page runs, and, for an undo made in the drawing (which tells the page
+  // nothing), whenever it is pointed at or focused
+  function pillSync() {
+    var bs = doc.querySelectorAll('.ef-pill-b');
+    if (!bs.length) return;
+    var cs = refreshCmds();
+    each(bs, function (b) {
+      var c = cs.filter(function (x) { return x.id === b.getAttribute('data-act'); })[0];
+      if (!c) return;
+      if (c.enabled) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true');
+      b.setAttribute('data-tip', c.label + (c.shortcut ? '   ' + c.shortcut : '') + (c.enabled ? '' : ' (cannot run now)'));
+      if (tip.shown && tip.owner === b) showTip(b);
+    });
+  }
+  // (an undo or redo can make the frames draw their tool-bars again: TILT carries the tilt into the new pill)
+  // It stays tilted while the pointer holds it down, as a rocker does, and for 220 ms after a key.
+  var tiltT = null, TILT = null;
+  function untilt() { clearTimeout(tiltT); TILT = null; each(doc.querySelectorAll('.ef-pill[data-tilt]'), function (x) { x.removeAttribute('data-tilt'); }); }
+  function tilt(b, held) {
+    var pill = b && b.closest('.ef-pill');
+    if (!pill || b.getAttribute('aria-disabled') === 'true') return;
+    clearTimeout(tiltT);
+    TILT = b.getAttribute('data-half');
+    pill.setAttribute('data-tilt', TILT);
+    if (!held) tiltT = setTimeout(untilt, 220);
+  }
+  window.addEventListener('pointerup', function () { if (TILT) { clearTimeout(tiltT); tiltT = setTimeout(untilt, 120); } });
+  window.addEventListener('pointercancel', function () { if (TILT) untilt(); });
   // the map mode slider (revision 7): three positions, cards (left), both (middle), rings (right)
   function mapSlider() {
     var i = MAPMODES.indexOf(MAPMODE);
@@ -1067,22 +1240,28 @@
     root.addEventListener('input', function (ev) { if (ev.target.closest && ev.target.closest('.navframe')) f.modelinesOnly(); });
     // tooltips and the preview: pointing at or focusing a tool, a shape or a navigator item
     function point(ev) {
-      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-shape, a.ef-it, .navframe a.it');
+      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-zoom, .ef-shape, a.ef-it, .navframe a.it');
       if (!el) return;
-      if (el.classList.contains('ef-slider')) { showTip(el); return; }
+      if (el.classList.contains('ef-slider') || el.classList.contains('ef-zoom')) { showTip(el); return; }
       if (el.classList.contains('ef-tool')) showTip(el, ev.type === 'focusin');
       preview(el);
     }
     root.addEventListener('mouseover', point);
     root.addEventListener('focusin', point);
     root.addEventListener('mouseout', function (ev) {
-      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-shape, a.ef-it, .navframe a.it');
+      var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-zoom, .ef-shape, a.ef-it, .navframe a.it');
       if (!el || (ev.relatedTarget && (el.contains(ev.relatedTarget) || tip.el.contains(ev.relatedTarget)))) return;
-      if ((el.classList.contains('ef-tool') || el.classList.contains('ef-slider')) && doc.activeElement !== el) hideTip();
-      if (el.classList.contains('ef-slider')) return;
+      if ((el.classList.contains('ef-tool') || el.classList.contains('ef-slider') || el.classList.contains('ef-zoom')) && doc.activeElement !== el) hideTip();
+      if (el.classList.contains('ef-slider') || el.classList.contains('ef-zoom')) return;
       preview(null);
     });
-    root.addEventListener('focusout', function (ev) { var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider'); if (el) hideTip(); });
+    root.addEventListener('focusout', function (ev) { var el = ev.target.closest && ev.target.closest('.ef-tool, .ef-slider, .ef-zoom'); if (el) hideTip(); });
+    // revision 10: the undo and redo pill tilts toward the half pressed, by pointer or by key; pointed at or
+    // focused, it reads undo and redo again (an undo in the drawing tells the page nothing)
+    root.addEventListener('pointerover', function (ev) { if (ev.target.closest && ev.target.closest('.ef-pill')) pillSync(); });
+    root.addEventListener('focusin', function (ev) { if (ev.target.closest && ev.target.closest('.ef-pill')) pillSync(); });
+    root.addEventListener('pointerdown', function (ev) { var b = ev.target.closest && ev.target.closest('.ef-pill-b'); if (b && ev.button === 0) tilt(b, true); });
+    root.addEventListener('keydown', function (ev) { var b = ev.target.closest && ev.target.closest('.ef-pill-b'); if (b && (ev.key === 'Enter' || ev.key === ' ')) tilt(b); });
     // a long press on an element that has one (the selection: the frame by the shape)
     root.addEventListener('pointerdown', function (ev) {
       var b = ev.target.closest && ev.target.closest('[data-long]');
@@ -1434,6 +1613,10 @@
   // a kept card (revision 9) comes first, and is not asked for again while it is the one shown (a turned page stays)
   function showSel() {
     var c = MAPMODE !== 'rings' && selCard(), t10 = ten('preview');
+    // (revision 10) while a peek shows, the page's own card waits until it ends: in topology forge 1.13 the page's
+    // preview() ends a peek, and the card's timer (400 ms after the pointer leaves a frame) or a selection message
+    // would end one the reader is still holding Shift for
+    if (PEEK && t10) { PVWAIT = true; return; }
     if (KEPT && t10 && MAPMODE !== 'rings') {
       if (SHOWN === KEPT.key) return;
       SHOWN = KEPT.key;
