@@ -6,6 +6,8 @@
 The key guard is the external-link allow-list: this repository is public, so a link to a private
 repository anywhere in the output must fail the build.
 """
+import hashlib
+import html
 import json
 import os
 import re
@@ -919,6 +921,23 @@ class PrivacyChecks(unittest.TestCase):
             self.assertEqual(len(tgt), 1, rel + " has no single #privacy for Customize's link")
             self.assertTrue(tgt[0][0] == "h1" if rel == "privacy.html" else "privacy-policy" in tgt[0][1].get("rel", ""), rel + ": #privacy is not the note")
         self.assertIn('href="privacy.html"', read("index.html").split('id="goto"')[1].split("</ul>")[0], "the list of everywhere lacks the note")
+
+    def test_the_request_log_sentence_is_the_registers_and_lives_in_one_place(self):
+        """The web server's request log is said in one sentence, rendered by lo1re from the logreq register's
+        corwin.cloud rows into privacy-log.txt (A+agent, live on gw33 since run 20261104T225156Z). Its first
+        line is a stamp naming the sentence's sha256; the page carries the sentence; build.py types none."""
+        with open(os.path.join(ROOT, "privacy-log.txt"), encoding="utf-8") as fh:
+            stamp, sentence = fh.read().split("\n")[:2]
+        m = re.search(r"sha256 ([0-9a-f]{64})\s*$", stamp)
+        self.assertTrue(m, "privacy-log.txt: the first line is not lo1re's stamp")
+        self.assertEqual(hashlib.sha256(sentence.encode("utf-8")).hexdigest(), m.group(1),
+                         "privacy-log.txt: the sentence is not the one its stamp names; render it again from the "
+                         "register (lo1re render ... corwin.cloud notefile), never edit it by hand")
+        text = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", "", read("privacy.html"))))
+        self.assertIn(sentence, text, "privacy.html does not carry privacy-log.txt's sentence")
+        with open(os.path.join(ROOT, "build.py"), encoding="utf-8") as fh:
+            self.assertNotIn("The web server", fh.read(),
+                             "build.py carries a request-log sentence of its own; the words live in privacy-log.txt")
 
     def test_what_the_note_names_links_back_to_it(self):
         note = parse("privacy.html")

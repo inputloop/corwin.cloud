@@ -49,6 +49,10 @@ Still out of bounds: anything that would name or publicly link a private reposit
   hostnames beyond the public ghostwheel names.
 - No inline script, no `style=""`, nothing loaded from another host. Every script keeps its LibreJS
   label and its row in `jslicense.html`.
+- What the web server keeps is said in one sentence, `privacy-log.txt`, rendered from the logreq
+  register (`lo1re render REGISTER corwin.cloud notefile`). Never edit it by hand and never type it
+  into build.py; `deploy/nginx-corwin.cloud.conf` is what gw33 serves, so a change to its log lines
+  is a change to the register first.
 - Credit as the shop's catalog gives it. Numbers only with the date they were counted.
 
 ## Before every push

@@ -1,0 +1,19 @@
+# lo1re: rendered for corwin.cloud from register rows 0024 and 0025.
+# Install as /etc/logrotate.d/nginx-corwin.cloud. The files sit in a folder of their own, so the stock
+# /var/log/nginx/*.log stanza does not also name them (logrotate refuses a file named twice).
+# daily + rotate N-1 + ifempty keeps at most N days: today's file and N-1 older ones, rotated every day
+# whether or not anything was written (notifempty would let a quiet day stretch the time).
+/var/log/nginx/corwin.cloud/access.log /var/log/nginx/corwin.cloud/error.log {
+	daily
+	rotate 13
+	maxage 14
+	ifempty
+	missingok
+	compress
+	delaycompress
+	create 0640 www-data adm
+	sharedscripts
+	postrotate
+		invoke-rc.d nginx rotate >/dev/null 2>&1
+	endscript
+}

@@ -15,6 +15,8 @@ if [ "${1:-}" = "--prove-red" ]; then
   plant "reloads even when nginx -t fails"  's/^if sudo nginx -t 2>&1; then$/if true; then/'
   plant "demo policy not installed"         's/^if \[ -n "\$demo" \]; then sudo install/if false; then sudo install/'
   plant "goes on without the demo policy"   's/^  echo "no generated\/demo-csp.conf.*$/  :/'
+  plant "no log folder before nginx -t"      's/^sudo install -d -m 0755 "\$LOG_DIR";/: ;/'
+  plant "no rotation file for the site logs" 's/^sudo install -m 644 "\$here\/logrotate-corwin.cloud"/: /'
   rm -rf "$t"; [ $bad = 0 ] && echo "PROVE-RED OK" || { echo "PROVE-RED FAILED"; exit 1; }; exit 0
 fi
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
@@ -28,11 +30,13 @@ printf '#!/bin/sh\necho 200\n' > "$T/bin/curl"
 printf '#!/bin/sh\n# stand-in for rsync -a --delete SRC/ DST/\nfor a; do s=$d; d=$a; done; rm -rf "$d"; mkdir -p "$d"; cp -R "$s." "$d"\n' > "$T/bin/rsync"
 chmod +x "$T/bin/"*
 cp "$S" "$T/build/deploy/install.sh"
-cp "$here/nginx-corwin.cloud.conf" "$here/corwin.cloud.interim.conf" "$T/build/deploy/"
+cp "$here/nginx-corwin.cloud.conf" "$here/corwin.cloud.interim.conf" "$here/logrotate-corwin.cloud" "$T/build/deploy/"
 echo "# topology policy" > "$T/build/deploy/topology-csp.conf"
 echo "# demo policy" > "$T/build/generated/demo-csp.conf"
 echo "<p>site</p>" > "$T/build/public/index.html"
-export FAKE_LOG=$T/log PATH=$T/bin:$PATH NGINX_DIR=$T/nginx LE_LIVE=$T/le WWW_ROOT=$T/www RELOAD_WAIT=0
+mkdir -p "$T/logrotate.d"
+export FAKE_LOG=$T/log PATH=$T/bin:$PATH NGINX_DIR=$T/nginx LE_LIVE=$T/le WWW_ROOT=$T/www RELOAD_WAIT=0 \
+  LOG_DIR=$T/varlog/corwin.cloud LOGROTATE_D=$T/logrotate.d LOG_OWNER=
 run() { : > "$T/log"; sh "$T/build/deploy/install.sh" >"$T/out" 2>&1; }
 
 # 1. with a certificate: the TLS block, demo policy installed, content copied
@@ -44,6 +48,8 @@ chk "the demo policy snippet is installed" grep -q "demo policy" "$T/nginx/snipp
 chk "the topology policy snippet is installed" grep -q "topology policy" "$T/nginx/snippets/corwin-cloud-topology-csp.conf"
 chk "the content is copied" test -f "$T/www/public/index.html"
 chk "nginx reloaded" grep -q "systemctl reload nginx" "$T/log"
+chk "the site's log folder is made (nginx -t needs it)" test -d "$T/varlog/corwin.cloud"
+chk "the site's rotation file is installed" cmp -s "$T/logrotate.d/nginx-corwin.cloud" "$here/logrotate-corwin.cloud"
 # 2. without a certificate: the interim block
 rm "$T/le/fullchain.pem"; run; r=$?
 chk "without a certificate: the interim block" cmp -s "$T/nginx/sites-available/corwin.cloud" "$here/corwin.cloud.interim.conf"

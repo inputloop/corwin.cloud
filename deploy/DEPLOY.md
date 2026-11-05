@@ -34,3 +34,13 @@ record is c4 `d/dns/corwin.cloud/2026/11/01/162544.txt`). Then `sh deploy/instal
 both names, renews on its own timer), the TLS block in place of the interim one, backed out if `nginx -t`
 fails. https://corwin.cloud and https://www.corwin.cloud answer 200; plain http answers 301 to https.
 Run as the gw33 account on gw33 (it has sudo); the vibrobeast account there has none.
+
+## The site's own request and error logs (2026-11-04)
+
+His pick for what the server keeps (logreq option A+agent, live since run 20261104T225156Z): the address, the
+time, the page without its query, whether it was found, and the browser's description of itself, in
+`/var/log/nginx/corwin.cloud/access.log`; errors in `error.log` beside it; both rotated daily and kept 14 days
+(`deploy/logrotate-corwin.cloud`, installed as `/etc/logrotate.d/nginx-corwin.cloud`). The lines are in both
+server blocks of `deploy/nginx-corwin.cloud.conf` and in the interim block. `deploy/install.sh` makes the folder
+before `nginx -t` (which fails without it) and installs the rotation file. The note's sentence is
+`privacy-log.txt`, rendered from the logreq register; change the register, render, rebuild, never edit by hand.

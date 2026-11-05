@@ -37,6 +37,12 @@ AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
 
 e = html.escape
+# The request-log sentence on privacy.html: lo1re renders it from the logreq register's corwin.cloud rows into
+# privacy-log.txt (line 1: the rows it came from and the sentence's sha256; line 2: the sentence). It is read
+# here and typed nowhere else; to change it, change the register and render it again. PrivacyChecks holds the
+# page to it, and it to its stamp.
+with open(os.path.join(ROOT, "privacy-log.txt"), encoding="utf-8") as _fh:
+    PRIVACY_LOG = _fh.read().split("\n")[1]
 SHARED = {"staged": False, "markup": "", "ci": "", "taxonomy": False}   # set by main() from share.stage(): about-corwin's palette and CI strip
 
 
@@ -579,7 +585,7 @@ def page_privacy(index, kept):
             + nav("") + """<main id="main" class="wrap privacy">
 <h1 id="privacy" tabindex="-1">What this site keeps in your browser</h1>
 <p class="lede">These pages collect nothing: no cookies, no counters, nothing loaded from another host. What they remember for you, such as a layout, where you put a frame, or your drawing, stays in this browser under the names below, and no script here sends it anywhere.</p>
-<p>The web server keeps its usual log of requests: the address that asked, the time, and the page. That log is on the server, not in your browser, and forgetting here does not touch it.</p>
+<p>%s</p>
 <section class="forget" aria-labelledby="forget-h">
 <h2 id="forget-h">Forget my settings</h2>
 <p class="js-only-flex"><button type="button" class="act primary" id="forget" data-doc="%s" data-drawing="%s">Forget my settings</button></p>
@@ -590,7 +596,7 @@ def page_privacy(index, kept):
 <div id="kept">%s</div>
 <p class="hint">This list is checked against the site's code at every build: the checks fail if the code keeps a name this page does not list, or this page lists one the code never keeps.</p>
 </main>
-""" % (e(index["doc"], quote=True), e(index["file"], quote=True), "".join(secs)) + foot("privacy"))
+""" % (e(PRIVACY_LOG, quote=False), e(index["doc"], quote=True), e(index["file"], quote=True), "".join(secs)) + foot("privacy"))
 
 
 # ---- demos -----------------------------------------------------------------------------------

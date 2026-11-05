@@ -98,6 +98,8 @@ prove_red() {
       printf 'STAYED GREEN  %s (browser)\n' "$name"; bad=1
     else printf 'went red      %s (browser)\n' "$name"; fi
   }
+  plant "the request-log sentence edited by hand" privacy-log.txt '2s/for up to 14 days/for up to 15 days/'
+  plant "a request-log sentence typed into the build" build.py 's/^    PRIVACY_LOG = _fh.read().split("\\n")\[1\]$/    PRIVACY_LOG = "The web server keeps its usual log of requests."/'
   plant "a private repository linked"       catalog.py   's#dict(id="c4", name="c4", kind="platform", public=False, tab=None,#dict(id="c4", name="c4", kind="platform", public=True, url=ORG + "/c4", tab=None,#'
   plant "obsmage not on the public allow-list" catalog.py '/^    ORG + "\/obsmage",$/d'
   plant "obsmage-corwin not on the allow-list" catalog.py '/^    ORG + "\/obsmage-corwin",$/d'

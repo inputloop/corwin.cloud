@@ -69,10 +69,13 @@ not fit at 1.10's sizes even alone left nothing to fit, so everything was drawn 
 1. **Shift with the pointer off the drawing.** The app can show the one selected shape's card then (1.14's
    keyboard fallback); the page does not pass Shift on there, so Shift+Tab never flashes a card. Falsifier: select
    a shape, point at a frame, press Shift: nothing shows.
-2. **The web server's request log.** The deploy configuration names no `access_log`, so nginx keeps its default
-   log of requests (address, time, page). The note says so plainly rather than claim nothing is kept anywhere.
-   Turning it off, or shortening it, is a change to `deploy/` (left alone in this revision). Falsifier: the note's
-   second paragraph names the log.
+2. **The web server's request log.** Settled 2026-11-04: his pick, "A + browser field" (logreq option A+agent),
+   live on gw33 since run 20261104T225156Z. The site keeps its own request log (the address, the time, the page
+   without its query, whether it was found, and the browser's description of itself, kept to guess which
+   requests are abuse) and its own error log, each 14 days, in `/var/log/nginx/corwin.cloud/`
+   (`deploy/nginx-corwin.cloud.conf`, `deploy/logrotate-corwin.cloud`). The note's sentence is
+   `privacy-log.txt`, rendered from the logreq register; `PrivacyChecks` holds the page to it and it to its
+   stamp. Falsifier: `lo1re-probe` on gw33 sees exactly those five fields in the site's own file.
 3. **topology's own pages and the demo apps** keep names the note lists but do not link the note themselves: they
    are other projects' programs, staged unchanged. Their pages here (the demo pages, the legend) link it.
    Falsifier: `topology/app.html` has no link to `privacy.html`.
