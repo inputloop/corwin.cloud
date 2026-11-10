@@ -44,3 +44,12 @@ time, the page without its query, whether it was found, and the browser's descri
 server blocks of `deploy/nginx-corwin.cloud.conf` and in the interim block. `deploy/install.sh` makes the folder
 before `nginx -t` (which fails without it) and installs the rotation file. The note's sentence is
 `privacy-log.txt`, rendered from the logreq register; change the register, render, rebuild, never edit by hand.
+
+## 79cd1b6 on gw33 (2026-11-10)
+
+Built away from the Windows mount (a clone in the Linux VM, with the demos taken by `git archive` at the
+commits revision 11 staged, topology forge 1.14 at 68c76c1, about-corwin df4f22f); the file list matched
+revision 11's exactly. Bundle `corwin-cloud-deploy/gw33-deploy-2026-11-10.tgz` (sha256 58573a778ad259bb...),
+installed with its `run.sh`. 25 files staged from the mount kept mode 0700, and `/topology/` answered 403 for
+about a minute until they were made readable; `install.sh` now sets 755/644 on everything it serves, and
+`test-install.sh` holds it to that (with a planted fault in `--prove-red`).

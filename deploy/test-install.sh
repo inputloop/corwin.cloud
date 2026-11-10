@@ -17,6 +17,7 @@ if [ "${1:-}" = "--prove-red" ]; then
   plant "goes on without the demo policy"   's/^  echo "no generated\/demo-csp.conf.*$/  :/'
   plant "no log folder before nginx -t"      's/^sudo install -d -m 0755 "\$LOG_DIR";/: ;/'
   plant "no rotation file for the site logs" 's/^sudo install -m 644 "\$here\/logrotate-corwin.cloud"/: /'
+  plant "served files keep the build's modes"  's/^sudo find "\$WWW_ROOT\/public" -type d -exec chmod.*$/:/'
   rm -rf "$t"; [ $bad = 0 ] && echo "PROVE-RED OK" || { echo "PROVE-RED FAILED"; exit 1; }; exit 0
 fi
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
@@ -34,6 +35,7 @@ cp "$here/nginx-corwin.cloud.conf" "$here/corwin.cloud.interim.conf" "$here/logr
 echo "# topology policy" > "$T/build/deploy/topology-csp.conf"
 echo "# demo policy" > "$T/build/generated/demo-csp.conf"
 echo "<p>site</p>" > "$T/build/public/index.html"
+mkdir -p "$T/build/public/topology"; echo app > "$T/build/public/topology/app.html"; chmod 700 "$T/build/public/topology"; chmod 600 "$T/build/public/topology/app.html"
 mkdir -p "$T/logrotate.d"
 export FAKE_LOG=$T/log PATH=$T/bin:$PATH NGINX_DIR=$T/nginx LE_LIVE=$T/le WWW_ROOT=$T/www RELOAD_WAIT=0 \
   LOG_DIR=$T/varlog/corwin.cloud LOGROTATE_D=$T/logrotate.d LOG_OWNER=
@@ -47,6 +49,7 @@ chk "with a certificate: the TLS block is installed" cmp -s "$T/nginx/sites-avai
 chk "the demo policy snippet is installed" grep -q "demo policy" "$T/nginx/snippets/corwin-cloud-demo-csp.conf"
 chk "the topology policy snippet is installed" grep -q "topology policy" "$T/nginx/snippets/corwin-cloud-topology-csp.conf"
 chk "the content is copied" test -f "$T/www/public/index.html"
+chk "a file the build left private is readable by everyone once served" sh -c "[ -z \"\$(find '$T/www/public' ! -perm -o+r)\" ]"
 chk "nginx reloaded" grep -q "systemctl reload nginx" "$T/log"
 chk "the site's log folder is made (nginx -t needs it)" test -d "$T/varlog/corwin.cloud"
 chk "the site's rotation file is installed" cmp -s "$T/logrotate.d/nginx-corwin.cloud" "$here/logrotate-corwin.cloud"

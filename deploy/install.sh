@@ -26,6 +26,9 @@ fi
 
 sudo mkdir -p "$WWW_ROOT" "$NGINX_DIR/snippets" "$NGINX_DIR/sites-available" "$NGINX_DIR/sites-enabled"
 sudo rsync -a --delete "$here/../public/" "$WWW_ROOT/public/"
+# Everything served is readable by the web server, whatever modes the build came with (2026-11-10: a build
+# staged from a mounted Windows folder carried 0700 files, and /topology/ answered 403 until this ran).
+sudo find "$WWW_ROOT/public" -type d -exec chmod 755 {} +; sudo find "$WWW_ROOT/public" -type f -exec chmod 644 {} +
 sudo install -m 644 "$here/topology-csp.conf" "$NGINX_DIR/snippets/corwin-cloud-topology-csp.conf"
 if [ -n "$demo" ]; then sudo install -m 644 "$demo" "$NGINX_DIR/snippets/corwin-cloud-demo-csp.conf"; fi
 
