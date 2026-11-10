@@ -1,7 +1,7 @@
 #!/bin/sh
 # Checks install.sh against fakes (sudo, nginx, systemctl, curl, rsync run in temp folders). Touches no real nginx.
 #   sh deploy/test-install.sh [--prove-red]
-# Copyright 2026 INPUTLOOP; GPL-3.0-or-later OR LGPL-3.0-or-later.
+# Copyright 2026 INPUTLOOP; GPL-3.0-or-later.
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
 S=${INSTALL_SH:-$here/install.sh}

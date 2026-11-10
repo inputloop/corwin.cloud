@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """What the left nav must show for a context, worked out here in Python, apart from js/nav.js.
 
     SITE_OUT=public python3 tests/nav_expect.py '{"show":["projects"],"f":{"notation":["bpmn"]},"q":"topology"}'

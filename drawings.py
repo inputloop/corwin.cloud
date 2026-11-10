@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The default drawings: one TopoForge page per project the directory lists, made at build time.
 
     python3 drawings.py OUT_DIR [TOPOLOGY_DIR [INPUTLOOP_DIR]]     (build.py calls make())

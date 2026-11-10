@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Stage the demos that run in a page, from checkouts of their public repositories.
 
 build.py calls stage_all(out, inputloop_dir). For each demo in catalog.DEMOS with runs="here", the

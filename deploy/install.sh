@@ -6,7 +6,7 @@
 # Paths can be overridden for tests: NGINX_DIR, LE_LIVE, WWW_ROOT, LOG_DIR, LOGROTATE_D, LOG_OWNER.
 # The site keeps its own request and error logs (logreq option A+agent, 2026-11-04): their folder must exist
 # before nginx -t, and their rotation file sits beside the stock one.
-# Copyright 2026 INPUTLOOP; GPL-3.0-or-later OR LGPL-3.0-or-later.
+# Copyright 2026 INPUTLOOP; GPL-3.0-or-later.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 NGINX_DIR=${NGINX_DIR:-/etc/nginx}

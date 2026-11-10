@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Processes as data, drawn in the notation the person chooses.
 
 A process here is lanes, elements and flows. Each element has a role (event, task, gateway, data)

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The words of corwin.cloud, as data: what exists, what it does, who made it, where it stands.
 
 This repository is public, so everything here is public. Private repositories are named, never
@@ -173,7 +173,7 @@ REPOS = [
     dict(id="hello-taxgnomes", name="hello-taxgnomes", kind="learn", public=True, tab=None,
          url=ORG + "/hello-taxgnomes",
          one="The Gnemonic Word Mines: pick a word, move a four-way slider (simpler, denser, moodier, drier), and every sentence says who wrote it.",
-         credit="Corwin Brust and Contributors"),
+         credit="Corwin Brust and Bryant Frankford"),
 ]
 
 # ---------------------------------------------------------------------------------------------
@@ -481,7 +481,7 @@ DEMOS = [
     dict(id="hello-taxgnomes", repo="hello-taxgnomes", name="hello-taxgnomes", runs="here",
          what="The Gnemonic Word Mines: pick a word from the word game's four tables and move a four-way slider (north simpler, south denser, east moodier, west drier). Every sentence says who wrote it: a dictionary, the game's sentences, a template or a local model.",
          run="The repository's make builds build/hello-taxgnomes.html, one page that works alone in any browser.",
-         credit="Corwin Brust and Contributors. The readings quote WordNet 3.1, GCIDE 0.53 and SCOWL.",
+         credit="Corwin Brust and Bryant Frankford. The readings quote WordNet 3.1, GCIDE 0.53 and SCOWL.",
          licence="Code GPL-3.0-or-later; prose CC BY-SA 4.0. WordNet 3.1 quotations under the WordNet licence (WORDNET-LICENSE, beside the page); GCIDE GPL-3.0-or-later; SCOWL permissive.",
          stage={"index.html": "build/hello-taxgnomes.html", "COPYING": "COPYING", "WORDNET-LICENSE": "WORDNET-LICENSE"},
          scripts=[],

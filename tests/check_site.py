@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Checks on the built site (SITE_OUT, default public/). Standard library only.
 
 The key guard is the external-link allow-list: this repository is public, so a link to a private
@@ -264,7 +264,7 @@ class SiteChecks(unittest.TestCase):
         for rel in ["index.html", "directory.html", "packages.html"]:
             h = read(rel)
             self.assertIn("Copyright 2026 INPUTLOOP", h)
-            self.assertIn("Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0.", h)
+            self.assertIn("Code GPL-3.0-or-later; prose CC-BY-SA-4.0.", h)
             self.assertIn("Corwin and Bryant (BryantAndCorwin@inputloop.com)", h)
             self.assertIn('class="modeline"', h)
 

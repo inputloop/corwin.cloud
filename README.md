@@ -138,7 +138,9 @@ to point.
 
 ## Licences
 
-Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose and diagrams CC-BY-SA-4.0. Texts in `LICENSES/`;
+Code GPL-3.0-or-later; prose and diagrams CC-BY-SA-4.0 (the house terms, v3: the Lesser licence is
+offered only part by part, and nothing on this site is such a part). The topology forge it embeds keeps
+its own terms, GPL-3.0-or-later OR LGPL-3.0-or-later, as its README says. Texts in `LICENSES/`;
 `REUSE.toml` says which covers which file. The mode-line footer and the build and test habits
 (a plain build, checks that are shown able to fail) are reused from the aboutcorwin.com source.
 

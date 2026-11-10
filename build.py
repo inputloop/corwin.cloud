@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Build corwin.cloud into public/.
 
     TOPOLOGY_DIR=../topology python3 build.py [--out DIR]
@@ -34,7 +34,7 @@ SRC = os.path.join(ROOT, "src")
 JS_FILES = ("ui.js", "site.js", "stage.js", "badges.js", "float.js", "nav.js", "free.js", "privacy.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
-LICENCE_LINE = "Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."
+LICENCE_LINE = "Code GPL-3.0-or-later; prose CC-BY-SA-4.0."
 
 e = html.escape
 # The request-log sentence on privacy.html: lo1re renders it from the logreq register's corwin.cloud rows into

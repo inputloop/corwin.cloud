@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Pinned copies of the libraries a demo needs, so it runs from this site and asks no other host.
 
 Each pin names one npm registry tarball by exact version, address and sha256 (and the sha512 the

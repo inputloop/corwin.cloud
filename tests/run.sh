@@ -1,6 +1,6 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 #
 # sh tests/run.sh               build, then every check this machine can run
 # sh tests/run.sh --prove-red   plant one fault per promise in a copy; each must turn a check red

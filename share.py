@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Share about-corwin's Customize palette and its Emacs CI strip, staged from a checkout at build time.
 
 aboutcorwin.com has a floating Customize control (text size, line length, spacing, colour theme;

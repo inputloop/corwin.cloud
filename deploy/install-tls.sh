@@ -2,7 +2,7 @@
 # install-tls.sh -- on gw33, after install.sh and once corwin.cloud's DNS points here: get the certificate
 # (certbot, webroot: nginx keeps serving) and swap the port-80 interim block for the TLS block.
 # Backs out to the interim block on any nginx -t failure.  Safe to run again: certbot keeps a valid certificate.
-# Copyright 2026 INPUTLOOP; GPL-3.0-or-later OR LGPL-3.0-or-later.
+# Copyright 2026 INPUTLOOP; GPL-3.0-or-later.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 sudo certbot certonly --webroot -w /var/www/corwin.cloud/public -d corwin.cloud -d www.corwin.cloud \

@@ -1,5 +1,5 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
-# SPDX-License-Identifier: GPL-3.0-or-later OR LGPL-3.0-or-later
+# SPDX-License-Identifier: GPL-3.0-or-later
 """The left nav's index: every thing the drawing draws, in layered categories, made at build time.
 
     build.py calls make(out, tdir, drawing_index) -> index; render(index) -> the plain-list HTML.

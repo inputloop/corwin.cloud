@@ -4,7 +4,7 @@
 # nginx -t failure: the old file comes back, nginx is not reloaded. Safe to run again (no change, no reload).
 #   sh deploy/install-dist.sh
 # Settings for tests: NGINX_CONF (/etc/nginx/sites-available/corwin.cloud), DIST_ROOT (/var/www/corwin.cloud-dist).
-# Copyright 2026 INPUTLOOP; GPL-3.0-or-later OR LGPL-3.0-or-later.
+# Copyright 2026 INPUTLOOP; GPL-3.0-or-later.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 CONF=${NGINX_CONF:-/etc/nginx/sites-available/corwin.cloud}
