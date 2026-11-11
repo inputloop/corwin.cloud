@@ -292,7 +292,7 @@ class SiteChecks(unittest.TestCase):
             self.assertIn("placeholder", h)
 
     def test_the_frame_asks_for_the_apps_switches_and_full_size_for_none(self):
-        """topology forge 1.8's switches (topology's topoforge/spec/EMBED-v1.md), one set per page layout
+        """draw 1.8's switches (topology's topoforge/spec/EMBED-v1.md), one set per page layout
         (docs/NAV.md, revision 4): free asks for bare (every bar and panel hidden) with the selection and
         ready messages; classic for the messages only, so the app keeps its own chrome. js/stage.js adds
         the set to the address; "Full size" opens the app on its own, with no switch."""
@@ -322,11 +322,11 @@ class SiteChecks(unittest.TestCase):
 
     def test_free_names_every_switch_it_relies_on(self):
         """docs/NAV.md, revision 9: free's call to TopoForge.embed() at ready (js/free.js) names every switch
-        the page relies on, topology forge 1.12's bigcard and cardpad among them. In 1.12 cardpad turns
+        the page relies on, draw 1.12's bigcard and cardpad among them. In 1.12 cardpad turns
         bigcard, mappad, preview and map on by itself, but an older app ignores a word it does not know, so
         each is named rather than left to another's implication. Classic asks for neither 1.12 word: its
         map keeps 1.10's card (it asks for no preview at all) and its pad stays off. Revision 10: free names
-        topology forge 1.13's peek too (Shift over a placed shape shows its card); classic does not ask for it."""
+        draw 1.13's peek too (Shift over a placed shape shows its card); classic does not ask for it."""
         js = read("js/free.js")
         m = re.search(r"\bt\.embed\(\{([^}]*)\}\)", js)
         self.assertTrue(m, "free.js has no call to TopoForge.embed({...}) at ready")
@@ -376,17 +376,18 @@ class SiteChecks(unittest.TestCase):
             text = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "", m.group(2))).strip()
             self.assertLessEqual(len(text), 160, "long text on the home page: " + text[:80])
 
-    def test_the_app_is_named_topology_forge_with_bryant_first(self):
-        """Corwin, 2026-11-01: the app is "topology forge (formerly TopoForge)" in our text; Bryant first."""
+    def test_the_app_is_named_draw_with_bryant_first(self):
+        """Corwin, 2026-11-01: Bryant first; 2026-11-11: the app is "draw" in our text (topology, and TopoForge before it, renamed)."""
         h = read("index.html")
         if not os.path.isdir(os.path.join(OUT, "topology")):
             return
         lg = re.search(r'<aside class="legend" id="legend".*?</aside>', h, re.S).group(0)
         app = re.sub(r"<[^>]+>", "", re.search(r'<div class="lg-cell lg-app">(.*?)</div>', lg, re.S).group(1))
-        self.assertIn("topology forge (formerly TopoForge)", app)
+        self.assertIn("draw", app)
+        self.assertNotIn("TopoForge", app, "the legend still names TopoForge")
         self.assertLess(app.index("Bryant Frankford"), app.index("Corwin"), "Bryant is not named first")
         line = re.sub(r"<[^>]+>", "", re.search(r'<p class="lg-line">(.*?)</p>', lg, re.S).group(1))
-        self.assertTrue(re.match(r"app\s*topology forge\s*by\s*Bryant Frankford", line), "the legend's line does not start with the app and Bryant: " + line[:60])
+        self.assertTrue(re.match(r"app\s*draw\s*by\s*Bryant Frankford", line), "the legend's line does not start with the app and Bryant: " + line[:60])
 
     def test_the_legend_is_one_line_in_words(self):
         """Corwin, 2026-11-02: "lets try one line" in hairline compartments; "Why would we use a machine
@@ -479,7 +480,7 @@ class SiteChecks(unittest.TestCase):
                 r = re.sub(r"\s+", " ", f.read())
             self.assertIn("GPL-3.0-or-later OR LGPL-3.0-or-later, your choice", r)
             self.assertIn("CC-BY-SA-4.0", r)
-        for u in ("https://github.com/inputloop/topology/tree/corwin/www/topoforge", "https://github.com/inputloop/topology/tree/corwin/topoforge"):
+        for u in ("https://github.com/inputloop/draw/tree/corwin/www/topoforge", "https://github.com/inputloop/draw/tree/corwin/topoforge"):
             self.assertIn('href="%s"' % u, lg)
         cells = dict(re.findall(r'<div class="lg-cell (lg-[a-z]+)">(.*?)</div>', lg, re.S))
         his = sum(len(re.sub(r"<[^>]+>", "", cells[k])) for k in ("lg-app", "lg-lic", "lg-src"))
@@ -528,7 +529,7 @@ class DemoChecks(unittest.TestCase):
                                      "customize.js", "vue.global.prod.js", "maplibre-gl-csp.js"), os.path.join(dp, f))
 
 
-TOPO = os.environ.get("TOPOLOGY_DIR", os.path.join(ROOT, "..", "topology"))
+TOPO = os.environ.get("DRAW_DIR") or os.environ.get("TOPOLOGY_DIR") or os.path.join(ROOT, "..", "draw")
 ILOOP = os.environ.get("INPUTLOOP_DIR", os.path.join(ROOT, "..", "inputloop"))
 ABOUT = os.environ.get("ABOUT_DIR", os.path.join(ROOT, "..", "about-corwin"))
 

@@ -168,7 +168,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     assert.equal(await opt(p, 'undo-reset'), false, 'Undo reset is still offered after use (one level)');
     ok(`Reset layout puts frame 1, the navigator's frame (reopened), the legend and the map mode back to their first state, leaves the text size alone; Undo reset puts them back, once, at ${tag}`);
 
-    // ---- stage 2 (topology forge 1.11): the map's pad, and Reset layout on both sides ----
+    // ---- stage 2 (draw 1.11): the map's pad, and Reset layout on both sides ----
     if (await app(p).evaluate(() => typeof TopoForge.resetLayout === 'function')) {
       await fresh(p); await p.goto(base + 'index.html'); await ready(p); await listen11(p);
       const A = () => app(p);

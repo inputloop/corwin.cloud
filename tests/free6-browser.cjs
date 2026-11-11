@@ -7,7 +7,7 @@
 // width and height together, at the corner) can be changed and is kept, and the frame shows which mode a
 // press there is in; the legend is lettered in two served fonts, one line, at the canvas's foot; the menu
 // bars never wrap (1920x950 at 100 % shows every menu; 1536x730 at 125 %, 1280, 390 and a 20-pixel default
-// font fold into »); the mode-line's lighter opens its mode's menu; frame 2 is mirrored. topology forge
+// font fold into »); the mode-line's lighter opens its mode's menu; frame 2 is mirrored. draw
 // 1.9 part A, when staged: *Here* beside the selection without zooming, *Properties* edits in one undo
 // step, %zoom says the zoom, the first fit sits between the frames, CUA cut.
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
@@ -170,7 +170,7 @@ const meets = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h &&
     for (const k of ['app', 'by', 'licence', 'prose', 'source', 'rev', 'date']) assert.ok(L.keys.includes(k), 'the legend lacks the field ' + k);
     ok(`the legend: field names in IBM Plex Sans Condensed Light, tracked capitals (Subtler), values in osifont (Subtle), both served here and AA; one line, ${Math.round(L.H - L.bottom)} pixels above the foot, at ${tag}`);
 
-    // ---- topology forge 1.9 part A ----
+    // ---- draw 1.9 part A ----
     if (await nineteen(p)) {
       // the first fit (on the first load, above) sits between the frames
       const [fit, a1, a2] = firstFit;
@@ -202,8 +202,8 @@ const meets = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h &&
       const n1 = await app(p).evaluate(() => TopoForge.doc.pages[TopoForge.doc.cur].nodes.length);
       assert.equal(n1, n0 - 1, 'C-x with a selection and no second key did not cut');
       await app(p).evaluate(() => TopoForge.undo());
-      ok(`topology forge 1.9 part A: the first fit sits between the frames; %zoom says the zoom; *Here* floats beside the selection without zooming; *Properties* sets the name in one undo step; C-x in the drawing with a selection cuts (CUA), at ${tag}`);
-    } else ok(`topology forge 1.9 part A checks skipped: the staged app is 1.8, at ${tag}`);
+      ok(`draw 1.9 part A: the first fit sits between the frames; %zoom says the zoom; *Here* floats beside the selection without zooming; *Properties* sets the name in one undo step; C-x in the drawing with a selection cuts (CUA), at ${tag}`);
+    } else ok(`draw 1.9 part A checks skipped: the staged app is 1.8, at ${tag}`);
 
     // ---- stage 2 (1.9 parts B and C): the map as the preview, its own moves re-checked against the frames ----
     // gated on the app having preview() (1.9 B) only: a missing map frame is then a failure, not a skip

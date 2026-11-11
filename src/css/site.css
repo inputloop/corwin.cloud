@@ -432,7 +432,7 @@ html:not(.motion-on)::view-transition-group(*), html:not(.motion-on)::view-trans
   .navframe.fl-left.fl-hidden .fl-grip, .navframe.fl-right.fl-hidden .fl-grip { writing-mode: vertical-rl; flex: 1 1 auto; padding: var(--s2) 0; }
   .legend.fl-float { position: absolute; left: var(--fx, 24px); top: var(--fy, 70%); width: max-content; max-width: calc(100% - var(--fx, 24px) - 8px); z-index: 6; border: 1px solid var(--border); }
 }
-/* the shapes: drawn as TopoForge draws them, small, always beside a word */
+/* the shapes: drawn as draw draws them, small, always beside a word */
 .g { display: inline-block; flex: none; width: 14px; height: 10px; margin-right: 6px; border: 1.5px solid currentColor; vertical-align: middle; }
 .g-rounded { border-radius: 4px; }
 .g-ellipse { border-radius: 50%; }
@@ -595,7 +595,7 @@ html[data-ui="free"] .legend.watermark .lg-bar { background: none; border-bottom
 html[data-ui="free"] .legend.watermark { display: flex; align-items: baseline; }
 html[data-ui="free"] .legend.watermark .lg-line { color: var(--text-dim); order: 1; flex: 1 1 auto; min-width: 0; }
 /* revision 8 stage 2: below 1400 pixels the compartments sit closer, so the one line ends before the map's pad
-   (topology forge 1.11), which hangs 132 pixels left of the map while the pointer is near it (at 1280 the
+   (draw 1.11), which hangs 132 pixels left of the map while the pointer is near it (at 1280 the
    line would otherwise run 18 pixels under it) */
 @media (max-width: 87.5rem) { html[data-ui="free"] .legend.watermark .lg-c { padding: 0 0.45em; } }
 html[data-ui="free"] .legend.watermark .lg-bar { order: 2; padding: 0; gap: 0; flex: none; }

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Build corwin.cloud into public/.
 
-    TOPOLOGY_DIR=../topology python3 build.py [--out DIR]
+    DRAW_DIR=../draw python3 build.py [--out DIR]
 
 Python 3.8+, standard library only. The words are in catalog.py; the page shapes, the stylesheet
 and the one script are in src/. topology (public since 2026-11-01) is not carried here: the build stages it. The build
@@ -272,9 +272,9 @@ def render_tabs():
 # ---- pages -----------------------------------------------------------------------------------
 
 def topology_area(have, index, navx=None):
-    """The front door is TopoForge itself, full width, opened on the shop's drawings: one page per
+    """The front door is draw itself, full width, opened on the shop's drawings: one page per
     project, its page tabs in the app's overview box. js/stage.js picks the address: the shop's drawings on a
-    first visit (TopoForge's own ?load=), the person's working copy when TopoForge has kept one."""
+    first visit (draw's own ?load=), the person's working copy when draw has kept one."""
     if not have:
         return ('<section class="stage placeholder" id="top" aria-labelledby="stage-h"><h1 id="stage-h">topology</h1>'
                 '<p class="lede">topology is drawn here when this site is built with a checkout of it. This build had none, so this is a placeholder.</p>'
@@ -287,11 +287,11 @@ def topology_area(have, index, navx=None):
     if navx:
         pages.update(navx["keys"])
     first = "topology/topoforge/index.html?load=/" + index["file"]
-    # the app's own switches (topology forge 1.8, spec/EMBED-v1.md), one set per page layout (docs/NAV.md,
+    # the app's own switches (draw 1.8, spec/EMBED-v1.md), one set per page layout (docs/NAV.md,
     # revision 4): free asks for bare (every bar and panel hidden) and the messages; classic for the
     # messages only, so the app keeps its own chrome. js/stage.js appends the set for the layout in force.
     # "Full size" (the legend) opens the app on its own, with none of them.
-    frame = ('<iframe id="topology" class="topology" title="topology forge (formerly TopoForge), opened on the shop\'s drawings" data-first="%s" '
+    frame = ('<iframe id="topology" class="topology" title="draw, opened on the shop\'s drawings" data-first="%s" '
              'data-resume="%s" data-embed-free="%s" data-embed-classic="%s" data-doc="%s" data-pages="%s"></iframe>'
              % (e(first + "&embed=", quote=True), e("topology/topoforge/index.html?embed=", quote=True),
                 TF_EMBED_FREE, TF_EMBED_CLASSIC, e(G.DOC_NAME, quote=True), e(json.dumps(pages), quote=True)))
@@ -306,14 +306,14 @@ def topology_area(have, index, navx=None):
             '</section>') % (e(index["file"], quote=True),)
 
 
-# TopoForge's maker, his public page (about-corwin: content/involvements/inputloop.txt and
-# content/personae/bryant.txt), and its licence as TopoForge's own README.org ("Licences") states it.
+# draw's maker, his public page (about-corwin: content/involvements/inputloop.txt and
+# content/personae/bryant.txt), and its licence as draw's own README.org ("Licences") states it.
 BRYANT_URL = "https://github.com/takushieternal"
-TF_NAME = "topology forge (formerly TopoForge)"   # the app's name since 2026-11-01 (Corwin); Bryant made it
+TF_NAME = "draw"   # the app's name since 2026-11-01 (Corwin); Bryant made it
 TF_EMBED_FREE = "bare,select,ready"
-TF_EMBED_CLASSIC = "select,ready,reset"   # revision 8 stage 2: the app's Reset layout in its View menu (topology forge 1.11); no pad in classic
-TF_SRC_APP = C.ORG + "/topology/tree/corwin/www/topoforge"
-TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"
+TF_EMBED_CLASSIC = "select,ready,reset"   # revision 8 stage 2: the app's Reset layout in its View menu (draw 1.11); no pad in classic
+TF_SRC_APP = C.ORG + "/draw/tree/corwin/www/topoforge"
+TF_SRC_PROJECT = C.ORG + "/draw/tree/corwin/topoforge"
 
 
 def site_revision():
@@ -340,11 +340,11 @@ def legend(index, first):
     def comp(cls, k, v):
         return '<span class="lg-c %s"><span class="lg-k">%s</span><span class="lg-v">%s</span></span>' % (cls, k, v)
     comps = [
-        comp("lg-c-app", "app", "topology forge"),
+        comp("lg-c-app", "app", "draw"),
         comp("lg-c-by", "by", gh),
         comp("lg-c-lic", "licence", '<abbr title="%s">GPLv3+ or LGPLv3+</abbr>' % lic_words),
         comp("lg-c-prose", "prose", '<abbr title="Creative Commons Attribution-ShareAlike 4.0 International">CC BY-SA 4.0</abbr>'),
-        comp("lg-c-src", "source", '<a href="%s">topology</a>' % TF_SRC_PROJECT),
+        comp("lg-c-src", "source", '<a href="%s">draw</a>' % TF_SRC_PROJECT),
         comp("lg-c-rev", "rev", '<code>%s</code>' % e(rev)),
         comp("lg-c-date", "date", day),
     ]
@@ -356,7 +356,7 @@ def legend(index, first):
          'or any later version, or the <a href="https://www.gnu.org/licenses/lgpl-3.0.html">GNU Lesser General Public License, version 3</a> '
          'or any later version, as you choose. Its prose is under <a href="https://creativecommons.org/licenses/by-sa/4.0/">Creative Commons '
          'Attribution-ShareAlike 4.0 International</a>. As its README.org says. There is no warranty, to the extent the law allows.'),
-        ("lg-src", "Its source", 'topology, branch corwin: <a href="%s">www/topoforge/</a>, the app served here; '
+        ("lg-src", "Its source", 'draw, branch corwin: <a href="%s">www/topoforge/</a>, the app served here; '
          '<a href="%s">topoforge/</a>, its README, AUTHORS and licences.' % (TF_SRC_APP, TF_SRC_PROJECT)),
         ("lg-you", "Your drawing", '<span class="lg-keep">Stays in this browser until you save it (File, Export): '
          '<a href="privacy.html#drawing" id="stage-kept">what is kept, and how to forget it</a>. </span>'
@@ -396,7 +396,7 @@ NAV_SCRIPTS = '<script src="js/taxonomy.js" defer></script>\n'
 
 def page_index(have, index, navx=None):
     return (head("corwin.cloud: the shop, drawn",
-                 "topology forge (formerly TopoForge), opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
+                 "draw, opened on a drawing of everything inputloop makes: one page per project, with live demos beside it.", "home",
                  '<script src="js/stage.js" defer></script>\n<script src="js/float.js" defer></script>\n'
                  + ((NAV_SCRIPTS if SHARED.get("taxonomy") else "") + '<script src="js/nav.js" defer></script>\n<script src="js/free.js" defer></script>\n' if navx else ""))
             + nav("home") + '<main id="main">\n' + topology_area(have, index, navx) + ('<div class="wrap shared-wrap">%s</div>' % ci_strip() if ci_strip() else "") + render_tabs() + "</main>\n" + foot("corwin.cloud"))
@@ -521,8 +521,8 @@ def page_jslicense(staged):
 # fails when this list and the code differ either way; js/privacy.js forgets exactly what the page lists.
 KEPT_SECTIONS = [
     ("layout", "This site's pages", "The home page, the directory and the rest, and Customize on every page."),
-    ("drawing", "The drawing", "topology forge, the drawing app on the home page and full size."),
-    ("topology", "topology's front door and board", 'topology\'s own pages: <a href="topology/">its front door</a> and <a href="topology/board/">its board</a>. '
+    ("drawing", "The drawing", "draw, the drawing app on the home page and full size."),
+    ("topology", "draw's front door and board", 'draw\'s own pages: <a href="topology/">its front door</a> and <a href="topology/board/">its board</a>. '
      "The front door asks a server for a graph only when you press Load or Go, and only the address in use: this site's, unless you add another."),
     ("demos", "The demos", 'Only <a href="demo/quantum3d5/">Quantum 3D5</a> keeps anything.'),
 ]
@@ -724,7 +724,7 @@ def stage_shots(out, idir):
 def stage_topology(out, tdir):
     """Ask topology to stage its own www. Returns True when staged. Never copies its sources here."""
     if not tdir or not os.path.isfile(os.path.join(tdir, "bin", "stage-www.sh")):
-        print("build: TOPOLOGY_DIR %r has no bin/stage-www.sh: the home page gets a placeholder" % tdir, file=sys.stderr)
+        print("build: DRAW_DIR %r has no bin/stage-www.sh: the home page gets a placeholder" % tdir, file=sys.stderr)
         return False
     dest = os.path.join(out, "topology")
     r = subprocess.run(["sh", "bin/stage-www.sh", dest], cwd=tdir, capture_output=True, text=True)
@@ -822,7 +822,7 @@ def write(out, name, text):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default=os.path.join(ROOT, "public"))
-    ap.add_argument("--topology", default=os.environ.get("TOPOLOGY_DIR", os.path.join(ROOT, "..", "topology")))
+    ap.add_argument("--topology", default=os.environ.get("DRAW_DIR") or os.environ.get("TOPOLOGY_DIR") or os.path.join(ROOT, "..", "draw"))   # DRAW_DIR since 2026-11-11 (topology renamed draw); TOPOLOGY_DIR still read
     ap.add_argument("--inputloop", default=os.environ.get("INPUTLOOP_DIR", os.path.join(ROOT, "..", "inputloop")),
                     help="a folder of checkouts of public inputloop repositories, for the demos and Bryant's drawing")
     ap.add_argument("--about", default=os.environ.get("ABOUT_DIR", os.path.join(ROOT, "..", "about-corwin")),

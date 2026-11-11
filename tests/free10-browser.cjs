@@ -4,7 +4,7 @@
 // Revision 10 of the home page (docs/NAV.md), in a browser (needs playwright):
 //   SITE_OUT=dir [SHOTS=dir] node tests/free10-browser.cjs
 // Free's tool-bar: the zoom slider in place of Zoom out, Fit and Zoom in (drawn as the map mode slider is; its
-// middle is Fit, the knob on a log scale about topology forge 1.13's fitScale(); a press beside the knob nudges,
+// middle is Fit, the knob on a log scale about draw 1.13's fitScale(); a press beside the knob nudges,
 // a drag zooms as it goes, the middle mark fits; keys; it follows the view; with an app that has no fitScale()
 // its middle is 100% and it says so); undo and redo as one split pill (a named group of two buttons, each
 // disabled when there is nothing to do, read again after an undo; it tilts toward the half pressed, never with

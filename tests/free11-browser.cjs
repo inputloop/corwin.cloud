@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Revision 11 of the home page (docs/NAV.md), in a browser (needs playwright):
 //   SITE_OUT=dir [SHOTS=dir] node tests/free11-browser.cjs
-// topology forge 1.14's peekKey: with the focus in this page and the pointer resting on a shape on the drawing, Shift
+// draw 1.14's peekKey: with the focus in this page and the pointer resting on a shape on the drawing, Shift
 // pressed here shows that shape's card (no move needed) and Shift let go here puts it away; the echo area says "The card
 // for <name>: let go of Shift to put it away."; Shift is not passed on while a field here takes typing, nor while the
 // pointer is on a frame over the drawing (Shift+Tab among the frames, a shape selected, shows nothing); with an app

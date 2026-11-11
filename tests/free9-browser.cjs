@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Revision 9 of the home page (docs/NAV.md), in a browser (needs playwright):
 //   SITE_OUT=dir [SHOTS=dir] node tests/free9-browser.cjs
-// topology forge 1.12's card that fills the map (bigcard) and the pad that pages it (cardpad), turned on in
+// draw 1.12's card that fills the map (bigcard) and the pad that pages it (cardpad), turned on in
 // free: the card fills the map with words larger than 1.10's, a picture and its facts; the card the page sends
 // carries a title, facts, a statement, and art only of this origin; the pad turns 45 degrees while a card
 // shows and returns to its 1.11 self when it goes; a hover card still goes when the pointer leaves, and a

@@ -27,7 +27,7 @@
     list.forEach(function (f) { o[f.name] = f.state; });
     try { window.localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* refused: kept for this visit only */ }
   }
-  // Where the app's own panels are (topology forge 1.8: TopoForge.panels(), read-only, in the frame's
+  // Where the app's own panels are (draw 1.8: TopoForge.panels(), read-only, in the frame's
   // pixels, which are the stage's): the shape palette's right edge, and the left edge of whichever of its
   // floating Properties and its overview box comes first. Falls back to its 1.7 widths before it is up.
   function tfEdges() {

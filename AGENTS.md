@@ -41,9 +41,9 @@ Still out of bounds: anything that would name or publicly link a private reposit
 
 - Link only public repositories (`PUBLIC_URLS` in `catalog.py`). A private project is named with
   "not public yet" and never given an address.
-- topology (branch `corwin`) is public; it contains Bryant Frankford's work for Corwin called
+- draw (branch `corwin`) is public; it contains Bryant Frankford's work for Corwin called
   "TopoForge"; that repository and project are obsolete and changes/work there should be merged
-  forward to the `topology` project in the "corwin" branch; keep the corwin branch current and
+  forward to the `draw` project (renamed from topology 2026-11-11) in the "corwin" branch; keep the corwin branch current and
   build from it
 - No secrets, no machine paths, no device ids (the obsmage tab's diagram uses invented names), no
   hostnames beyond the public ghostwheel names.

@@ -6,7 +6,7 @@
 // 2026-11-04: "Keep it, disclose it"). It removes from this browser every name the page lists (#kept:
 // data-key, data-kind "key" or "prefix", data-store "local" or "session"), the page's list and nothing
 // else, and says in the echo area what it removed. It asks first only when work is kept nowhere but
-// here: a drawing in topology forge's autosave that is neither the app's sample, nor empty, nor the
+// here: a drawing in draw's autosave that is neither the app's sample, nor empty, nor the
 // shop's drawing as this site serves it (read from this site, data-drawing, only then), or a board
 // drawn on topology's board. It writes nothing and asks no other host for anything.
 (function () {
@@ -15,7 +15,7 @@
   if (!btn) return;
   var said = doc.getElementById('forget-said'), echo = doc.getElementById('echo');
   var AUTOSAVE = 'topoforge.autosave.v1', BOARD = 'topology-board:', BOARD_LAST = 'topology-board:last';
-  // topology forge's own sample, as it makes it (js/stage.js knows it the same way)
+  // draw's own sample, as it makes it (js/stage.js knows it the same way)
   var SAMPLE = { name: 'Sample office network', nodes: 19, links: 15 };
 
   function listed() {
@@ -58,7 +58,7 @@
     }
     var raw = get(AUTOSAVE), d = null;
     if (raw === null) return with_('');
-    try { d = JSON.parse(raw); } catch (e) { return with_('a drawing topology forge keeps that this page cannot read'); }
+    try { d = JSON.parse(raw); } catch (e) { return with_('a drawing draw keeps that this page cannot read'); }
     var pages = d && Array.isArray(d.pages) ? d.pages : [];
     var shapes = pages.reduce(function (n, p) { return n + ((p && p.nodes) || []).length + ((p && p.links) || []).length; }, 0);
     if (!shapes) return with_('');

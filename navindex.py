@@ -355,7 +355,7 @@ if __name__ == "__main__":
     import sys
     a = sys.argv[1:]
     if len(a) < 1:
-        sys.exit("usage: python3 navindex.py OUT_DIR [TOPOLOGY_DIR]   (after build.py has written OUT_DIR)")
+        sys.exit("usage: python3 navindex.py OUT_DIR [DRAW_DIR]   (after build.py has written OUT_DIR)")
     with open(os.path.join(a[0], "drawings", "index.json"), encoding="utf-8") as f:
         ix = make(a[0], a[1] if len(a) > 1 else "../topology", json.load(f))
     print("navindex: %d items" % len(ix["items"]))

@@ -4,7 +4,7 @@ SPDX-License-Identifier: CC-BY-SA-4.0
 -->
 # corwin.cloud
 
-The website at corwin.cloud. Its home page is **topology**, the drawing app, with a tab strip below
+The website at corwin.cloud. Its home page is **draw**, the drawing app, with a tab strip below
 it: one tab of full design detail for each public app (obsmage among them since it went public on
 2026-11-02). Two more pages: a **directory** of every inputloop repository we can name, and the
 **packages** we curate, each with its state said plainly (today, built, designed).
@@ -14,26 +14,26 @@ It reads well with scripts off. The one script is free software, labelled for GN
 prompt that jumps to a page or a project. The policy forbids inline script, inline style and any
 other host.
 
-## topology is not in this repository
+## draw is not in this repository
 
-topology (branch `corwin`) has been public since 2026-11-01 and carries Bryant Frankford's topology forge (formerly TopoForge), where its work now goes on. This repository still holds only the
+draw (branch `corwin`) has been public since 2026-11-01 and carries Bryant Frankford's draw, where its work now goes on. This repository still holds only the
 shell: navigation, tabs, directory, packages, footer. At build time the build asks a local checkout
-of topology to stage its own `www` (`sh bin/stage-www.sh DEST`) into `public/topology/`. Without a
+of draw to stage its own `www` (`sh bin/stage-www.sh DEST`) into `public/topology/`. Without a
 checkout the home page says so in place of the app, and everything else still builds.
 
-The build leaves out the staged `context/` folder (working notes for topology's own host) and
+The build leaves out the staged `context/` folder (working notes for draw's own host) and
 replaces the address of any repository still private (`PRIVATE_NAMES` in `catalog.py`) with "(private
-repository, not public yet)"; topology's own address is public now and stays. `TOPOLOGY_KEEP_CONTEXT=1` keeps the folder.
+repository, not public yet)"; draw's own address is public now and stays. `TOPOLOGY_KEEP_CONTEXT=1` keeps the folder.
 
 ## The drawings and the demos (2026-11-01)
 
-The home page is topology forge (formerly TopoForge), by Bryant Frankford, itself, full width, opened on **the shop, drawn**: one TopoForge page per
+The home page is draw, by Bryant Frankford, itself, full width, opened on **the shop, drawn**: one draw page per
 project the directory lists (the page tabs in the overview, at the drawing's bottom right), obsmage's workflows and
 scenes, and Bryant Frankford's five-page drawing of how Gitcha works. `drawings.py` makes them at
-build time from `catalog.py` and the `TOPOLOGY.md` files in topology's `examples/inputloop/`; they are
-TopoForge's own JSON, opened with its own `?load=`, so they can be saved, changed and opened in any
-copy of TopoForge. A person's own working copy is never replaced: `src/js/stage.js` opens the shop's
-drawings only when TopoForge has kept nothing in this browser, and a button starts again on request.
+build time from `catalog.py` and the `TOPOLOGY.md` files in draw's `examples/inputloop/`; they are
+draw's own JSON, opened with its own `?load=`, so they can be saved, changed and opened in any
+copy of draw. A person's own working copy is never replaced: `src/js/stage.js` opens the shop's
+drawings only when draw has kept nothing in this browser, and a button starts again on request.
 
 `/demo/<id>/` has a page for every inputloop app: the ones that run in a browser run there, staged
 at build time by `demos.py` from a checkout of the public repository (never committed here); the
@@ -44,10 +44,10 @@ page links `jslicense.html`. The policy for `/demo/*/app/` is written to `genera
 
 ## The next pass (2026-11-01)
 
-- **Every directory project has a `TOPOLOGY.md`** in topology's `examples/inputloop/` now, so no
+- **Every directory project has a `TOPOLOGY.md`** in draw's `examples/inputloop/` now, so no
   page in the drawing is made from the catalog alone (a check fails if one is).
 - **Processes as data** (`processes.py`): lanes, and elements that say what they are (event, task,
-  gateway, data, and for BPMN+ an act). The shape comes from the notation, read from topology's own
+  gateway, data, and for BPMN+ an act). The shape comes from the notation, read from draw's own
   `NOTATIONS` table at build time. Each process is a page in the drawing (BPMN) and a file in each
   notation (BPMN, BPMN+, flowchart), offered under the drawing on the home page.
 - **NextTime's demo runs here** on pinned copies of Vue 3.5.44, Vue Router 4.6.4 and MapLibre 4.7.1
@@ -86,16 +86,16 @@ the drawing's own sources; `src/js/nav.js` draws it, matching words with about-c
 (staged by `share.py`, unchanged). With scripts off it is a plain list of links.
 
 `docs/AMBITIONS.md` is our reading of what this site is for; `docs/UI-AUDIT-2026-11-01.md` lists
-what differs from TopoForge as Bryant made it, and why each difference stays or went.
+what differs from the app as Bryant first made it (as TopoForge), and why each difference stays or went.
 
 ## Build
 
 ```sh
-TOPOLOGY_DIR=../topology INPUTLOOP_DIR=../inputloop ABOUT_DIR=../about-corwin python3 build.py   # writes public/, deploy/topology-csp.conf, generated/demo-csp.conf
+DRAW_DIR=../draw INPUTLOOP_DIR=../inputloop ABOUT_DIR=../about-corwin python3 build.py   # writes public/, deploy/topology-csp.conf, generated/demo-csp.conf
 python3 -m http.server -d public 8000            # then open http://127.0.0.1:8000/
 ```
 
-Python 3.8 or later, standard library only. `TOPOLOGY_DIR` defaults to `../topology`.
+Python 3.8 or later, standard library only. `DRAW_DIR` defaults to `../draw` (`TOPOLOGY_DIR`, its old name, is still read).
 
 ## Test
 
@@ -139,7 +139,7 @@ to point.
 ## Licences
 
 Code GPL-3.0-or-later; prose and diagrams CC-BY-SA-4.0 (the house terms, v3: the Lesser licence is
-offered only part by part, and nothing on this site is such a part). The topology forge it embeds keeps
+offered only part by part, and nothing on this site is such a part). The draw it embeds keeps
 its own terms, GPL-3.0-or-later OR LGPL-3.0-or-later, as its README says. Texts in `LICENSES/`;
 `REUSE.toml` says which covers which file. The mode-line footer and the build and test habits
 (a plain build, checks that are shown able to fail) are reused from the aboutcorwin.com source.

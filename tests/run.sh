@@ -5,15 +5,18 @@
 # sh tests/run.sh               build, then every check this machine can run
 # sh tests/run.sh --prove-red   plant one fault per promise in a copy; each must turn a check red
 #   (PLANT_ONLY=words: only the plants whose name has those words; PLANT_SHARD=i/n: every n-th from the i-th)
-# TOPOLOGY_DIR=../topology picks the topology checkout (the default); without one the home page
+# DRAW_DIR=../draw picks the draw checkout (the default); without one the home page
 # gets a placeholder and the checks still run.
 set -u
 here=$(cd "$(dirname "$0")/.." && pwd)
 cd "$here" || exit 2
 py=${PYTHON:-python3}
 node=${NODE:-node}
-if [ -z "${TOPOLOGY_DIR:-}" ]; then TOPOLOGY_DIR=$(cd "$here/../topology" 2>/dev/null && pwd || echo "$here/../topology"); fi
-export TOPOLOGY_DIR
+# DRAW_DIR since 2026-11-11 (topology renamed draw); TOPOLOGY_DIR, the old name, is still read
+DRAW_DIR=${DRAW_DIR:-${TOPOLOGY_DIR:-}}
+if [ -z "$DRAW_DIR" ]; then DRAW_DIR=$(cd "$here/../draw" 2>/dev/null && pwd || echo "$here/../draw"); fi
+TOPOLOGY_DIR=$DRAW_DIR
+export DRAW_DIR TOPOLOGY_DIR
 if [ -z "${INPUTLOOP_DIR:-}" ]; then INPUTLOOP_DIR=$(cd "$here/../inputloop" 2>/dev/null && pwd || echo "$here/../inputloop"); fi
 export INPUTLOOP_DIR
 if [ -z "${ABOUT_DIR:-}" ]; then ABOUT_DIR=$(cd "$here/../about-corwin" 2>/dev/null && pwd || echo "$here/../about-corwin"); fi
@@ -47,11 +50,11 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free7-browser.cjs || fail=1
       step "revision 8: frame 2 below the layout switch at four sizes, the legend on the frames' lines, the slider drawn, Reset layout (playwright)"
       SITE_OUT=$out "$node" tests/free8-browser.cjs || fail=1
-      step "revision 9: topology forge 1.12's big card and card pad in free, a pressed item's card kept for the pad, the turned pad clear of the frames, classic unchanged (playwright)"
+      step "revision 9: draw 1.12's big card and card pad in free, a pressed item's card kept for the pad, the turned pad clear of the frames, classic unchanged (playwright)"
       SITE_OUT=$out "$node" tests/free9-browser.cjs || fail=1
-      step "revision 10: the zoom slider (Fit in the middle), the undo and redo pill, topology forge 1.13's peek in free, classic unchanged (playwright)"
+      step "revision 10: the zoom slider (Fit in the middle), the undo and redo pill, draw 1.13's peek in free, classic unchanged (playwright)"
       SITE_OUT=$out "$node" tests/free10-browser.cjs || fail=1
-      step "revision 11: topology forge 1.14's peekKey (Shift here, the pointer still), his wording, not while typing or on a frame, the opening zoom not Fit (playwright)"
+      step "revision 11: draw 1.14's peekKey (Shift here, the pointer still), his wording, not while typing or on a frame, the opening zoom not Fit (playwright)"
       SITE_OUT=$out "$node" tests/free11-browser.cjs || fail=1
       step "revision 11: the note on what the site keeps in the browser: only its names kept in use, one press forgets them all and says so, asks only for work kept nowhere else, the menus and the legend reach it (playwright)"
       SITE_OUT=$out "$node" tests/privacy-browser.cjs || fail=1
@@ -175,7 +178,7 @@ prove_red() {
   plant "a legend font from another host"     src/css/site.css 's#src: url("../fonts/osifont.woff") format("woff");#src: url("https://fonts.example.com/osifont.woff") format("woff");#'
   plant "Credits forgets the fonts"           build.py     's#.Lettered in osifont, an ISO 3098 face#"Lettered in a face#'
   plant "a legend font changed, not as staged" src/fonts/README 's#^  sha256 6ee5#  sha256 7ee5#'
-  # topology forge 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
+  # draw 1.8: the switches asked for, the name and its spelling, the app asked and never reached into
   plant "scripts cached for a day again"    deploy/nginx-corwin.cloud.conf 's#^        add_header Cache-Control "no-cache" always;\(.*\)$#        add_header Cache-Control "public, max-age=86400";#'
   plant "topology not revalidated"          deploy/corwin.cloud.interim.conf '/corwin-cloud-topology-csp.conf;/{n;d;}'
   plant "the frame asks for no selection"   build.py     's#^TF_EMBED_FREE = "bare,select,ready"#TF_EMBED_FREE = "bare,ready"#'
@@ -193,11 +196,11 @@ prove_red() {
   plant "an Emacs frame animates"           src/css/site.css 's#^\.ef-msg { margin: 0;#.ef-msg { transition: color 1s; margin: 0;#'
   plant "a single key starts a frame command" src/js/free.js "s#if (ev.ctrlKey \&\& !ev.altKey \&\& !ev.metaKey \&\& (k === 'x' || k === 'X')) { ev.preventDefault(); prefix = 'C-x'#if ((k === 'x' || k === 'X')) { ev.preventDefault(); prefix = 'C-x'#"
   plant "Full size asks for switches"       build.py     's#% (e(first, quote=True), e(index\["file"\], quote=True))),#% (e(first + "\&embed=all", quote=True), e(index["file"], quote=True))),#'
-  plant "the legend says only TopoForge"    build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "TopoForge"#'
-  plant "the name misspelled"               build.py     's#^TF_NAME = "topology forge (formerly TopoForge)"#TF_NAME = "topograph""y forge (formerly TopoForge)"#'
+  plant "the legend says only TopoForge"    build.py     's#^TF_NAME = "draw"#TF_NAME = "TopoForge"#'
+  plant "the name misspelled"               build.py     's#^TF_NAME = "draw"#TF_NAME = "topograph""y forge (formerly TopoForge)"#'
   plant "nav.js reaches into the app again" src/js/nav.js "s#if (w.TopoForge.showPage(it.page))#if (frame.contentDocument.querySelector('\#pagetabs .ptab'))#"
   plant "a message heard from any frame"    src/js/stage.js 's#ev.origin !== window.location.origin || ev.source !== f.contentWindow || ##'
-  plant "TopoForge's source not linked"      build.py     's#^TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin/topoforge"#TF_SRC_PROJECT = C.ORG + "/topology/tree/corwin"#'
+  plant "TopoForge's source not linked"      build.py     's#^TF_SRC_PROJECT = C.ORG + "/draw/tree/corwin/topoforge"#TF_SRC_PROJECT = C.ORG + "/draw/tree/corwin"#'
   plant "nav.js asks another host"           src/js/nav.js "s#window.fetch('nav/index.json'#window.fetch('https://x.example/nav/index.json'#"
   plant "nav.js reads storage outside try"   src/js/nav.js 's#^  function save() {#  function peek() { return window.localStorage.getItem(KEY); }\n  function save() {#'
   plant "a single-key shortcut in the nav"   src/js/nav.js "s#if (ev.ctrlKey \&\& !ev.altKey \&\& !ev.metaKey \&\& (ev.key === 'x' || ev.key === 'X'))#if ((ev.key === 'x' || ev.key === 'X'))#"
@@ -211,7 +214,7 @@ prove_red() {
   plant "free leaves mappad to cardpad"      src/js/free.js 's#mappad: true, reset#reset#'
   plant "classic asks for bigcard"           build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,bigcard"#'
   plant "classic asks for cardpad"           build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,cardpad"#'
-  # revision 10 (docs/NAV.md): free names topology forge 1.13's peek; classic does not ask for it
+  # revision 10 (docs/NAV.md): free names draw 1.13's peek; classic does not ask for it
   plant "free does not name peek"            src/js/free.js 's#pagelist: true, peek: true, view#pagelist: true, view#'
   plant "classic asks for peek"              build.py     's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,peek"#'
   # revision 11 (docs/NAV.md): the note on what the site keeps in the browser; every page links it; the forget button
@@ -338,7 +341,7 @@ prove_red() {
     plant_b "a card's count not from the data"    src/js/free.js "s#\['Shapes', String(c.shapes.length)\]#['Shapes', String(c.shapes.length + 1)]#" $V
     plant_b "an item's statement not its own"     src/js/free.js 's#statement: it.tip || (#statement: (#' $V
     plant_b "the selection has no card"           src/js/free.js "s#if (MAPMODE !== 'rings' \&\& SEL \&\& !narrowQ.matches) showSel();#if (false) showSel();#" $V
-    # revision 7, stage 2: topology forge 1.10 (the map's modes, its card, its wheel)
+    # revision 7, stage 2: draw 1.10 (the map's modes, its card, its wheel)
     plant_b "mapwheel not turned on"              src/js/free.js 's#map: true, preview: true, mapwheel: true#map: true, preview: true#' $V
     plant_b "the slider does not drive the app"   src/js/free.js "s#if (t10 \&\& from !== 'app' \&\& from !== 'ready') {#if (false) {#" $V
     plant_b "the app's Mode menu moves no slider" src/js/free.js "s#{ setMapMode(m.detail.mode, 'app'); return; }#{ return; }#" $V
@@ -370,7 +373,7 @@ prove_red() {
     plant_b "Undo reset puts nothing back"        src/js/free.js "s#window.CCFloat.all().forEach(function (fl) { if (u.st\[fl.name\]) fl.set(u.st\[fl.name\], true); });#void 0;#" $E
     plant_b "Undo reset offered twice"            src/js/free.js 's#var u = UNDO; UNDO = null;#var u = UNDO;#' $E
     plant_b "a late caption over a newer message" src/js/free.js 's#    if (!pointed) return;#    void pointed;#' $E
-    # revision 8 stage 2: topology forge 1.11 (the map's pad, Reset layout both ways)
+    # revision 8 stage 2: draw 1.11 (the map's pad, Reset layout both ways)
     # (revision 9: cardpad turns mappad on, so "no pad" takes cardpad too)
     plant_b "no pad in free"                      src/js/free.js 's#mapwheel: true, mappad: true, reset: true, bigcard: true, cardpad: true })#mapwheel: true, reset: true, bigcard: true })#' $E
     plant_b "no reset switch in free"             src/js/free.js 's#mappad: true, reset: true, bigcard: true#mappad: true, bigcard: true#' $E
@@ -388,7 +391,7 @@ prove_red() {
     plant_b "the legend runs under the pad"       src/css/site.css '/^@media (max-width: 87.5rem) { html\[data-ui="free"\] .legend.watermark .lg-c { padding: 0 0.45em; } }$/d' $E
     plant   "the pad in classic"                  build.py 's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready,reset,mappad"#'
     plant   "no reset in classic"                 build.py 's#TF_EMBED_CLASSIC = "select,ready,reset"#TF_EMBED_CLASSIC = "select,ready"#'
-    # revision 9 (docs/NAV.md): topology forge 1.12's big card and card pad, and the kept card
+    # revision 9 (docs/NAV.md): draw 1.12's big card and card pad, and the kept card
     G=tests/free9-browser.cjs
     plant_b "no big card in free"                 src/js/free.js 's#, bigcard: true, cardpad: true })# })#' $G
     plant_b "the pad never turns in free"         src/js/free.js 's#bigcard: true, cardpad: true })#bigcard: true })#' $G
@@ -403,7 +406,7 @@ prove_red() {
     plant_b "a card's art from another host"      src/js/free.js "s#statement: d.statement || '', art: art };#statement: d.statement || '', art: { src: 'https://x.example/a.png' } };#" $G
     plant_b "a frame over the turned pad's grip"  src/js/free.js 's#function padReach(m) { return twelve() \&\&#function padReach(m) { return false \&\&#' $G
     plant_b "a map laid out after ready ignored"  src/js/free.js 's#if (tries > 0) (window.requestAnimationFrame || setTimeout)(function () { mapCheck(tries - 1); }); ##' $G
-    # revision 10 (docs/NAV.md): the zoom slider, the undo and redo pill, topology forge 1.13's peek
+    # revision 10 (docs/NAV.md): the zoom slider, the undo and redo pill, draw 1.13's peek
     X=tests/free10-browser.cjs
     plant_b "the zoom buttons back"               src/js/free.js "s#if (!zoomable()) gs.push({ id: 'view'#if (true) gs.push({ id: 'view'#" $X
     plant_b "no zoom slider"                      src/js/free.js "s#if (app_ \&\& zoomable()) gs.push({ id: 'zoom'#if (false) gs.push({ id: 'zoom'#" $X
@@ -436,7 +439,7 @@ prove_red() {
     plant_b "the card's timer ends a peek"        src/js/free.js 's#    if (PEEK \&\& t10) { PVWAIT = true; return; }##' $X
     plant_b "a stale card after a peek"           src/js/free.js 's#    if (PVWAIT) { PVWAIT = false; showSel(); }#    void 0;#' $X
     plant_b "Shift let go here leaves the card"   src/js/free.js "s#if (ev.key !== 'Shift' || (!PEEK \&\& !KEYDOWN)) return;#if (true) return;#" $X
-    # revision 11 (docs/NAV.md): topology forge 1.14's peekKey, his wording, the opening zoom (retargeted above: the keyup line names KEYDOWN)
+    # revision 11 (docs/NAV.md): draw 1.14's peekKey, his wording, the opening zoom (retargeted above: the keyup line names KEYDOWN)
     Y=tests/free11-browser.cjs
     plant_b "a still pointer waits for a move"    src/js/free.js "s#    try { t.peekKey(true); }.*##" $Y
     plant_b "the page's Shift up leaves the card" src/js/free.js "s#    if (t) { try { t.peekKey(false); }.*#    if (t) { return; }#" $Y

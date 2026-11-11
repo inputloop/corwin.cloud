@@ -53,7 +53,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       facts: Object.fromEntries([...h.querySelectorAll('.ef-card-f dt')].map((dt) => [dt.textContent, dt.nextElementSibling.textContent])),
       statement: (h.querySelector('.ef-card-s') || {}).textContent, statements: h.querySelectorAll('.ef-card-s').length,
       color: getComputedStyle(h.querySelector('.ef-card-s')).color, bg: getComputedStyle(document.body).backgroundColor }; });
-  // topology forge 1.10: the card is in the map; read it there (what shows) and in topoforge:preview (the card as shown)
+  // draw 1.10: the card is in the map; read it there (what shows) and in topoforge:preview (the card as shown)
   const ten = (p) => app(p).evaluate(() => typeof TopoForge.mapMode === 'function');
   const listen = (p) => p.evaluate(() => { window.__pv = []; window.addEventListener('message', (e) => { if (e.data && e.data.type === 'topoforge:preview') window.__pv.push(e.data.detail); }); });
   const mapCard = async (p) => {
@@ -73,7 +73,7 @@ function contrast(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) +
   const meets = (a, b) => a.x < b.r && b.x < a.r && a.y < b.b && b.y < a.b;
 
 
-  // topology forge 1.10 (revision 7, stage 2): the slider and the app's mapMode are one setting, both ways; the
+  // draw 1.10 (revision 7, stage 2): the slider and the app's mapMode are one setting, both ways; the
   // cards go into the map (the stand-in box is retired, kept for 1.9); the middle lights the matches in the drawing
   const appMode = (p) => app(p).evaluate(() => TopoForge.mapMode().mode);
   const sliderAt = (p) => p.evaluate(() => [document.querySelector('#ef-1 .ef-slider').getAttribute('aria-valuenow'), CCFree.mapMode()]);

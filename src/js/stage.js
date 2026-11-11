@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 INPUTLOOP
 // SPDX-License-Identifier: GPL-3.0-or-later
 //
-// stage.js: opens topology forge (formerly TopoForge) on the home page, and does nothing else. It reads one thing this
+// stage.js: opens draw (formerly TopoForge) on the home page, and does nothing else. It reads one thing this
 // browser keeps, TopoForge's own working copy (the key TopoForge writes, topoforge.autosave.v1): its
 // name, its page names and whether any page has a shape. It never writes it, writes nothing else,
 // and asks the network for nothing. docs/NAV.md (revision 2, "The drawing loads") says why:
@@ -57,7 +57,7 @@
   // "TopoForge full size" opens the shop's drawings unless a drawing worth keeping is kept here
   if (full && kept) full.setAttribute('href', f.getAttribute('data-resume'));
 
-  // The app tells this page when it is ready (topology forge 1.8, its "ready" switch, which this page's
+  // The app tells this page when it is ready (draw 1.8, its "ready" switch, which this page's
   // address for it asks for): the drawing open, its name and pages. Only a message from the frame itself,
   // of this site's own origin, is heard.
   var fitNext = false;

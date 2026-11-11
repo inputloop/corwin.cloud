@@ -4,13 +4,13 @@
 
 A process here is lanes, elements and flows. Each element has a role (event, task, gateway, data)
 and, for BPMN+, an act (describe, propose, effect, go). The role says what the element is; the
-notation says which TopoForge shape draws it. The notations are topology's own table, NOTATIONS in
+notation says which draw shape draws it. The notations are topology's own table, NOTATIONS in
 its www/js/topology-core.js, read from the checkout at build time, so one table decides for both
 projects. Nothing is baked into a shape: every node carries its role and the shape each notation
-gives it, as data TopoForge shows in its Properties panel.
+gives it, as data draw shows in its Properties panel.
 
 drawings.py writes, for each process and each notation, drawings/process-<id>-<notation>.json, and
-puts the BPMN one in the default set as a TopoForge page. Standard library only.
+puts the BPMN one in the default set as a draw page. Standard library only.
 """
 import json
 import os
@@ -50,7 +50,7 @@ def read_notations(tdir):
 
 
 def shape_for(el, notation, table):
-    """The TopoForge shape a notation gives one element, and the word it reads it by."""
+    """The draw shape a notation gives one element, and the word it reads it by."""
     els = table[notation]["elements"]
     role = el["role"]
     if notation == "bpmnplus" and el.get("act") in els:

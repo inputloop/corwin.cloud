@@ -13,10 +13,10 @@
 // navigator of revisions 1 to 3, whole) instead of *finder*; on a wide first visit frame 2 shows it beside
 // frame 1; the frame moves by its menu bar too and widens by its right edge; the menu bar, the mode-lines
 // and the message area grow by a line together; the tool-bar is icons in even groups with tooltips; a
-// preview box says what is pointed at (topology forge 1.9's preview() takes over when it is there). It talks to the app only through its documented calls and messages
-// (topology forge 1.8, spec/EMBED-v1.md), never reaching into its page; it reads one file from this
+// preview box says what is pointed at (draw 1.9's preview() takes over when it is there). It talks to the app only through its documented calls and messages
+// (draw 1.8, spec/EMBED-v1.md), never reaching into its page; it reads one file from this
 // site (nav/index.json) and asks the network for nothing else; it keeps only places (js/float.js) and
-// the watermark's on or off (js/float.js) in this browser. Revision 9: topology forge 1.12's card that fills
+// the watermark's on or off (js/float.js) in this browser. Revision 9: draw 1.12's card that fills
 // the map and the pad that pages it (bigcard, cardpad), and a pressed item's card kept so the pad can be reached.
 (function () {
   'use strict';
@@ -33,7 +33,7 @@
   var VIEW = null, HERE_AT = null;
   // the map mode (revision 7): cards (left), both (middle, the default), rings (right); kept per browser
   var MAPMODES = ['cards', 'both', 'rings'], MAPWORDS = { cards: 'Preview shapes: the card of what is pointed at', both: 'Both: matches highlighted, and the card', rings: 'Highlight matches: rings in the map, its caption in the echo area' };
-  var MAPMODE = (function () { var m = fstate().mapMode; return MAPMODES.indexOf(m) >= 0 ? m : 'both'; })();   // topology forge 1.9: the view, and where *Here* floats (beside the selection)
+  var MAPMODE = (function () { var m = fstate().mapMode; return MAPMODES.indexOf(m) >= 0 ? m : 'both'; })();   // draw 1.9: the view, and where *Here* floats (beside the selection)
   // the menu bar's priority+ overflow (revision 6): the last of these go into » first; Site never does
   var DROP = ['Layout', 'Arrange', 'Help', 'Options', 'View', 'Edit', 'File', 'Navigator'];
   // the layout switch's box, in the stage's pixels: no frame's top row sits under it (js/float.js moves it below)
@@ -65,7 +65,7 @@
     return n;
   }
   function tf() { try { var w = app.contentWindow; return w && w.TopoForge && w.TopoForge.commands ? w.TopoForge : null; } catch (e) { return null; } }
-  // topology forge 1.9's calls turn on only when its version says so and the call is there
+  // draw 1.9's calls turn on only when its version says so and the call is there
   function vge(v, w) {
     var a = String(v || '0').split('.').map(Number), b = String(w).split('.').map(Number);
     for (var i = 0; i < Math.max(a.length, b.length); i++) { var x = a[i] || 0, y = b[i] || 0; if (x !== y) return x > y; }
@@ -163,7 +163,7 @@
     if (small.pages && !small.pages.root.hidden) small.pages.fill();
     if (small.properties && !small.properties.root.hidden) small.properties.fill();
   });
-  // topology forge 1.9 (docs/NAV.md, revision 5, "1.9 hooks"): each turns on only when the version says
+  // draw 1.9 (docs/NAV.md, revision 5, "1.9 hooks"): each turns on only when the version says
   // 1.9 or later and the call is there; with 1.8 nothing here runs
   function hooks19() {
     var t = nine('embed');
@@ -310,7 +310,7 @@
       help: function (c) { return 'Window ' + c.n + ' of ' + c.total + '. Click: the other window (C-x o).'; } },
     lighters: { scope: 'core', wrap: true, parts: [['Finder', 'describe-mode', 'Finder mode: what this frame is. Click to read it here.'],
       ['Motion', 'toggle-motion', 'Motion: on or off (Customize’s Reduce motion presses this).'],
-      ['GPL', 'credits', 'The drawing app’s legal notices: topology forge by Bryant Frankford, its licence and source. Click for Credits.']] }
+      ['GPL', 'credits', 'The drawing app’s legal notices: draw by Bryant Frankford, its licence and source. Click for Credits.']] }
   };
   function filterWords(f) {
     var p = [];
@@ -705,7 +705,7 @@
       gs.push({ id: 'edit', label: 'Undo and redo', pill: true, tools: [appT('edit::undo', 'undo'), appT('edit::redo', 'redo')] });
       if (SEL) gs.push({ id: 'sel', label: 'The selection', tools: [appT('edit::duplicate', 'dup'), appT('edit::delete', 'del'), appT('arrange::bring-to-front', 'front'),
         appT('arrange::send-to-back', 'back'), appT('view::zoom-to-selection', 'zsel'), coreT('here', 'here')] });
-      // an app that cannot set the view (before topology forge 1.9) keeps the three buttons the slider replaced
+      // an app that cannot set the view (before draw 1.9) keeps the three buttons the slider replaced
       if (!zoomable()) gs.push({ id: 'view', label: 'View', tools: [appT('view::zoom-out', 'zout'), appT('view::fit-to-window', 'fit'), appT('view::zoom-in', 'zin')] });
     }
     var win = [coreT('split-window-right', 'split')];
@@ -754,7 +754,7 @@
   // ---- the zoom slider (revision 10; his words, 2026-11-03 17:01: "we could do the zoom nudge controls this way
   // with fit to window in the middel and free up three toolbar buttons"). In place of Zoom out, Fit and Zoom in,
   // drawn as the map mode slider is. Its middle is Fit to window: the knob shows the zoom against the zoom Fit
-  // would set (topology forge 1.13's fitScale(); 100 % with an older app, and its tooltip says so), on a log
+  // would set (draw 1.13's fitScale(); 100 % with an older app, and its tooltip says so), on a log
   // scale, k = fit x 4^p for p from -1 (the left end) to +1 (the right end), held to the app's own limits (0.08 to
   // 5). A press beside the knob nudges one step, as the buttons did (the app's own Zoom in and Zoom out, x 1.2);
   // a drag zooms smoothly about the view's middle; a press on the middle mark fits. Keys: Left and Right a step,
@@ -838,7 +838,7 @@
     z.addEventListener('pointercancel', function () { dr = null; z.removeAttribute('data-drag'); zoomSync(); });
     return z;
   }
-  // topology forge 1.13's peek (revision 10; his words: "a modifer key that shows the flash-card/trading-card like we
+  // draw 1.13's peek (revision 10; his words: "a modifer key that shows the flash-card/trading-card like we
   // get with no modifier"): Shift over a placed shape shows its card in the map. The echo area says so in words, and
   // when the peek ends puts back what it said before, unless something else has been said since
   var PEEK = null, PVWAIT = false;   // the peek shown (with the echo's words), and whether the page's own card waits for it
@@ -864,7 +864,7 @@
     if (PVWAIT) { PVWAIT = false; showSel(); }   // the page's own card, held while the peek showed
   }
   // The app hears its own keys only while the focus is in it. With the focus in this page (a frame was just used):
-  // revision 11, with topology forge 1.14, Shift here is passed on (TopoForge.peekKey: down shows the card of the shape
+  // revision 11, with draw 1.14, Shift here is passed on (TopoForge.peekKey: down shows the card of the shape
   // under the pointer, which rests on the drawing; up ends it), so a still pointer peeks too. Only while the pointer
   // is on the drawing (not on a frame over it: Shift+Tab among the frames shows nothing) and never while a field here
   // takes typing (Shift makes capitals). With 1.13 a still pointer waits for a move, and Shift let go here ends the
@@ -1467,9 +1467,9 @@
     tip.el.hidden = true; tip.shown = false; tip.owner = null;
   }
 
-  // ---- the preview: what a press would do, in a small box above the app's overview map; topology forge
+  // ---- the preview: what a press would do, in a small box above the app's overview map; draw
   // 1.9's preview() shows it on the map itself, and then the box stands down ---------------------------
-  // the card box (revision 7): until the map can draw cards (topology forge 1.10) the card shows here, just
+  // the card box (revision 7): until the map can draw cards (draw 1.10) the card shows here, just
   // above the map; with 1.8 it is the whole preview
   var hud = mk('aside', { cls: 'ef-hud', id: 'ef-hud', 'aria-label': 'Card: what is pointed at', hidden: true });
   grid.appendChild(hud);
@@ -1608,13 +1608,13 @@
         return;
       }
       if (!d || d.kind === 'tool') { hideCardSoon(); return; }
-      showCard(d, 'A stand-in until the map can show the card (topology forge 1.10).');
+      showCard(d, 'A stand-in until the map can show the card (draw 1.10).');
       return;
     }
     if (!d) { hideCardSoon(); return; }
-    showCard(d, 'A stand-in until the overview map can show it (topology forge 1.9).');
+    showCard(d, 'A stand-in until the overview map can show it (draw 1.9).');
   }
-  // the kept card (revision 9, topology forge 1.12's cardpad): a card shown while the pointer is on an item
+  // the kept card (revision 9, draw 1.12's cardpad): a card shown while the pointer is on an item
   // goes when it leaves, so the pointer could never reach the map's pad to page it. A PRESSED item's card
   // stays: when a hover ends the map shows it again (as it shows the selection's card), until C-g in a frame,
   // a shape selected in the drawing, or another page in view puts it away. Wide screens and 1.12 only (the
@@ -1640,7 +1640,7 @@
   // a kept card (revision 9) comes first, and is not asked for again while it is the one shown (a turned page stays)
   function showSel() {
     var c = MAPMODE !== 'rings' && selCard(), t10 = ten('preview');
-    // (revision 10) while a peek shows, the page's own card waits until it ends: in topology forge 1.13 the page's
+    // (revision 10) while a peek shows, the page's own card waits until it ends: in draw 1.13 the page's
     // preview() ends a peek, and the card's timer (400 ms after the pointer leaves a frame) or a selection message
     // would end one the reader is still holding Shift for
     if (PEEK && t10) { PVWAIT = true; return; }
@@ -1847,7 +1847,7 @@
   // Reset layout (revision 8): every frame and palette back to its first place and size, the navigator's
   // frame reopened, the map mode back to Both; settings (text size, colours, the watermark, Motion, lines,
   // tool-bars, what windows show, the pad's arrows) untouched. One level of Undo reset, for this visit.
-  // Stage 2 (topology forge 1.11): one reset on both sides. From the page (from: undefined) it also calls
+  // Stage 2 (draw 1.11): one reset on both sides. From the page (from: undefined) it also calls
   // the app's resetLayout() / undoReset() and drops the one topoforge:reset that call sends (EXPECT); from
   // the app (from: 'app', its View or Mode menu) it resets or restores the page's side only.
   var UNDO = null, EXPECT = { reset: 0, undo: 0 };

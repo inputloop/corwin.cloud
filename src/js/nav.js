@@ -528,7 +528,7 @@
     if (w.TopoForge.showPage(it.page)) say('Showing ' + it.page + ' in the drawing.');
     else say('The drawing in front of you has no page named “' + it.page + '”.');
   }
-  // The app tells this page what is selected and which page is in view (topology forge 1.8, its
+  // The app tells this page what is selected and which page is in view (draw 1.8, its
   // "select" and "ready" switches, asked for in the frame's address): only messages from the frame,
   // of this site's own origin. The selection fills each window's item line when nothing is pointed at.
   var lastPage = null, drawSel = null, seenPage = null;

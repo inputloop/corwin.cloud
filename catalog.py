@@ -26,9 +26,9 @@ PUBLIC_URLS = [
     ORG + "/vibrobeast-skills",
     ORG + "/vibrobeast-skills/tree/HEAD/skills",
     ORG + "/corwin.cloud",
-    ORG + "/topology/tree/corwin",
-    ORG + "/topology/tree/corwin/www/topoforge",
-    ORG + "/topology/tree/corwin/topoforge",
+    ORG + "/draw/tree/corwin",
+    ORG + "/draw/tree/corwin/www/topoforge",
+    ORG + "/draw/tree/corwin/topoforge",
     ORG + "/about-corwin",
     ORG + "/gitcha",
     ORG + "/ta",
@@ -101,9 +101,9 @@ KINDS = [
 # ---------------------------------------------------------------------------------------------
 REPOS = [
     dict(id="topology", name="topology", kind="app", public=True, tab="topology",
-         url=ORG + "/topology/tree/corwin",
+         url=ORG + "/draw/tree/corwin",
          one="Draws what you have, from the files that describe it. This is the home page.",
-         credit="Corwin and Bryant; the drawing app, topology forge (formerly TopoForge), is Bryant's"),
+         credit="Corwin and Bryant; the drawing app is Bryant's"),
     dict(id="obsmage", name="obsmage", kind="app", public=True, tab="obsmage",
          url=ORG + "/obsmage", home="https://obsmage.com/",
          one="OBS Studio kept as readable settings, with a composer for multi-monitor scenes.",
@@ -219,9 +219,9 @@ REPOS = [
 # ---------------------------------------------------------------------------------------------
 APPS = [
     dict(
-        id="topology", name="topology", repo="topology",
+        id="topology", name="draw", repo="topology",
         tagline="Draw what you have, from the files that describe it.",
-        what="Point topology at the git repositories you keep. Each can say what it is in a short TOPOLOGY.md; topology reads them, sorts what they say by place, part, path and person, and draws the result with TopoForge. You move the shapes. The drawing is yours.",
+        what="Point draw at the git repositories you keep. Each can say what it is in a short TOPOLOGY.md; draw reads them, sorts what they say by place, part, path and person, and draws the result. You move the shapes. The drawing is yours.",
         does=[
             "Reads a list of repositories and the TOPOLOGY.md in each, and keeps what it learns as one cell per fact.",
             "Sorts every thing by four pillars: place, part, path, person.",
@@ -232,14 +232,14 @@ APPS = [
         how_title="From repositories to a drawing",
         flow=[("Repositories", "the ones you keep"), ("TOPOLOGY.md", "each says what it is"),
               ("Cells", "one fact per cell, kept twice"), ("Four pillars", "place, part, path, person"),
-              ("topology forge", "the drawing you move")],
+              ("draw", "the drawing you move")],
         how="Cells are written as two files, one filed by row and one by column, and a check reads both sides and reports any cell they disagree on. A rebuild makes a fresh graph beside the old one and swaps it in, so nothing a repository stopped saying survives.",
         status="Built on a working branch (corwin); the repository has been public since 2026-11-01. The browser app and the three packages exist. No tool that effects changes is shipped yet: with writing switched on, the server says so.",
         state="built",
         licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0.",
-        credit="Corwin and Bryant. topology forge (formerly TopoForge), the drawing app, is Bryant Frankford's.",
+        credit="Corwin and Bryant. draw, the drawing app, is Bryant Frankford's (he first made it as TopoForge).",
         needs="A browser. A server is optional.",
-        links=[("This page: topology, in the main area above", "index.html#top"), ("Repository, branch corwin", ORG + "/topology/tree/corwin")],
+        links=[("This page: draw, in the main area above", "index.html#top"), ("Repository, branch corwin", ORG + "/draw/tree/corwin")],
         demo=None,
     ),
     dict(
@@ -462,13 +462,13 @@ OBS_SCENES = dict(
 PACKAGES = [
     dict(name="topology", kind="Debian package", state="built", public=True,
          what="The command and the graph API. Built from topology's RECIPE.org, which is itself shipped inside it.",
-         where="Built by the recipe in the public topology repository (branch corwin).", tab="topology", url=ORG + "/topology/tree/corwin"),
+         where="Built by the recipe in the public draw repository (branch corwin); the package keeps its old name for now.", tab="topology", url=ORG + "/draw/tree/corwin"),
     dict(name="topology-perl", kind="Debian package", state="built", public=True,
          what="Perl 5.44.0 built for topology, with 16 CPAN distributions chosen by maintainer.",
-         where="Built by the recipe in the public topology repository (branch corwin).", tab="topology", url=ORG + "/topology/tree/corwin"),
+         where="Built by the recipe in the public draw repository (branch corwin); the package keeps its old name for now.", tab="topology", url=ORG + "/draw/tree/corwin"),
     dict(name="topology-www", kind="Debian package", state="built", public=True,
          what="The browser app and front door, as files. Install only this one to serve the app with nothing else.",
-         where="Built by the recipe in the public topology repository (branch corwin).", tab="topology", url=ORG + "/topology/tree/corwin"),
+         where="Built by the recipe in the public draw repository (branch corwin); the package keeps its old name for now.", tab="topology", url=ORG + "/draw/tree/corwin"),
     dict(name="C4", kind="Debian package", state="built", public=False,
          what="The registry and signing layer, packaged with a signed release key.",
          where="Private for now.", tab=None),
@@ -494,17 +494,17 @@ STATE_WORDS = {
 
 # ---------------------------------------------------------------------------------------------
 # Demos: one page each under /demo/<id>/. `runs`: here (staged at build time from a checkout of the
-# public repository, never committed here), drawing (a TopoForge drawing on the home page), or
+# public repository, never committed here), drawing (a draw drawing on the home page), or
 # elsewhere (the page says what it needs and how to run it). `stage` maps a published path under
 # /demo/<id>/app/ to a path in the repository checkout. `scripts` are the app's script files, for
 # jslicense.html: (path under app/, licence, source address or None for "this file is the source").
 # ---------------------------------------------------------------------------------------------
 P5_SOURCE = "https://github.com/processing/p5.js/tree/v1.9.0"
 DEMOS = [
-    dict(id="topology", repo="topology", name="topology", runs="drawing",
-         what="The drawing app this site opens with: topology forge (formerly TopoForge), by Bryant Frankford, with the shop drawn as one page per project.",
-         run="It is the home page. To keep your own copy, install the topology-www package, or open its index.html (www/topoforge/ in topology) in any browser.",
-         credit="Corwin and Bryant. topology forge (formerly TopoForge), the drawing app, is Bryant Frankford's.",
+    dict(id="topology", repo="topology", name="draw", runs="drawing",
+         what="The drawing app this site opens with: draw, by Bryant Frankford, with the shop drawn as one page per project.",
+         run="It is the home page. To keep your own copy, install draw's package (still named topology-www), or open its index.html (www/topoforge/ in draw) in any browser.",
+         credit="Corwin and Bryant. draw, the drawing app, is Bryant Frankford's.",
          licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; prose CC-BY-SA-4.0."),
     dict(id="quantum3d5", repo="quantum3d5", name="Quantum 3D5", runs="here",
          what="Build atoms and molecules from protons, neutrons and electrons and watch them bond, react and decay in 3D, with lessons, a glossary and a page that says which physics is real, simplified or faked.",
@@ -531,7 +531,7 @@ DEMOS = [
          licence="Code GPL-3.0-or-later; prose CC BY-SA 4.0. Modus is GPL-3.0-or-later.",
          links=[("Repository", ORG + "/egad")]),
     dict(id="gitcha", repo="gitcha", name="Gitcha", runs="drawing",
-         what="A free, self-hosted forge for people and their agents: packages, git, site hosting and CI, with two-factor sign-in on every account. It is a server, so it does not run in a page; Bryant's drawing of how it works does, in TopoForge.",
+         what="A free, self-hosted forge for people and their agents: packages, git, site hosting and CI, with two-factor sign-in on every account. It is a server, so it does not run in a page; Bryant's drawing of how it works does, in draw.",
          run="Its INSTALL.md takes you from nothing to a running Gitcha on your own computer in about ten minutes, or on an Ubuntu server.",
          credit="Bryant Frankford and Corwin Brust, co-creators. The drawing and the screenshots are Bryant Frankford's.",
          licence="Code GPL-3.0-or-later OR LGPL-3.0-or-later; the drawing GPL-3.0-or-later OR LGPL-3.0-or-later; the screenshots CC-BY-SA-4.0.",

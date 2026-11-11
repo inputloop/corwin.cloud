@@ -66,7 +66,7 @@ test('the generated topology policy lists scripts by hash, not unsafe-inline', (
 // ---- the default drawings (made by drawings.py; checked here in another language) -------------
 import { createHash } from 'node:crypto';
 import { readdirSync, statSync } from 'node:fs';
-const topo = process.env.TOPOLOGY_DIR || join(root, '..', 'topology');
+const topo = process.env.DRAW_DIR || process.env.TOPOLOGY_DIR || join(root, '..', 'draw');
 const ildir = process.env.INPUTLOOP_DIR || join(root, '..', 'inputloop');
 const hasDrawings = existsSync(join(out, 'drawings', 'inputloop.json'));
 const set = hasDrawings ? JSON.parse(rd('drawings/inputloop.json')) : null;
@@ -272,7 +272,7 @@ test('every file the site serves revalidates: no-cache with an ETag, in every lo
   }
 });
 
-// ---- the app's own messages and calls (topology forge 1.8) ----------------------------------------
+// ---- the app's own messages and calls (draw 1.8) ----------------------------------------
 test('the home page scripts ask the app, never reach into its page, and hear only its own frame', () => {
   for (const f of ['stage.js', 'nav.js', 'float.js', 'free.js']) {
     const s = rd('js/' + f);
@@ -327,7 +327,7 @@ test('free.js asks the app only through its documented calls', { skip: !freeSrc 
   for (const c of calls) assert.ok(allowed.includes(c), 'free.js calls the app\'s ' + c + '(), which EMBED v1 does not document');
   for (const c of ['commands', 'shapes', 'place', 'showPage', 'embed']) assert.ok(calls.has(c), 'free.js does not use ' + c + '()');
 });
-// revision 7: the map mode starts in the middle. With topology forge 1.10 the app's own default (both) is
+// revision 7: the map mode starts in the middle. With draw 1.10 the app's own default (both) is
 // the one source of truth and the page follows it at ready, so a browser cannot see the page's fallback;
 // the fallback (1.9 and 1.8, and before ready) is checked here, in the source
 test('the page\'s own map mode, when nothing is kept, is the middle (both)', { skip: !freeSrc }, () => {

@@ -2,7 +2,7 @@
 SPDX-FileCopyrightText: 2026 INPUTLOOP
 SPDX-License-Identifier: CC-BY-SA-4.0
 -->
-# The left nav: an Emacs frame beside topology forge (formerly TopoForge)
+# The left nav: an Emacs frame beside draw
 
 Status: revision 5, 2026-11-02 morning: **yes, and**. The navigator of revisions 1 to 3 comes back in
 free beside the shape finder; the legend is one line; the frame moves, widens and grows its three
@@ -22,7 +22,7 @@ toplogy forge for Shift and the text cut off on later pages."
 His choice the same morning, among the options put to him for what the pages remember: "Keep it, disclose it
 — keep on-device remembering, and say so in each page's privacy note with a one-press 'forget my settings'".
 
-The two app changes are topology forge 1.14 (topology, branch corwin, read-only here): `TopoForge.peekKey(down)`,
+The two app changes are draw 1.14 (topology, branch corwin, read-only here): `TopoForge.peekKey(down)`,
 for a page whose own keys hear Shift, and a big card's title too long to fit shortened at a word with an ellipsis,
 no longer cut off by the card ("... for people and their agents:"; the cause, in 1.12's fitter: a title that could
 not fit at 1.10's sizes even alone left nothing to fit, so everything was drawn at the floor and the box cut it).
@@ -45,7 +45,7 @@ not fit at 1.10's sizes even alone left nothing to fit, so everything was drawn 
 | **the note** | one page, `privacy.html`: these pages collect nothing (no cookies, no counters, nothing from another host); what they remember stays in this browser, and no script sends it anywhere; the web server's own request log is said plainly; then every name the code keeps, by part (this site's pages, the drawing, topology's front door and board, the demos), each with what it is for and its store (this tab's one says so) | his choice: keep it, disclose it |
 | **the list is the code's** | `build.py`'s `KEPT` is the list; `tests/check_site.py` reads every `setItem` in every served script, follows its name (a string, a constant in the file, one exported beside it, a string and a variable as a prefix, the board's `LS.set` wrapper) and fails when the note and the code differ either way, or when it meets a write it cannot read | "the note lists exactly the keys the code writes", from the code, not from memory |
 | **Forget my settings** | one press removes every listed name (prefixes too: each board, each panel) from local storage and from this tab's session storage, and says in the echo area (and under the button) how many and which; `js/privacy.js` forgets the page's own list, never one of its own | one press, and it says what it removed |
-| **asks only for work kept nowhere else** | it asks first only when topology forge's autosave holds a drawing that is neither the app's sample, nor empty, nor the shop's drawing as this site serves it (read from this site only then and compared shape by shape), or when a board is kept; Cancel keeps everything and says so | a confirmation only if the drawing has unsaved work |
+| **asks only for work kept nowhere else** | it asks first only when draw's autosave holds a drawing that is neither the app's sample, nor empty, nor the shop's drawing as this site serves it (read from this site only then and compared shape by shape), or when a board is kept; Cancel keeps everything and says so | a confirmation only if the drawing has unsaved work |
 | **reachable from every page** | the colophon's link (`rel="privacy-policy"`) on every page the build makes, the 404 page included, and the list of everywhere; in free, Site and Options; in M-x, Site: | reachable from every page |
 | **what it names links back** | Options ("What these options keep in this browser"), the navigator's Help (classic) and its menu (free), Customize's layout row, the legend's Your drawing (to `#drawing`), and the demo pages of topology and Quantum 3D5 (to `#topology`, `#demos`) | every remembered feature the note names links back to it |
 | **`#privacy` on every page** | about-corwin's Customize block, staged unchanged, now links `#privacy` ("What this site remembers") on the page it sits on; here that is the colophon's link to the note (on the note, its heading) | its link lands, here as on aboutcorwin.com |
@@ -60,7 +60,7 @@ not fit at 1.10's sizes even alone left nothing to fit, so everything was drawn 
   check, each with a test that keeps it true: Vue Router's devtools settings (its proxy is never made, nothing sets
   `enableEarlyProxy`), MapLibre's storage test (only in the unminified twins, defined and never called), and p5's
   `storeItem` (Quantum 3D5 never calls it).
-- topology forge does not write its autosave when it opens a drawing, only when the drawing changes or its page is
+- draw does not write its autosave when it opens a drawing, only when the drawing changes or its page is
   turned; a page turn keeps the shop's drawing unchanged, so Forget compares shapes, not the mere presence of an
   autosave.
 
@@ -119,12 +119,12 @@ revision: 8 for Shift, the words and the zoom, 29 for the note, among them "priv
 
 ### What Corwin asked (his words, 2026-11-03 17:01, relayed with the task)
 
-"For topology forge: i love the slider on the toolbar, we could do the zoom nudge controls this way with fit
+"For draw: i love the slider on the toolbar, we could do the zoom nudge controls this way with fit
 to window in the middel and free up three toolbar buttons; if we then made a split-pill left/right (two
 position only) switch we get two more; Also: when hovering a shape on the main stage area it would be good to
 have a modifer key that shows the flash-card/trading-card like we get with no modifier".
 
-topology forge 1.13 (topology, branch corwin, `a997073`, read-only) adds the switch `peek` (Shift over a
+draw 1.13 (topology, branch corwin, `a997073`, read-only) adds the switch `peek` (Shift over a
 placed shape shows its card in the map; `topoforge:peek` tells the page) and the read-only call
 `TopoForge.fitScale()`, the zoom Fit would set (`topoforge/spec/EMBED-v1.md`, "Added in 1.13").
 
@@ -168,7 +168,7 @@ placed shape shows its card in the map; `topoforge:peek` tells the page) and the
 2. **Shift pressed in this page.** With the focus in this page and the pointer still over a shape, pressing
    Shift shows nothing until the pointer moves: the app reads Shift from its own keys, or from a pointer move
    over the drawing. A call for the page to pass Shift on (say `TopoForge.peekKey(down)`) would close it;
-   that is topology forge's to add.
+   that is draw's to add.
 3. **The pill's tilt** holds while the pointer is down (a rocker), not for a fixed moment. Falsifier: hold
    the undo half down and watch the pill stay tilted.
 4. **The zoom slider's span**, Fit ÷ 4 to Fit × 4, is the house's 4, picked, not measured. A wider span
@@ -209,7 +209,7 @@ shards. Two faults that first stayed green showed checks that did not test what 
 with no card timer running; an undo that changed the selection, so the tool-bar's redraw hid a stale pill),
 and a third (the focus kept) a check whose press drew nothing again; each check now builds the case it names.
 
-## Revision 9: topology forge 1.12's card that fills the map, and the pad that pages it (2026-11-03)
+## Revision 9: draw 1.12's card that fills the map, and the pad that pages it (2026-11-03)
 
 ### What Corwin asked (his words, 2026-11-03, relayed with the task)
 
@@ -218,7 +218,7 @@ and a third (the focus kept) a check whose press drew nothing again; each check 
 could be the dpad's function when one is highlighted, changing the color and maybe even rotating the dpad
 45deg".
 
-topology forge 1.12 (topology, branch corwin, `ee1475a`, read-only) answers it with two switch words, off
+draw 1.12 (topology, branch corwin, `ee1475a`, read-only) answers it with two switch words, off
 unless a page asks: `bigcard` (the card fills the map, its words as large as fit, a large picture, its
 facts a box score or lines, several matches as pages, "2 of 5") and `cardpad` (while a card shows, the
 map's pad turns 45 degrees, takes the accent colour, and its arms page the cards). Its spec,
@@ -315,7 +315,7 @@ From the resume note: "the original framing was in terms of slider and you even 
 the hand-back, but we didn't draw a slider."
 
 This stage builds reading 1 of S2, S5 and S6, and the page's side of S1 and S4 (READINGS.md). The pad
-itself and the app's reset arrive with topology forge 1.11 (stage 2, below when it lands).
+itself and the app's reset arrive with draw 1.11 (stage 2, below when it lands).
 
 ### S6, fit it at 1280: frame 2 starts below the layout switch, at every width
 
@@ -408,7 +408,7 @@ fault, and the old "a private repository linked" plant now links c4.
 
 Each promise has a planted fault in `tests/run.sh --prove-red`, proven in shards.
 
-### Built and checked (2026-11-02, revision 8 stage 1, on topology forge 1.10 `e524fe8`)
+### Built and checked (2026-11-02, revision 8 stage 1, on draw 1.10 `e524fe8`)
 
 `sh tests/run.sh`: Python 43 (one new: obsmage public and linked), node 30, browser 33, navigator 31,
 classic 34, free 46, revision 5 30, revision 6 26, revision 7 37, revision 8 **42**. Found while building:
@@ -426,7 +426,7 @@ classic 34, free 46, revision 5 30, revision 6 26, revision 7 37, revision 8 **4
   thumb, which moves only when the reader moves it and never with Motion off; the node and browser
   checks that hold that rule name the exception.
 
-### Stage 2: topology forge 1.11, the map's pad and Reset layout (topology, branch corwin, `adff93a`, read-only)
+### Stage 2: draw 1.11, the map's pad and Reset layout (topology, branch corwin, `adff93a`, read-only)
 
 1.11 adds two switch words, `mappad` and `reset` (both off unless a page asks, in neither `all` nor
 `bare`), and three calls: `padArrows`, `resetLayout`, `undoReset`.
@@ -524,7 +524,7 @@ options around changes [...] is most often TRT [...] A feature disabled that way
   controls: the map and its door-handle controls are inside the app's frame, which this page does not
   draw in; the tool-bar is where the things that preview are. Kept per browser.
 - The map's place, size and orientation are the reader's and are not touched when the mode changes.
-- Until the app can draw cards and highlight in the drawing (topology forge 1.10), cards are shown in the
+- Until the app can draw cards and highlight in the drawing (draw 1.10), cards are shown in the
   plain box above the map; in the middle position the map's rings stand in for the drawing's highlight.
 
 ### Cards, built from data
@@ -550,7 +550,7 @@ drawing) is wired and checked when it lands.
 
 Manifest: none owed.
 
-### Built and checked (2026-11-02, revision 7 stage 1, before topology forge 1.10)
+### Built and checked (2026-11-02, revision 7 stage 1, before draw 1.10)
 
 Built against topology, branch corwin, `25fae11` (1.9). `sh tests/run.sh`: ALL CHECKS PASSED (Python, node,
 browser 33, navigator 31, classic 34, free 46, revision 5 30, revision 6 26, revision 7 21). The card box sits
@@ -561,7 +561,7 @@ Found: in the rings position the echo area takes every hover's caption, so a lon
 a hover under the pointer; that is the position's purpose, and the test now invokes its command without
 moving the pointer.
 
-### Stage 2: topology forge 1.10 wired (topology, branch corwin, `e524fe8`, read-only)
+### Stage 2: draw 1.10 wired (topology, branch corwin, `e524fe8`, read-only)
 
 1.10 gives the map its three modes (`mapMode`), a card in the map (`preview(what, { caption, card })`), the
 matches lit in the drawing (the middle mode), the map's own scale (`mapScale`, from its Mode menu) and the
@@ -670,7 +670,7 @@ for technical drawings (European CAD requires an ISO 3098 face; osifont exists f
 
 - **Subtler**, the field names: IBM Plex Sans Condensed Light, small capitals, tracked (letter-spacing
   0.12em), 9 pixels: APP, BY, LICENCE, PROSE, SOURCE, REV, DATE.
-- **Subtle**, the values: osifont (ISO 3098 lettering), 12 pixels, regular: topology forge, Bryant
+- **Subtle**, the values: osifont (ISO 3098 lettering), 12 pixels, regular: draw, Bryant
   Frankford (linked), GPLv3+ or LGPLv3+, CC BY-SA 4.0, topology (linked), the revision, the date; then
   `credits`.
 - Both in the dim text colour, which keeps AA contrast (4.5:1): subtle by size, weight, width and
@@ -728,7 +728,7 @@ The design, weighed (Corwin: "we MUST be innovative"):
 7. The navigator's menu stays in the menu bar too while its window is selected, when there is room
    (yes, and): the mode-line lighter is one more way to it, not a replacement.
 
-### topology forge 1.9, part A, wired now (built against topology, branch corwin, `c67b9f4`, read-only)
+### draw 1.9, part A, wired now (built against topology, branch corwin, `c67b9f4`, read-only)
 
 - `*Here*` floats beside the shape (`TopoForge.selectionRect()`), without zooming; with 1.8 it still
   recentres first (revision 4).
@@ -794,7 +794,7 @@ DOME: storage refused, the frames still resize; 390 wide nothing floats and noth
 
 Manifest: none owed.
 
-### Built and checked (2026-11-02, revision 6, with topology forge 1.9 part A)
+### Built and checked (2026-11-02, revision 6, with draw 1.9 part A)
 
 Built against topology, branch corwin, `c67b9f4` (1.9 part A), staged read-only with `git archive`.
 `sh tests/run.sh`: ALL CHECKS PASSED (Python, node 29, browser 33, navigator 31, classic 34, free 46,
@@ -811,7 +811,7 @@ there, with the edges). The revision 4 check that `*Here*` sits beside the middl
 (1.9 floats it beside the shape); the check that 1.9's hooks stay off with 1.8 now tells the app it is
 1.8 for a moment, so it holds whichever app is staged.
 
-### Stage 2: topology forge 1.9 parts B and C (topology, branch corwin, `25fae11`)
+### Stage 2: draw 1.9 parts B and C (topology, branch corwin, `25fae11`)
 
 His words (08:57, c4 `q/2026-11-02-yes-and/PROMPT.md`): "when hovering/selecting something inside the
 nav/emacs frame use the mini-map as a HUD to give a little dashboard of what we are looking for. Allow the
@@ -924,7 +924,7 @@ written down as a fork below.
 ### What is built, control by control, each with its intention
 
 **The legend: one line.** Hairline compartments in the drafting manner, small type, no sentences:
-`topology forge · Bryant Frankford` | `GPLv3+ or LGPLv3+` | `prose CC BY-SA 4.0` | `source` |
+`draw · Bryant Frankford` | `GPLv3+ or LGPLv3+` | `prose CC BY-SA 4.0` | `source` |
 `rev <sha> · <date>` | `credits`. Intentions: credit Bryant first and link him; say the licence in the
 words people use for it (GPLv3+, as he wrote it; CC BY-SA 4.0 is Creative Commons' own short name),
 never the SPDX expression meant for machines; keep the drawing's revision, as a title block does;
@@ -995,7 +995,7 @@ already say.
 **The preview (HUD).** Pointing at or focusing a tool, a shape row or a navigator item shows what you
 are looking for in a small read-only box in the bottom right corner, just above the app's overview
 map: the category and its shapes, the command and its key, the item and what it says. Intention: a
-little dashboard of what a press would do, before you press. When topology forge 1.9 is there
+little dashboard of what a press would do, before you press. When draw 1.9 is there
 (`TopoForge.version` 1.9 or later and `TopoForge.preview` a function), the page asks the app to show
 it on the overview map itself (`preview({ category })`, `preview(refs)`, `preview(null)` on leaving),
 and the plain box stands down.
@@ -1072,9 +1072,9 @@ waits for its spec text before its exact shape is fixed.
 - The tool-bar as an undockable palette (dock to the frame or float). Not needed: more rows work.
 - A strobe (automatic blink compare). He said skip it.
 
-### Built and checked (2026-11-02, stage 1: before topology forge 1.9)
+### Built and checked (2026-11-02, stage 1: before draw 1.9)
 
-Observed with `sh tests/run.sh` against committed topology forge 1.8: ALL CHECKS PASSED (Python,
+Observed with `sh tests/run.sh` against committed draw 1.8: ALL CHECKS PASSED (Python,
 node 29, browser 33, navigator 31, home in classic 34, free 46, revision 5 30). The revision 5 suite,
 `tests/free5-browser.cjs`, checks each promise above at 1280 and 390, light and dark; its planted
 faults (16 new, and 7 earlier ones rewritten for the one-line legend and the new keys table) each
@@ -1097,7 +1097,7 @@ gets a planted fault in `tests/run.sh --prove-red`.
 
 TOWER
 - The legend is one line at 1280: its line's height is one line of its text; no SPDX-style string
-  (`-or-later`, `-only`, `CC-BY-SA-`) in its visible text; it names topology forge and Bryant first with
+  (`-or-later`, `-only`, `CC-BY-SA-`) in its visible text; it names draw and Bryant first with
   his link; `GPLv3+` is there. (browser and Python; plant: the SPDX line back)
 - The frame moves and its width persists: grip drag and ArrowRight move it; the edge's End and
   ArrowLeft change the width; both survive a reload. (browser; plants: width not kept; edge keys dead)
@@ -1176,11 +1176,11 @@ reach editor/access related functions conveniently." (The whole prompt is in c4,
 
 - The site's top bar is back at the top (Home, Directory, Demos, Packages, About, and Customize at the
   right). The heading is two words: "The shop, drawn".
-- topology forge with its own chrome: the frame asks only for `embed=select,ready` (the selection and
+- draw with its own chrome: the frame asks only for `embed=select,ready` (the selection and
   ready messages; no switch that changes how it looks).
 - The navigator (revisions 1 to 3, `js/nav.js`) is the finder, a palette that starts hidden to its
   one grip row, floating over the canvas right of the app's shapes; "show" opens it.
-- Under the drawing, one row: "topology forge (formerly TopoForge) by Bryant Frankford · code
+- Under the drawing, one row: "draw by Bryant Frankford · code
   GPL-3.0-or-later or LGPL-3.0-or-later · prose CC-BY-SA-4.0 · source", and one row of links (the app
   full size, the drawings as a file, start again) with the one-line status. The five-cell legend is not
   shown in classic.
@@ -1423,7 +1423,7 @@ obsolete; its work is merged forward into topology, branch corwin, which is kept
 
 ### The name
 
-The drawing app is **topology forge (formerly TopoForge)**, made by Bryant Frankford, with Corwin
+The drawing app is **draw**, made by Bryant Frankford, with Corwin
 Brust and contributors. Bryant is named first. Our own text (this file, the legend, the catalog's
 credits, README) says the new name; the app's internal names stay (`window.TopoForge`, its JSON
 format, its storage keys), because saved drawings and this page rely on them.
@@ -1453,8 +1453,8 @@ own, 1.8 draws the same pixels as 1.7 (that kit compares them at three widths, l
   (`contentDocument`) and re-placing on a timer after the frame loads.
 - Each message listener hears only its own frame, of this site's origin (`ev.origin` and
   `ev.source` both checked); the app itself posts only to its own origin.
-- The legend says "topology forge (formerly TopoForge), made by Bryant Frankford ..." and its hidden
-  row "topology forge (formerly TopoForge) by Bryant Frankford ...".
+- The legend says "draw, made by Bryant Frankford ..." and its hidden
+  row "draw by Bryant Frankford ...".
 
 ### Checks added (each with a planted fault in `tests/run.sh --prove-red`)
 
@@ -1614,7 +1614,7 @@ Checked in `www/topoforge/index.html` (topology, branch corwin, TopoForge 1.7):
   top bar; and nothing says what is selected. Restyling TopoForge from outside (writing CSS into its
   document) would be a change to TopoForge in all but name, so it is not done.
 
-### The TopoForge-side changes, proposed (built in topology forge 1.8: see revision 3 above)
+### The TopoForge-side changes, proposed (built in draw 1.8: see revision 3 above)
 
 Credit: TopoForge is Bryant Frankford's; these would go into topology (branch corwin) under
 `www/topoforge/`, with a version bump (1.8), his name first in AUTHORS as now, and only after Corwin

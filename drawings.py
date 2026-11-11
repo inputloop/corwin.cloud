@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: 2026 INPUTLOOP
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""The default drawings: one TopoForge page per project the directory lists, made at build time.
+"""The default drawings: one draw page per project the directory lists, made at build time.
 
-    python3 drawings.py OUT_DIR [TOPOLOGY_DIR [INPUTLOOP_DIR]]     (build.py calls make())
+    python3 drawings.py OUT_DIR [DRAW_DIR [INPUTLOOP_DIR]]     (build.py calls make())
 
 Reads catalog.py (what each project is, who made it, how it works) and the TOPOLOGY.md files in a
 topology checkout (examples/inputloop/: what each thing contains and connects to, its layer and
-pillar). Writes TopoForge JSON, the format TopoForge saves and opens with File > Open or ?load=:
+pillar). Writes draw JSON, the format draw saves and opens with File > Open or ?load=:
 
     drawings/inputloop.json        the default set: the shop, then one page per directory project,
                                    obsmage's workflows and scenes, and Bryant's "how Gitcha works"
@@ -16,9 +16,9 @@ pillar). Writes TopoForge JSON, the format TopoForge saves and opens with File >
 
 The TOPOLOGY.md reader follows topology's spec/TOPOLOGY-md.md (front matter, ## Private parts). This
 site is public, so its floor is "never": a private part is never drawn, and the page says one was
-kept back and by what. Each node sits on a TopoForge layer named for its layer (abstract,
+kept back and by what. Each node sits on a draw layer named for its layer (abstract,
 operational, physical) or for what it is (flow, words), so a person can switch views with
-TopoForge's own Layers panel. Standard library only.
+draw's own Layers panel. Standard library only.
 """
 import hashlib
 import json
@@ -36,7 +36,7 @@ LAYERS = [("words", "Words: titles and notes"), ("abstract", "Abstract: people a
           ("flow", "Flow: how it works, step by step")]
 SETTINGS = {"grid": 20, "snap": True, "showGrid": True, "guides": True, "netLabels": True, "ifLabels": True,
             "minimap": True, "defaultRoute": "orthogonal"}
-# TopoForge shape names a TOPOLOGY.md kind may use directly; anything else is drawn as a rounded box.
+# draw shape names a TOPOLOGY.md kind may use directly; anything else is drawn as a rounded box.
 TF_SHAPES = set("router switch l3switch hub ap wrouter modem lb patch firewall ids vpn server vm container database "
                 "storage ups nms desktop laptop phone ipphone tablet printer camera user users internet cloud wan tower "
                 "zone site vlan subnet dmz vpc rack rect rounded ellipse diamond triangle hexagon parallelogram "
@@ -359,7 +359,7 @@ def gitcha_pages(idir):
 
 
 def process_page(proc, notation, table, src, key):
-    """One process, in one notation: lanes stacked as TopoForge zones, elements placed by column.
+    """One process, in one notation: lanes stacked as draw zones, elements placed by column.
     Every element carries its role and the shape each notation gives it, so the notation is data."""
     nt = table[notation]
     pg = Page(proc["name"] if notation == "bpmn" else "%s (%s)" % (proc["name"], nt["name"]), key)
@@ -464,6 +464,6 @@ def make(out, tdir, idir):
 if __name__ == "__main__":
     a = sys.argv[1:]
     if not a:
-        sys.exit("usage: python3 drawings.py OUT_DIR [TOPOLOGY_DIR [INPUTLOOP_DIR]]")
+        sys.exit("usage: python3 drawings.py OUT_DIR [DRAW_DIR [INPUTLOOP_DIR]]")
     ix = make(a[0], a[1] if len(a) > 1 else "../topology", a[2] if len(a) > 2 else "../inputloop")
     print("drawings: %d pages, %d projects" % (len(ix["pages"]), len(ix["projects"])))

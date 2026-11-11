@@ -5,7 +5,7 @@
 //   SITE_OUT=dir [SHOTS=dir] node tests/free5-browser.cjs
 // The legend is one line in words; the frame moves and its width is kept; the menu bar, the mode-lines
 // and the message area grow together; the navigator is back in free, beside the finder; the tool-bar is
-// icons only with tooltips and names, in evenly spaced groups; the preview box; topology forge 1.9's hooks
+// icons only with tooltips and names, in evenly spaced groups; the preview box; draw 1.9's hooks
 // stay off with 1.8 and turn on with 1.9; the layout switch never moves. 1280 and 390, light and dark,
 // under the deploy policies; no console errors, no request to another host.
 const http = require('node:http'), fs = require('node:fs'), path = require('node:path'), assert = require('node:assert/strict');
@@ -69,7 +69,7 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
     const lg = await p.evaluate(() => { const l = document.querySelector('#legend .lg-line'); const cs = getComputedStyle(l); return { h: l.getBoundingClientRect().height, lh: parseFloat(cs.lineHeight), text: l.innerText, color: cs.color, bg: getComputedStyle(document.body).backgroundColor, n: l.querySelectorAll('.lg-c').length }; });
     if (wide) assert.ok(lg.h <= lg.lh * 1.5 + 2, `the legend is not one line (${lg.h} for a line of ${lg.lh}) at ${tag}`);
     assert.ok(!/-or-later|-only|CC-BY-SA-|SPDX/.test(lg.text), 'a machine-formatted licence string in the legend: ' + lg.text);
-    assert.ok(/^app\s*topology forge\s*by\s*Bryant Frankford/i.test(lg.text.trim()) && /GPLv3\+/.test(lg.text), 'the legend line does not credit the app and Bryant first, or lacks GPLv3+: ' + lg.text);
+    assert.ok(/^app\s*draw\s*by\s*Bryant Frankford/i.test(lg.text.trim()) && /GPLv3\+/.test(lg.text), 'the legend line does not credit the app and Bryant first, or lacks GPLv3+: ' + lg.text);
     assert.ok(lg.n >= 6, 'fewer than six compartments');
     assert.ok(contrast(lg.color, lg.bg) >= 4.5, 'the legend line is below AA');
     ok(`the legend is ${wide ? 'one line' : 'whole compartments'} of ${lg.n} hairline compartments, in words (GPLv3+, no SPDX string), Bryant first, AA, at ${tag}`);
@@ -269,7 +269,7 @@ const near = (a, b, d = 1) => Math.abs(a - b) <= d;
     assert.deepEqual(pv.slice(0, 2), ['{"category":"net"}', null], 'with 1.9 the preview did not go to the app: ' + JSON.stringify(pv));
     assert.equal(await p.isVisible('#ef-hud'), false, 'with 1.9 the stand-in box still shows');
     await ctx.close();
-    ok('with topology forge 1.9 (version and preview() there) the preview goes to the app: preview({ category }), then preview(null); the stand-in box stands down');
+    ok('with draw 1.9 (version and preview() there) the preview goes to the app: preview({ category }), then preview(null); the stand-in box stands down');
   }
   // ---- storage refused ----
   {
