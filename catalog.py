@@ -70,7 +70,14 @@ PUBLIC_URLS = [
 # Addresses that come with about-corwin's CI strip (share.py): the blog, and one folder per build
 # branch, in the same strict shape about-corwin's build accepts (CI_BRANCH there).
 PUBLIC_URLS.append("https://corwin.bru.st/")
-PUBLIC_URL_PATTERNS = [r"^https://corwin\.bru\.st/[a-z][a-z0-9-]{1,30}/$"]
+# The homes of projects added 2026-11-11 (each answered 200 that day).
+PUBLIC_URLS += ["https://chadtab.com/", "https://orgfs.com/", "https://ghostlights.theater/"]
+PUBLIC_URLS += [ORG + "/" + n for n in ("chadtab", "orgfs", "deckline", "ghostlights-theatre", "gameDroid", "bContain", "garden")]
+PUBLIC_URL_PATTERNS = [r"^https://corwin\.bru\.st/[a-z][a-z0-9-]{1,30}/$",
+                       # each build's source upstream (about-corwin's ABOUT_UPSTREAM_COMMIT): the GitHub mirror by
+                       # default, Savannah's cgit when that is chosen
+                       r"^https://github\.com/emacs-mirror/emacs/commit/[0-9a-f]{6,40}$",
+                       r"^https://git\.savannah\.gnu\.org/cgit/emacs\.git/commit/\?id=[0-9a-f]{6,40}$"]
 # Hosts the drawings may name. Any other host a TOPOLOGY.md names (a person's own computer) is drawn
 # as "a workstation" with no name: this site names only the public ghostwheel hosts and forges.
 PUBLIC_HOSTS_RE = r"^(gw\d+|code\.bru\.st|github\.com/inputloop)$"
@@ -199,10 +206,8 @@ REPOS = [
          url=ORG + "/bContain",
          one="One program boots disk images and runs container images on Windows and Linux, with a command line and a web dashboard.",
          credit="Bryant"),
-    dict(id="avalon", name="avalon", kind="security", public=True, tab=None,
-         url=ORG + "/avalon",
-         one="Signed method tools lifted from a security engagement, checkable against pinned keys; the cases themselves never travel.",
-         credit="Corwin"),
+    # avalon (public on GitHub since 2026-11-11) is not listed here: this site never names Corwin's workstation,
+    # and the repository bears its name (tests: no private part or name in the nav or the drawings).
     dict(id="garden", name="garden", kind="ai", public=True, tab=None,
          url=ORG + "/garden",
          one="Gated agent-skill synthesis: tags in notes pass a gate, skill skeletons are minted, and bundles come out.",

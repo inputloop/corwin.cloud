@@ -43,7 +43,7 @@ e = html.escape
 # page to it, and it to its stamp.
 with open(os.path.join(ROOT, "privacy-log.txt"), encoding="utf-8") as _fh:
     PRIVACY_LOG = _fh.read().split("\n")[1]
-SHARED = {"staged": False, "markup": "", "ci": "", "taxonomy": False}   # set by main() from share.stage(): about-corwin's palette and CI strip
+SHARED = {"staged": False, "markup": "", "ci": "", "taxonomy": False, "builds": False}   # set by main() from share.stage(): about-corwin's palette and CI strip
 
 
 def a(href, text, cls=""):
@@ -140,7 +140,8 @@ Built by build.py from catalog.py and src/. Edit those, not this file.
 def shared_head():
     if not SHARED["staged"]:
         return ""
-    return '<link rel="stylesheet" href="css/shared.css">\n<script src="js/customize.js" defer></script>\n'
+    return ('<link rel="stylesheet" href="css/shared.css">\n<script src="js/customize.js" defer></script>\n'
+            + ('<script src="js/builds.js" defer></script>\n' if SHARED.get("builds") and SHARED["ci"] else ""))
 
 
 def ci_strip():
@@ -486,7 +487,8 @@ SOURCE_LABELS = {C.P5_SOURCE: "p5.js 1.9.0"}
 def page_jslicense(staged):
     lab = '<a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU-GPL-3.0-or-later</a>'
     rows = []
-    for f in JS_FILES + (("customize.js",) if SHARED["staged"] else ()) + (("taxonomy.js",) if SHARED.get("taxonomy") else ()):
+    for f in JS_FILES + (("customize.js",) if SHARED["staged"] else ()) + (("taxonomy.js",) if SHARED.get("taxonomy") else ()) \
+            + (("builds.js",) if SHARED.get("builds") and SHARED["ci"] else ()):
         rows.append('<tr><td><a href="js/%s">%s</a></td><td>%s</td><td><a href="js/%s">%s</a></td></tr>' % (f, f, lab, f, f))
     for did, res in sorted(staged.items()):
         for path, lic, source in res.get("scripts", []):
@@ -586,6 +588,7 @@ def page_privacy(index, kept):
 <h1 id="privacy" tabindex="-1">What this site keeps in your browser</h1>
 <p class="lede">These pages collect nothing: no cookies, no counters, nothing loaded from another host. What they remember for you, such as a layout, where you put a frame, or your drawing, stays in this browser under the names below, and no script here sends it anywhere.</p>
 <p>%s</p>
+<p>One thing is asked for, and nothing about you goes with it: with scripts on, the Emacs builds card asks this site once for the newest build list (this site passes the question to corwin.bru.st, where the builds are published), to mark each build checked or updated.</p>
 <section class="forget" aria-labelledby="forget-h">
 <h2 id="forget-h">Forget my settings</h2>
 <p class="js-only-flex"><button type="button" class="act primary" id="forget" data-doc="%s" data-drawing="%s">Forget my settings</button></p>

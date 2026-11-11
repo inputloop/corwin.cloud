@@ -25,7 +25,8 @@ import subprocess
 import sys
 
 LABEL = "// @license magnet:?xt=urn:btih:1f739d935676111cfff4b4693e3816e664797050&dn=gpl-3.0.txt GPL-3.0-or-later"
-SIDE_RULES = (".side {", ".side-card {", ".side-card h3 {", ".side ul {", ".side .what {", ".side .when {", ".side .src {", ".builds li, .posts li {")
+SIDE_RULES = (".side {", ".side-card {", ".side-card h3 {", ".side ul {", ".side .what {", ".side .when {", ".side .src {", ".builds li, .posts li {",
+              ".side .up {", ".side .chk", ".side .ci-live {")
 SECTIONS = ("reading settings (Customize)", "Customize: the floating control")
 
 
@@ -48,7 +49,7 @@ def css_section(css, title):
 
 def stage(out, adir):
     """Returns {"staged": bool, "why", "commit", "markup", "ci"} and writes js/customize.js and css/shared.css."""
-    res = {"staged": False, "why": "", "commit": None, "markup": "", "ci": "", "taxonomy": False}
+    res = {"staged": False, "why": "", "commit": None, "markup": "", "ci": "", "taxonomy": False, "builds": False}
     src = os.path.join(adir or "", "src")
     try:
         with open(os.path.join(src, "js", "customize.js"), encoding="utf-8") as f:
@@ -81,6 +82,7 @@ def stage(out, adir):
         f.write(head + "\n".join(parts) + "\n/* ---- the side cards (the CI strip) */\n" + "\n".join(side) + "\n")
     with open(os.path.join(out, "js", "customize.js"), "w", encoding="utf-8") as f:
         f.write(js)
+    res["builds"] = stage_builds(out, src)
     res["taxonomy"] = stage_taxonomy(out, src)
     # about-corwin's page is a template now: {{TONE_ROWS}} in the Customize block (2026-11-01). Its own
     # build fills a placeholder with nothing when the tone pads are off; they are not on this site, so
@@ -89,6 +91,27 @@ def stage(out, adir):
     res["ci"] = ci_strip(adir, res)
     res["staged"] = True
     return res
+
+
+# The address the builds card asks for the live build list: this site's own copy of corwin.bru.st's
+# emacs-latest.json (nginx passes it through: deploy/nginx-corwin.cloud.conf, location /feeds/), so the page's
+# policy stays connect-src 'self'.  CC_BUILDS_FEED="" turns the check off.
+BUILDS_FEED = os.environ.get("CC_BUILDS_FEED", "/feeds/emacs-latest.json")
+
+
+def stage_builds(out, src):
+    """about-corwin's builds.js, unchanged, when it carries its LibreJS label; False otherwise."""
+    try:
+        with open(os.path.join(src, "js", "builds.js"), encoding="utf-8") as f:
+            js = f.read()
+    except OSError:
+        return False
+    if not js.startswith(LABEL) or "// @license-end" not in js:
+        print("share: about-corwin's builds.js lost its LibreJS label: not shared", file=sys.stderr)
+        return False
+    with open(os.path.join(out, "js", "builds.js"), "w", encoding="utf-8") as f:
+        f.write(js)
+    return True
 
 
 def ci_strip(adir, res):
@@ -101,7 +124,11 @@ def ci_strip(adir, res):
         spec = importlib.util.spec_from_file_location("about_corwin_build", path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        return mod.render_ci(mod.load_snapshots())
+        snap = mod.load_snapshots()
+        try:
+            return mod.render_ci(snap, feed=BUILDS_FEED if res.get("builds") else "")
+        except TypeError:   # an about-corwin from before the builds card took a feed
+            return mod.render_ci(snap)
     except Exception as ex:  # noqa: BLE001  any failure here only leaves the strip out
         print("share: the CI strip is left out: %s" % ex, file=sys.stderr)
         res["ci_why"] = str(ex)
