@@ -9,7 +9,10 @@ The site is plain files. Nothing runs on the server but nginx.
 1. On a machine that has this repository and a checkout of draw:
    `DRAW_DIR=../draw python3 build.py` writes `public/` and `deploy/topology-csp.conf`.
    Run `sh tests/run.sh` first; it must end `ALL CHECKS PASSED`.
-2. Copy `public/` to `/var/www/corwin.cloud/public/` on gw33 (rsync with `--delete` is fine).
+2. Copy `public/` to `/var/www/corwin.cloud/public/` on gw33 (rsync with `--delete` is fine), and give
+   it world-readable modes: `rsync -a --delete --chmod=D755,F644`, or `install.sh`, which sets them. A
+   build written on a Windows-backed folder carries owner-only modes, and nginx answers 403 for those
+   files (2026-11-12: draw's pages under /topology/, for a minute, after a hand copy without them).
 3. Copy `deploy/topology-csp.conf` to `/etc/nginx/snippets/corwin-cloud-topology-csp.conf`, and
    `deploy/nginx-corwin.cloud.conf` to `/etc/nginx/sites-available/corwin.cloud`; link it into
    `sites-enabled`; add the certificate lines; `sudo nginx -t && sudo systemctl reload nginx`.
