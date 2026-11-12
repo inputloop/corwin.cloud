@@ -61,3 +61,17 @@ revision 11's exactly. Bundle `corwin-cloud-deploy/gw33-deploy-2026-11-10.tgz` (
 installed with its `run.sh`. 25 files staged from the mount kept mode 0700, and `/topology/` answered 403 for
 about a minute until they were made readable; `install.sh` now sets 755/644 on everything it serves, and
 `test-install.sh` holds it to that (with a planted fault in `--prove-red`).
+
+## alchemy on gw33 (2026-11-12)
+
+Laid over the live site, not a full install: the live build had demos staged from checkouts this machine's build
+could not reproduce exactly (NextTime-Dev's checkout was on a working branch), so a full `install.sh` would have
+changed more than alchemy. Built from 5065065 with the demos staged (NextTime-Dev from its public main by `git
+archive`), every page compared with the live copy first: only `jslicense.html` (one row), `privacy.html` (one
+section) and `index.html` (the revision stamp) differed, beside the new files. Bundle
+`corwin-cloud-deploy/gw33-deploy-2026-11-12-alchemy.tgz` (sha256 646ed0f0a6f884b6...), its `run.sh` run as gw33:
+backup in `/var/backups/corwin.cloud/alchemy-20261112T065917Z`, then the seven files, then `location /` given
+`$uri.html` (`nginx -t` passed; reloaded). Checked from outside: `/alchemy`, `/alchemy.html`, `/directory`,
+`/packages`, `/`, `/demo/`, `/topology/` answer 200, `/nope` 404, `/alchemy` carries the strict policy; a browser
+played the C4 deck there with no script error. The next full `install.sh` carries the same files from the
+repository, so nothing here is kept only on the host.
