@@ -1,0 +1,70 @@
+about	classic	Classic	Four kinds of first matter. Put two together and see what they make; pull one apart and see what it was made of.
+start	air
+start	earth
+start	fire
+start	water
+name	philosopherstone	philosopher's stone
+rx	air	air	wind	Air on the move.
+rx	air	cloud	sky	Clouds need somewhere to be.
+rx	air	earth	dust	Earth light enough for the air to carry.
+rx	air	fire	energy	Fire fed by air does work.
+rx	air	lava	stone	Lava cooled in the open.
+rx	air	life	bird	Life that went up.
+rx	air	steam	cloud	Steam that the air keeps aloft.
+rx	air	water	rain	Water given back by the air.
+rx	alchemist	stone	philosopherstone	The stone the alchemist looked for.
+rx	ash	bird	phoenix	The bird that comes back from what fire leaves.
+rx	bird	metal	airplane	A bird made of metal.
+rx	book	book	library	Books kept for anyone.
+rx	clay	life	human	The oldest story: clay that got up.
+rx	cloud	cloud	sky	A sky full of clouds is still a sky.
+rx	computer	computer	network	Computers that talk.
+rx	dust	wind	sand	Dust the wind has worked on.
+rx	earth	earth	land	Earth heaped up until you can stand on it.
+rx	earth	fire	lava	Earth hot enough to flow.
+rx	earth	plant	tree	A plant that kept going.
+rx	earth	rain	plant	Rain on earth, given time.
+rx	earth	water	mud	The first mess anyone makes.
+rx	electricity	glass	light	Electricity in a glass that glows.
+rx	energy	human	idea	A person with energy to spare.
+rx	energy	metal	electricity	Energy that runs along a wire.
+rx	energy	sea	life	A spark in the wide water.
+rx	energy	swamp	life	A spark in the wet.
+rx	fire	fire	heat	Fire doubled is felt from across the room.
+rx	fire	sand	glass	Sand melted clear.
+rx	fire	sky	sun	The fire that stays up there.
+rx	fire	stone	metal	Stone that gave up what it hid.
+rx	fire	water	steam	Water that fire has lifted.
+rx	fire	wood	ash	What fire leaves.
+rx	flower	flower	garden	Flowers someone tends.
+rx	glass	sand	hourglass	Sand counted through glass.
+rx	gold	scholar	alchemist	A scholar who wants to make gold.
+rx	heat	sand	glass	Sand melted clear, the slow way.
+rx	hourglass	sun	time	The two old ways of telling it.
+rx	house	house	village	Houses close enough to borrow sugar.
+rx	human	human	family	People who stay together.
+rx	human	library	scholar	A person who reads the library.
+rx	human	plant	farm	Plants someone tends for food.
+rx	idea	machine	computer	A machine that follows ideas.
+rx	idea	paper	book	An idea that can be lent.
+rx	idea	tool	machine	A tool that does the work itself.
+rx	land	life	beast	Life that walked out.
+rx	land	ocean	world	Land and water, all of it.
+rx	lava	water	stone	Lava cooled at once.
+rx	life	water	fish	Life that stayed in.
+rx	metal	stone	tool	A hard thing to shape the others.
+rx	metal	sun	gold	The metal the colour of the sun.
+rx	mud	plant	swamp	Plants with wet feet.
+rx	mud	sand	clay	Mud that holds its shape.
+rx	network	world	internet	The talk, everywhere.
+rx	plant	sun	flower	A plant turned to the sun.
+rx	rain	sun	rainbow	Sun through the rain.
+rx	sea	sea	ocean	Seas that meet.
+rx	stone	stone	wall	Stones that agree to stand together.
+rx	stone	wind	sand	Stone the wind has worn down.
+rx	tool	tree	wood	A tree, worked.
+rx	tree	tree	forest	Trees enough to get lost in.
+rx	village	village	city	Villages that grew into each other.
+rx	wall	wall	house	Walls that keep the weather out.
+rx	water	water	sea	Enough water to have a horizon.
+rx	water	wood	paper	Wood pulped and pressed.

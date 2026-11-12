@@ -1,12 +1,12 @@
 version = 1
 
 [[annotations]]
-path = ["build.py", "catalog.py", "drawings.py", "demos.py", "processes.py", "vendor.py", "share.py", "navindex.py", "src/js/**", "src/css/**", "src/demo-extra/**", "tests/**", "deploy/nginx-corwin.cloud.conf", "deploy/logrotate-corwin.cloud"]
+path = ["build.py", "catalog.py", "drawings.py", "demos.py", "processes.py", "vendor.py", "share.py", "navindex.py", "alchemy.py", "src/js/**", "src/css/**", "src/demo-extra/**", "tests/**", "deploy/nginx-corwin.cloud.conf", "deploy/logrotate-corwin.cloud"]
 SPDX-FileCopyrightText = "2026 INPUTLOOP"
 SPDX-License-Identifier = "GPL-3.0-or-later"
 
 [[annotations]]
-path = ["README.md", "AGENTS.md", "docs/**", "deploy/DEPLOY.md", "privacy-log.txt", "src/favicon.svg", "src/robots.txt", ".gitignore"]
+path = ["README.md", "AGENTS.md", "docs/**", "deploy/DEPLOY.md", "privacy-log.txt", "src/favicon.svg", "src/robots.txt", ".gitignore", "src/alchemy/**"]
 SPDX-FileCopyrightText = "2026 INPUTLOOP"
 SPDX-License-Identifier = "CC-BY-SA-4.0"
 

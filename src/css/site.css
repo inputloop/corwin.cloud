@@ -777,3 +777,41 @@ html.motion-on .ef-pill[data-tilt="redo"]::before, html.motion-on .ef-pill[data-
 .ef-card-f dt { color: var(--text-dim); }
 .ef-card-f dd { margin: 0; overflow-wrap: anywhere; }
 .ef-card-s { margin: 0 !important; }
+
+/* ---- alchemy (alchemy.html, 2026-11-12): the whole width, three columns that stack ------------- */
+.wrap.wide { max-width: none; }
+.al-addr { font-family: var(--mono); font-size: 14px; }
+.al-off { border-left: 3px solid var(--warn); padding-left: var(--s3); max-width: 70ch; }
+.al-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s6); margin: var(--s4) 0; }
+.al-group { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+.al-label { font: 700 14px/22px var(--mono); color: var(--text-dim); }
+button.act { font: inherit; font-size: 14px; background: var(--canvas); color: var(--link); cursor: pointer; }
+button.act[aria-pressed="true"] { background: var(--link); color: var(--canvas); }
+button.act[aria-pressed="true"]::before { content: "\2713\00a0"; }
+.al-count { margin: 0; font-family: var(--mono); }
+.al-cols { display: grid; grid-template-columns: minmax(14rem, 1fr) minmax(18rem, 1.4fr) minmax(14rem, 1fr); gap: var(--s6); align-items: start; }
+.al-cols h2 { margin-top: 0; font-size: 20px; }
+.al-items { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: var(--s2); }
+.al-item { font: 15px/22px var(--sans); min-height: 36px; padding: var(--s1) var(--s3); background: var(--canvas-dim); color: var(--text); border: 1px solid var(--border); cursor: pointer; }
+.al-item:hover { background: var(--canvas-line); }
+.al-item[aria-pressed="true"] { border: 2px solid var(--focus); background: var(--canvas-active); }
+.al-item[aria-pressed="true"]::after { content: " (chosen)"; font-size: 12px; }
+.al-tag { font-size: 12px; color: var(--text-dim); }
+.al-slots { font: 700 18px/26px var(--mono); min-height: 26px; }
+.al-said { min-height: 52px; color: var(--text-alt); }
+.al-card { border: 1px solid var(--border); border-top: 3px solid var(--link); background: var(--canvas-dim); padding: var(--s4); }
+.al-card.al-new { border-top-color: var(--done); }
+.al-eq { font: 700 17px/26px var(--mono); margin: 0; }
+.al-why { color: var(--text-dim); margin: var(--s1) 0 0; }
+.al-ways { padding-left: 1.1em; margin: var(--s2) 0 0; }
+.al-ways li { margin-bottom: var(--s2); }
+.al-ways .al-why { display: block; }
+.al-logl { font: 14px/22px var(--mono); padding-left: 1.1em; max-height: 28rem; overflow: auto; }
+.al-reset { margin-top: var(--s3); }
+.al-how, .al-books { max-width: 76rem; }
+.al-book { margin: var(--s3) 0; border: 1px solid var(--border); padding: var(--s2) var(--s3); }
+.al-book summary { cursor: pointer; font-weight: 700; }
+.al-book table { border-collapse: collapse; width: 100%; margin-top: var(--s2); font-size: 14px; line-height: 22px; }
+.al-book th, .al-book td { text-align: left; padding: var(--s1) var(--s2); border-bottom: 1px solid var(--canvas-line); vertical-align: top; }
+.al-note { margin-top: var(--s6); }
+@media (max-width: 60rem) { .al-cols { grid-template-columns: 1fr; } }

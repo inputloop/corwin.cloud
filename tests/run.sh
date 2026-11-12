@@ -14,6 +14,9 @@ py=${PYTHON:-python3}
 node=${NODE:-node}
 # DRAW_DIR since 2026-11-11 (topology renamed draw); TOPOLOGY_DIR, the old name, is still read
 DRAW_DIR=${DRAW_DIR:-${TOPOLOGY_DIR:-}}
+# c4, beside this checkout's parent: the alchemy folds are checked against its al1ch (NOT CHECKED without it);
+# absolute, so the planted copies under --prove-red reach it too
+if [ -z "${C4_DIR:-}" ] && [ -d "$here/../../c4/h" ]; then C4_DIR=$(cd "$here/../../c4" && pwd); export C4_DIR; fi
 if [ -z "$DRAW_DIR" ]; then DRAW_DIR=$(cd "$here/../draw" 2>/dev/null && pwd || echo "$here/../draw"); fi
 TOPOLOGY_DIR=$DRAW_DIR
 export DRAW_DIR TOPOLOGY_DIR
@@ -56,6 +59,8 @@ run_checks() {
       SITE_OUT=$out "$node" tests/free10-browser.cjs || fail=1
       step "revision 11: draw 1.14's peekKey (Shift here, the pointer still), his wording, not while typing or on a frame, the opening zoom not Fit (playwright)"
       SITE_OUT=$out "$node" tests/free11-browser.cjs || fail=1
+      step "alchemy: every element of every deck found by play, split, the save, the short address, 360px (playwright)"
+      SITE_OUT=$out "$node" tests/alchemy-browser.cjs || fail=1
       step "revision 11: the note on what the site keeps in the browser: only its names kept in use, one press forgets them all and says so, asks only for work kept nowhere else, the menus and the legend reach it (playwright)"
       SITE_OUT=$out "$node" tests/privacy-browser.cjs || fail=1
     else
@@ -137,6 +142,16 @@ prove_red() {
   plant "stage.js writes to storage"        src/js/stage.js "s#^  var kind = classify(), kept#  localStorage.setItem('x', '1'); var kind = classify(), kept#"
   plant "the home frames a host page"       build.py     's#first = "topology/topoforge/index.html?load=/" + index\["file"\]#first = "topology/app.html"#'
   plant "the demo policy allows inline js"  build.py     "s#DEMO_POLICY = (\"default-src 'self'; script-src 'self';#DEMO_POLICY = (\"default-src 'self'; script-src 'self' 'unsafe-inline';#"
+  plant "alchemy: the short address dropped" deploy/nginx-corwin.cloud.conf 's#try_files \$uri \$uri.html \$uri/ =404;#try_files $uri $uri/ =404;#'
+  plant "alchemy: the page forgets its short address" alchemy.py 's#<a href="/alchemy">#<a href="/alchemy.html">#'
+  plant "alchemy: its stored name not in the note" build.py '/("games", AL.KEY, "key", "local"/d'
+  plant "alchemy: in the menu before the ENHANCE" build.py 's#("packages", "Packages", "packages.html")\]#("packages", "Packages", "packages.html"), ("alchemy", "Alchemy", "alchemy.html")]#'
+  plant "alchemy: a fold copy drifts from c4"  src/alchemy/classic.tsv 's#Water that fire has lifted\.#Water that fire lifted.#'
+  plant "alchemy: a reaction loses its why"   src/alchemy/c4.tsv 's#\tA person standing behind a record of what they agreed to\.#\t #'
+  plant "alchemy: storage outside try"         src/js/alchemy.js "s#^  function store() {#  function store() { window.localStorage.setItem('corwin.cloud.alchemy.v1', '');#"
+  plant "alchemy: a second fetch"              src/js/alchemy.js "s#^  function found(d)#  fetch('x'); function found(d)#"
+  plant_b "alchemy: split shows one way only"  src/js/alchemy.js 's#var rs = d.makes\[x\] || \[\], words = \[\];#var rs = (d.makes[x] || []).slice(0, 1), words = [];#' tests/alchemy-browser.cjs
+  plant_b "alchemy: a corrupt save not said"   src/js/alchemy.js "s#if (was === 'corrupt')#if (was === 'never')#" tests/alchemy-browser.cjs
   plant "a card without its drawing link"   build.py     '/t.append(a("index.html?drawing=%s#top" % r\["id"\], "Drawing", "act"))/d'
   plant "a project drawn from the catalog alone" drawings.py  's#        for f in ("TOPOLOGY.md", ".topology.md"):#        for f in (".topology.md",):#'
   plant "a notation baked into the shape"    drawings.py  's#        shape, word = PR.shape_for(el, notation, table)#        shape, word = "rounded", el["role"]#'

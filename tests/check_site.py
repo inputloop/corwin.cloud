@@ -18,9 +18,10 @@ from html.parser import HTMLParser
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 import catalog  # noqa: E402
+import alchemy  # noqa: E402
 
 OUT = os.environ.get("SITE_OUT", os.path.join(ROOT, "public"))
-PAGES = ["index.html", "directory.html", "packages.html", "jslicense.html", "privacy.html", "404.html", "demo/index.html"] + \
+PAGES = ["index.html", "directory.html", "packages.html", "jslicense.html", "privacy.html", "404.html", "demo/index.html", "alchemy.html"] + \
     ["demo/%s/index.html" % d["id"] for d in catalog.DEMOS]
 # Written in pieces so that this file does not itself contain what it forbids.
 FORBIDDEN = re.compile(r"F" r":\\|/ho" r"me/|clau" r"de\.ai|anthro" r"pic\.com|Co-Auth" r"ored")
@@ -100,6 +101,8 @@ class SiteChecks(unittest.TestCase):
                 if target.endswith("/") or os.path.isdir(os.path.join(OUT, target)) or target in ("", "."):
                     target = os.path.join(target, "index.html")
                 full = os.path.join(OUT, target)
+                if not os.path.isfile(full) and os.path.isfile(full + ".html") and SHORT_ADDRESSES():
+                    target, full = target + ".html", full + ".html"   # a short address: nginx tries $uri.html
                 self.assertTrue(os.path.isfile(full), "%s: %s -> %s does not exist" % (rel, v, target))
                 if frag and target.endswith(".html"):
                     self.assertIn(frag, parse(target).ids, "%s: %s has no #%s" % (rel, v, frag))
@@ -891,6 +894,64 @@ def kept_by_note(out):
     p = Page()
     p.feed(_slurp(os.path.join(out, "privacy.html")))
     return {(d["data-key"], d.get("data-kind", "key"), d.get("data-store", "local")) for t, d in p.tags if "data-key" in d}
+
+
+def SHORT_ADDRESSES():
+    """True when the site proper's location / tries $uri.html, so /alchemy serves alchemy.html."""
+    conf = _slurp(os.path.join(ROOT, "deploy", "nginx-corwin.cloud.conf"))
+    m = re.search(r"\n    location / \{\s*try_files ([^;]*);", conf)
+    return bool(m) and m.group(1).split()[:2] == ["$uri", "$uri.html"]
+
+
+class AlchemyChecks(unittest.TestCase):
+    """alchemy.html (2026-11-12): the combine-and-split game, a test page. Corwin: "make sure that people are
+    not expected to remember a filename if they happen to be typing URLs: link also to the without
+    extension targets"; and the menu waits for the ENHANCE ("Later, once things look good")."""
+
+    def test_the_short_address_is_served_and_linked(self):
+        self.assertTrue(SHORT_ADDRESSES(), "nginx's location / does not try $uri.html, so corwin.cloud/alchemy would be a 404")
+        hrefs = [d.get("href") for tg, d in parse("alchemy.html").tags if tg == "a"]
+        self.assertIn("/alchemy", hrefs, "the page does not link its short address")
+
+    def test_the_page_works_with_scripts_off(self):
+        t = read("alchemy.html")
+        self.assertIn('<noscript>', t)
+        for deck in alchemy.DECKS:
+            d = alchemy.read(deck)
+            self.assertIn(html.escape(d["title"]), t)
+            for s in d["start"]:
+                self.assertIn(html.escape(alchemy.name(d, s)), t, "first matter %s is not on the page" % s)
+            self.assertIn("(%d reactions)" % len(d["rx"]), t, deck + "'s recipe book is not on the page")
+        self.assertIn('src="js/alchemy.js"', t)
+
+    def test_the_data_is_the_folds(self):
+        got = json.loads(read("alchemy-decks.json"))
+        self.assertEqual(got, json.loads(json.dumps(alchemy.data())))
+        self.assertEqual(got["key"], "corwin.cloud.alchemy.v1")
+        for d in got["decks"]:
+            dk = alchemy.read(d["id"])
+            order, lv = alchemy.elements(dk)
+            made = {r[2] for r in dk["rx"]} | set(dk["start"])
+            self.assertEqual(made, set(order), d["id"] + ": an element cannot be reached from first matter")
+            self.assertFalse(set(dk["start"]) & {r[2] for r in dk["rx"]}, d["id"] + ": a reaction makes first matter")
+            for a, b, p, why in dk["rx"]:
+                self.assertLessEqual(a, b)
+                self.assertTrue(why.strip(), "%s: %s + %s has no why" % (d["id"], a, b))
+
+    def test_the_folds_are_c4s(self):
+        for deck in alchemy.DECKS:
+            text, why = alchemy.fresh_fold(deck)
+            if text is None:
+                print("alchemy: NOT CHECKED against c4 (%s)" % why, file=sys.stderr)
+                return
+            self.assertEqual(text, _slurp(os.path.join(ROOT, "src", "alchemy", deck + ".tsv")),
+                             deck + ".tsv differs from c4's fold: run python3 alchemy.py --refresh")
+
+    def test_not_in_the_menu_until_the_enhance(self):
+        for rel in ["index.html", "directory.html", "packages.html"]:
+            top = read(rel).split('<main', 1)[0]
+            self.assertNotIn("alchemy", top, rel + ": alchemy is in the menu before the ENHANCE installs it")
+            self.assertNotIn("alchemy", read(rel).split('id="goto"')[1].split("</ul>")[0], rel + ": alchemy is in the list of everywhere")
 
 
 class PrivacyChecks(unittest.TestCase):

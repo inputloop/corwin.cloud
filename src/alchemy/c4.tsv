@@ -1,0 +1,48 @@
+about	c4	C4	The working parts of C4 (Collaborative Consent Continuity Controls). Combine to compose a capability; split one to see what it is made of and why.
+start	file
+start	key
+start	person
+start	word
+name	c4	C4
+name	magicword	magic word
+name	redfirst	red first
+name	tworeaders	two readers
+rx	atom	folder	register	A folder of atoms, read by path rather than by search.
+rx	atom	reader	check	One question asked of one fact.
+rx	check	check	redfirst	A check shown failing on purpose before it is trusted.
+rx	check	file	tool	A check that lives in a file, so anyone can run it.
+rx	collaboration	continuity	c4	Partners who keep agreeing as the work moves: the other road to the same place.
+rx	consent	consent	continuity	Consent kept, and kept again, as things change.
+rx	continuity	control	c4	Controls that keep consent continuous: the name says it.
+rx	door	door	host	A machine is a house of doors.
+rx	file	file	folder	Files kept together.
+rx	file	key	signature	A key over a file's bytes says who stood behind them.
+rx	file	phrase	note	Something said, written down.
+rx	file	signature	seal	A file with its signature beside it: change one byte and it shows.
+rx	file	word	atom	One fact in one file: the smallest thing C4 keeps.
+rx	folder	key	door	A folder you need a key for.
+rx	folder	partner	collaboration	Partners working in one shared place.
+rx	game	recipe	alchemy	A game whose rules are recipes: this one.
+rx	host	host	ring	Hosts that follow the same rules.
+rx	host	phrase	wire	Words passed between hosts.
+rx	key	key	keyring	Keys kept together, each for its own door.
+rx	key	name	identity	A name that a key can answer for.
+rx	key	register	control	A key that decides what a register may hold.
+rx	key	word	magicword	A word that opens something because a key agrees.
+rx	name	phrase	persona	A name with its own way of speaking.
+rx	note	seal	record	A note sealed so it cannot quietly change.
+rx	note	tool	recipe	Notes that say how, beside the tool that does it.
+rx	person	person	partner	Two people working as equals.
+rx	person	persona	byline	A persona writing for a person: the byline says for whom.
+rx	person	record	consent	A person standing behind a record of what they agreed to.
+rx	person	register	reader	A person reading a register.
+rx	person	rule	game	People who agree to a rule to have fun.
+rx	person	word	name	What a person answers to.
+rx	persona	register	seat	Where a persona keeps its notes.
+rx	persona	wire	tavern	A room where people and their personas meet over the wire.
+rx	phrase	register	rule	A phrase a register holds you to.
+rx	phrase	tool	spell	Words that run a tool.
+rx	reader	reader	tworeaders	Two readers who start apart catch what one would miss.
+rx	ring	ring	ghostwheel	Rings of hosts, turning together.
+rx	seat	seat	garden	Seats side by side, tended.
+rx	word	word	phrase	Two words in order already say something.

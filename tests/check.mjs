@@ -369,3 +369,14 @@ test('privacy.js removes and never writes, asks this site for the drawing file o
   assert.match(body, /querySelectorAll\('#kept \[data-key\]'\)/);
   assert.ok(!/'corwin\.cloud\.|'tb:|'quantum_/.test(body), 'privacy.js names keys of its own; it must forget the list on the page');
 });
+// ---- alchemy (2026-11-12): the game's one script -----------------------------------------------------
+const alSrc = existsSync(join(out, 'js', 'alchemy.js')) ? rd('js/alchemy.js') : null;
+test('alchemy.js asks this site once for the decks, keeps one name inside try, writes no markup as text, and reaches no other host', { skip: !alSrc }, () => {
+  const body = alSrc.split('\n').slice(1).join('\n');
+  assert.equal((body.match(/\bfetch\(/g) || []).length, 1, 'alchemy.js fetches more than one thing');
+  assert.match(body, /fetch\(root\.getAttribute\('data-src'\)/);
+  for (const bad of ['XMLHttpRequest', 'sendBeacon', 'WebSocket', 'EventSource', 'document.cookie', 'eval(', 'innerHTML', 'sessionStorage', '.clear()', 'removeItem']) assert.ok(!body.includes(bad), 'alchemy.js uses ' + bad);
+  assert.ok(!/https?:\/\//.test(body.replace(/^\/\/.*$/gm, '')), 'alchemy.js names an address on another host');
+  for (const l of body.split('\n').filter((x) => /localStorage/.test(x))) assert.match(l, /try \{ (raw = )?window\.localStorage\.(get|set)Item\('corwin\.cloud\.alchemy\.v1'/, 'storage outside try, or another name: ' + l.trim());
+  assert.match(rd('alchemy.html'), /data-src="alchemy-decks\.json"/);
+});

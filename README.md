@@ -42,6 +42,18 @@ checkouts (`quantum3d5`, `hello-taxgnomes`, `egad`, `gitcha`); a demo with no ch
 staged copy changes in two ways only: each inline script moves into a file beside its page, and the
 page links `jslicense.html`. The policy for `/demo/*/app/` is written to `generated/demo-csp.conf`.
 
+## Alchemy (2026-11-12, a test page)
+
+`/alchemy` (`alchemy.html`): a game of combining two things to find a third, and splitting one to see
+every pair that makes it. Two decks: `classic` (air, earth, fire, water) and `c4` (file, word, key,
+person). The decks are made in c4 as atoms (`c4/alchemy/decks`, one file per reaction) and carried here
+as c4's folds in `src/alchemy/*.tsv`; `python3 alchemy.py --refresh` refolds them from a c4 checkout
+beside this one (`C4_DIR`), and the checks compare the copies with a fresh fold. `js/alchemy.js` asks
+this site once for `alchemy-decks.json` and keeps what you found under one name, listed on
+privacy.html. nginx now tries `$uri.html`, so every page answers at its short address
+(corwin.cloud/alchemy, /directory, /packages). The page is not in the menu until the ENHANCE that
+installs it there and on aboutcorwin.com.
+
 ## The next pass (2026-11-01)
 
 - **Every directory project has a `TOPOLOGY.md`** in draw's `examples/inputloop/` now, so no

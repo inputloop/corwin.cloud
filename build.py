@@ -28,10 +28,11 @@ import drawings as G
 import vendor as V
 import share as SH
 import navindex as NV
+import alchemy as AL
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ROOT, "src")
-JS_FILES = ("ui.js", "site.js", "stage.js", "badges.js", "float.js", "nav.js", "free.js", "privacy.js")
+JS_FILES = ("ui.js", "site.js", "stage.js", "badges.js", "float.js", "nav.js", "free.js", "privacy.js", "alchemy.js")
 YEAR_LINE = "Copyright 2026 INPUTLOOP"
 AUTHOR_LINE = "Corwin and Bryant (%s)" % C.MAIL
 LICENCE_LINE = "Code GPL-3.0-or-later; prose CC-BY-SA-4.0."
@@ -471,6 +472,13 @@ def page_packages():
 """ % "".join(package(p) for p in C.PACKAGES) + foot("packages"))
 
 
+def page_alchemy():
+    # a test page (2026-11-12): not in the menu or the list of everywhere until the ENHANCE that installs it
+    return (head("Alchemy: combine two things, or split one", "A game of putting two things together to find a third, and pulling one apart to see what made it. Free software; it asks for nothing.",
+                 "alchemy", '<script src="js/alchemy.js" defer></script>\n')
+            + nav("") + AL.page_body() + foot("alchemy"))
+
+
 def page_404():
     return (head("Not found", "Nothing at this address.", "404").replace('href="css/', 'href="/css/').replace('src="js/', 'src="/js/').replace('href="favicon', 'href="/favicon')
             + '<main id="main" class="wrap"><h1>Not found</h1><p class="lede">There is nothing at this address. <a href="/">Home</a>, <a href="/directory.html">the directory</a> or <a href="/packages.html">the packages</a> may have what you were after.</p>'
@@ -525,6 +533,7 @@ KEPT_SECTIONS = [
     ("topology", "draw's front door and board", 'draw\'s own pages: <a href="topology/">its front door</a> and <a href="topology/board/">its board</a>. '
      "The front door asks a server for a graph only when you press Load or Go, and only the address in use: this site's, unless you add another."),
     ("demos", "The demos", 'Only <a href="demo/quantum3d5/">Quantum 3D5</a> keeps anything.'),
+    ("games", "The alchemy game", '<a href="alchemy.html">Alchemy</a> (a test page, not in the menu yet).'),
 ]
 KEPT = [
     ("layout", "corwin.cloud.ui.v1", "key", "local", "Free or classic: the layout you chose for the home page."),
@@ -552,6 +561,7 @@ KEPT = [
     ("demos", "quantum_theme", "key", "local", "Quantum 3D5's light or dark."),
     ("demos", "quantum_tour_completed", "key", "local", "Whether you finished Quantum 3D5's tour."),
     ("demos", "quantum_achievements_v1", "key", "local", "The achievements you earned in Quantum 3D5."),
+    ("games", AL.KEY, "key", "local", "What you have found and made in each deck, and the deck you played last."),
 ]
 # a demo page that runs something which keeps names above says so, and links its section of the note
 DEMO_KEEPS = {"quantum3d5": ("demos", "Its light or dark, whether you finished its tour, and its achievements"),
@@ -859,6 +869,8 @@ def main():
     write(out, "packages.html", page_packages())
     write(out, "jslicense.html", page_jslicense(staged))
     write(out, "privacy.html", page_privacy(index, kept))
+    write(out, "alchemy.html", page_alchemy())
+    write(out, "alchemy-decks.json", json.dumps(AL.data(), ensure_ascii=False, separators=(",", ":")))
     write(out, "404.html", page_404())
     print("build: wrote %s (topology %s; about-corwin's palette %s; %d drawing pages; demos staged: %s)" % (
         out, "staged" if have else "PLACEHOLDER", "staged" if SHARED["staged"] else "left out", len(index["pages"]), ", ".join(k for k, v in staged.items() if v["staged"]) or "none"))
