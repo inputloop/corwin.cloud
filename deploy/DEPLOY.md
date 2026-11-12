@@ -13,6 +13,11 @@ The site is plain files. Nothing runs on the server but nginx.
    it world-readable modes: `rsync -a --delete --chmod=D755,F644`, or `install.sh`, which sets them. A
    build written on a Windows-backed folder carries owner-only modes, and nginx answers 403 for those
    files (2026-11-12: draw's pages under /topology/, for a minute, after a hand copy without them).
+   Whenever the app changes, install the rebuilt `deploy/topology-csp.conf` with it (step 3): the
+   policy names the app's inline script by its sha256, so new files under an old snippet answer 200
+   and the browser refuses the app (2026-11-12: draw 1.15 under 1.14's snippet, an hour and a half
+   with no drawing). After any deploy, run `python3 deploy/live-csp-check.py`: it fetches the live
+   app and fails unless its policy names every inline script (`--prove-red` shows it can fail).
 3. Copy `deploy/topology-csp.conf` to `/etc/nginx/snippets/corwin-cloud-topology-csp.conf`, and
    `deploy/nginx-corwin.cloud.conf` to `/etc/nginx/sites-available/corwin.cloud`; link it into
    `sites-enabled`; add the certificate lines; `sudo nginx -t && sudo systemctl reload nginx`.
