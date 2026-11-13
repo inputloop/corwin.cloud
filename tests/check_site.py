@@ -903,6 +903,20 @@ def SHORT_ADDRESSES():
     return bool(m) and m.group(1).split()[:2] == ["$uri", "$uri.html"]
 
 
+class StartupChecks(unittest.TestCase):
+    """2026-11-13: nginx refused to start after unattended-upgrade restarted it while DNS was down, because a
+    proxy_pass named a host outright (nginx resolves those once, at start). Every site on gw33 went down."""
+
+    def test_nginx_needs_no_dns_to_start(self):
+        conf = _slurp(os.path.join(ROOT, "deploy", "nginx-corwin.cloud.conf"))
+        for m in re.finditer(r"^\s*proxy_pass\s+(\S+);", conf, re.M):
+            host = re.match(r"https?://([^/:$]+)", m.group(1))
+            self.assertFalse(host and host.group(1) not in ("127.0.0.1", "localhost", "[::1]"),
+                             "proxy_pass names %s outright: nginx would need DNS to start" % m.group(1))
+        if re.search(r"proxy_pass\s+https?://\$", conf):
+            self.assertRegex(conf, r"\bresolver\s+\S+", "a proxy_pass by variable needs a resolver")
+
+
 class AlchemyChecks(unittest.TestCase):
     """alchemy.html (2026-11-12): the combine-and-split game, a test page. Corwin: "make sure that people are
     not expected to remember a filename if they happen to be typing URLs: link also to the without

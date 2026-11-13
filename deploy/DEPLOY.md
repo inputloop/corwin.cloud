@@ -75,3 +75,15 @@ backup in `/var/backups/corwin.cloud/alchemy-20261112T065917Z`, then the seven f
 `/packages`, `/`, `/demo/`, `/topology/` answer 200, `/nope` 404, `/alchemy` carries the strict policy; a browser
 played the C4 deck there with no script error. The next full `install.sh` carries the same files from the
 repository, so nothing here is kept only on the host.
+
+## Down 06:33-09:19 UTC on 2026-11-13: nginx would not start without DNS
+
+unattended-upgrade installed a new libc at 06:32:59 and restarted every service at once, the host's resolver
+among them. nginx came back before the resolver did, could not look up corwin.bru.st for the Emacs feed's
+`proxy_pass`, and refused to start (`host not found in upstream "corwin.bru.st"`), so every site on gw33
+(corwin.cloud, ghostwheel.chat, the rest) was down until Corwin restarted nginx by hand. nginx resolves a host
+named outright in `proxy_pass` once, at start. The feed now names it through a variable with `resolver
+127.0.0.53`, so it is looked up when a visitor asks; patched live the same morning (backup in
+`/var/backups/corwin.cloud/dns-at-start-20261113T092240Z`, `nginx -t` passed, reloaded; `/`, `/alchemy`,
+`/feeds/emacs-latest.json` and the release feed answer 200). `tests/check_site.py` StartupChecks fails on a
+`proxy_pass` that names a host other than this one, and on a variable one with no resolver; two plants.

@@ -142,6 +142,8 @@ prove_red() {
   plant "stage.js writes to storage"        src/js/stage.js "s#^  var kind = classify(), kept#  localStorage.setItem('x', '1'); var kind = classify(), kept#"
   plant "the home frames a host page"       build.py     's#first = "topology/topoforge/index.html?load=/" + index\["file"\]#first = "topology/app.html"#'
   plant "the demo policy allows inline js"  build.py     "s#DEMO_POLICY = (\"default-src 'self'; script-src 'self';#DEMO_POLICY = (\"default-src 'self'; script-src 'self' 'unsafe-inline';#"
+  plant "nginx needs DNS to start"            deploy/nginx-corwin.cloud.conf "s#proxy_pass https://\$emacs_feed_host/emacs-latest.json;#proxy_pass https://corwin.bru.st/emacs-latest.json;#"
+  plant "a proxy by variable with no resolver" deploy/nginx-corwin.cloud.conf "/resolver 127.0.0.53 valid=300s ipv6=off;/d"
   plant "alchemy: the short address dropped" deploy/nginx-corwin.cloud.conf 's#try_files \$uri \$uri.html \$uri/ =404;#try_files $uri $uri/ =404;#'
   plant "alchemy: the page forgets its short address" alchemy.py 's#<a href="/alchemy">#<a href="/alchemy.html">#'
   plant "alchemy: its stored name not in the note" build.py '/("games", AL.KEY, "key", "local"/d'
